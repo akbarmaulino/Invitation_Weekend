@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Trip Romantis — Ciaaa 💙</title>
+  <link rel="stylesheet" href="css/style.css" /> 
+</head>
+<body>
+  <div class="container">
+    <h1>🎀 Trip Ciaa Weekend 🎀</h1>
+    <p class="subtitle">Pilih hari, atau tambahkan ide baru — semua akan tersimpan online.</p>
+
+    <div class="day-select">
+      <label>Pilih hari:</label>
+      <label><input type="checkbox" name="hari" value="Sabtu"> Sabtu</label>
+      <label><input type="checkbox" name="hari" value="Minggu"> Minggu</label>
+    </div>
+
+    <div id="activityArea"></div>
+
+    <div class="controls">
+      <button id="addIdeaBtn">➕ Tambah Ide Baru</button>
+      <button id="generateBtn">🎟️ Buat Karcis</button>
+    </div>
+  </div>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-inner">
+      <h3>Tambah Ide Perjalanan</h3>
+      <form id="ideaForm">
+        <label>Hari (opsional): 
+          <select id="ideaDay">
+            <option value="">(kosong = semua hari)</option>
+            <option>Sabtu</option>
+            <option>Minggu</option>
+          </select>
+        </label>
+
+        <label>Kategori (Level 1):
+          <select id="ideaCategory"></select>
+        </label>
+        <input id="newCategoryInput" type="text" placeholder="Masukkan nama Kategori baru (Level 1)" style="display: none; margin-bottom: 8px;">
+
+        <label>Sub-tipe (Level 2):
+          <select id="ideaSubtype"></select>
+        </label>
+        <input id="newSubtypeInput" type="text" placeholder="Masukkan nama Sub-tipe baru (Level 2)" style="display: none; margin-bottom: 8px;">
+
+        <label>Nama ide (Level 3 - Nama Tempat, ex: "Sate Senayan") [Opsional]:
+          <input id="ideaTitle" /> 
+        </label>
+
+        <label>Foto (opsional):
+          <input id="ideaImageInput" type="file" accept="image/*" />
+        </label>
+
+        <div class="modal-actions">
+          <button type="submit">Simpan ide</button>
+          <button type="button" id="cancelIdea">Batal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
