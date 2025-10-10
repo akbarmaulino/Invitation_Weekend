@@ -5,7 +5,7 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 /* ====== Supabase Config ====== */
 // GANTI DENGAN KREDENSIAL ANDA
 const supabaseUrl = "https://rdoywpzkfddvrxrwmvsc.supabase.co"; 
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkb3l3cHprZmRkdnJ4cndtdnNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxMDIyNzUsImV4cCI6MjA3NTY3ODI3NX0.CxlF8rihbLEOSef4ItWelqoCVIgr7JL03uGdpNWMKGIU";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkb3l3cHprZmRkdnJ4cndtdnNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxMDIyNzUsImV4cCI6MjA3NTY3ODI3NX0.CxlF8rihbLEOSef4ItWelqoCVIgr7JL03uGdpWNKGIU";
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
