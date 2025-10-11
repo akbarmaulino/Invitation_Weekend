@@ -1,68 +1,85 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Trip Romantis — Ciaaa 💙</title>
-  <link rel="stylesheet" href="css/style.css" /> 
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trip Ciaaa ❤️ Kamu</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>❤️</text></svg>">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div class="container">
-    <h1>🎀 Trip Ciaa Weekend 🎀</h1>
-    <p class="subtitle">Pilih hari, atau tambahkan ide baru — semua akan tersimpan online.</p>
 
-    <div class="day-select">
-      <label>Pilih hari:</label>
-      <label><input type="checkbox" name="hari" value="Sabtu"> Sabtu</label>
-      <label><input type="checkbox" name="hari" value="Minggu"> Minggu</label>
-    </div>
-
-    <div id="activityArea"></div>
-
-    <div class="controls">
-      <button id="addIdeaBtn">➕ Tambah Ide Baru</button>
-      <button id="generateBtn">🎟️ Buat Karcis</button>
-    </div>
-  </div>
-
-  <div id="modal" class="modal hidden">
-    <div class="modal-inner">
-      <h3>Tambah Ide Perjalanan</h3>
-      <form id="ideaForm">
-        <label>Hari (opsional): 
-          <select id="ideaDay">
-            <option value="">(kosong = semua hari)</option>
-            <option>Sabtu</option>
-            <option>Minggu</option>
-          </select>
-        </label>
-
-        <label>Kategori (Level 1):
-          <select id="ideaCategory"></select>
-        </label>
-        <input id="newCategoryInput" type="text" placeholder="Masukkan nama Kategori baru (Level 1)" style="display: none; margin-bottom: 8px;">
-
-        <label>Sub-tipe (Level 2):
-          <select id="ideaSubtype"></select>
-        </label>
-        <input id="newSubtypeInput" type="text" placeholder="Masukkan nama Sub-tipe baru (Level 2)" style="display: none; margin-bottom: 8px;">
-
-        <label>Nama ide (Level 3 - Nama Tempat, ex: "Sate Senayan") [Opsional]:
-          <input id="ideaTitle" /> 
-        </label>
-
-        <label>Foto (opsional):
-          <input id="ideaImageInput" type="file" accept="image/*" />
-        </label>
-
-        <div class="modal-actions">
-          <button type="submit">Simpan ide</button>
-          <button type="button" id="cancelIdea">Batal</button>
+    <header>
+        <h1>Rencana Weekend Romantis ❤️</h1>
+        <p id="countdownDisplay">Memuat hitungan mundur...</p>
+        <div class="filter-days">
+            <label><input type="checkbox" name="hari" value="Sabtu"> <span>Sabtu</span></label>
+            <label><input type="checkbox" name="hari" value="Minggu"> <span>Minggu</span></label>
         </div>
-      </form>
-    </div>
-  </div>
+    </header>
 
-  <script type="module" src="js/main.js"></script>
+    <main>
+        
+        <div class="controls">
+            <button id="addIdeaBtn" class="btn primary">Tambah Ide Baru ✨</button>
+            <button id="randomPlanBtn" class="btn secondary" style="display: none;">
+                ✨ Mode Surprise (Random Plan)
+            </button>
+        </div>
+
+        <section id="activityArea" class="activity-grid">
+            <p style="text-align: center; color: var(--text-muted);">Pilih hari di atas untuk melihat ide aktivitas.</p>
+        </section>
+
+        <section class="secret-note">
+            <h2>Pesan Rahasia untuk Ticket 💌</h2>
+            <textarea id="secretMessage" placeholder="Tuliskan pesan manis atau janji rahasia untuk dimasukkan di tiket (ex: Aku janji nggak bakal nyanyi kenceng kecuali kamu minta)"></textarea>
+        </section>
+        
+        <button id="generateBtn" class="btn full-width">
+            Buat Karcis Trip Sekarang! 🎫
+        </button>
+
+    </main>
+
+    <div id="modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Tambah Ide Perjalanan</h2>
+            <form id="ideaForm">
+                <label for="ideaDay">Hari (opsional):</label>
+                <select id="ideaDay" required>
+                    <option value="">(kosong = semua hari)</option>
+                    <option value="Sabtu">Sabtu</option>
+                    <option value="Minggu">Minggu</option>
+                </select>
+                
+                <label for="ideaCategory">Kategori (Level 1):</label>
+                <select id="ideaCategory" required></select>
+                <input type="text" id="newCategoryInput" placeholder="Masukkan nama kategori baru" style="display:none;">
+
+                <label for="ideaSubtype">Sub-tipe (Level 2):</label>
+                <select id="ideaSubtype" required></select>
+                <input type="text" id="newSubtypeInput" placeholder="Masukkan nama sub-tipe baru" style="display:none;">
+
+                <label for="ideaTitle">Nama ide (Level 3 - Nama Tempat, ex: "Sate Senayan"):</label>
+                <input type="text" id="ideaTitle" placeholder="Misalnya: 'Nasi Goreng Kebon Sirih'" value="">
+                
+                <label for="ideaImageInput">Foto (opsional):</label>
+                <input type="file" id="ideaImageInput" accept="image/*">
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn primary">Simpan ide</button>
+                    <button type="button" id="cancelIdea" class="btn secondary">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="imageModal" class="image-modal">
+        <span class="close-btn">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>

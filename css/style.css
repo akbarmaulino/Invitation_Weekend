@@ -1,232 +1,304 @@
-/* --- Global Styles --- */
+/* css/style.css (Lengkap) */
 
 :root {
-    --bg-main: #0a0e14; /* Darkest background */
-    --bg2: #1e2430; /* Secondary background (card/modal) */
-    --accent: #5e72e4; /* Primary accent color (Blue/Purple) */
-    --muted: #bcd8ff; /* Muted text/subtitle color */
-    --text-primary: #f0f8ff; /* White/Light text */
+    --bg-dark: #1e1e2d;
+    --bg-medium: #2a2a3f;
+    --text-light: #f0f0f5;
+    --primary-color: #5d5dff; /* Biru/Ungu Cerah */
+    --secondary-color: #4a4a5f; /* Abu-abu gelap */
+    --muted: #a0a0b5;
+    --error-color: #ff6b6b;
+    --success-color: #48cfad;
 }
 
 body {
-    background-color: var(--bg-main);
-    color: var(--text-primary);
-    font-family: Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-light);
     margin: 0;
     padding: 0;
+    line-height: 1.6;
 }
 
-.container {
-    max-width: 800px;
-    margin: 40px auto;
-    padding: 0 20px;
-}
-
-h1 {
-    color: var(--text-primary);
+header {
+    background-color: var(--bg-medium);
+    padding: 20px;
     text-align: center;
-    margin-bottom: 5px;
+    border-bottom: 3px solid var(--primary-color);
 }
 
-.subtitle {
-    text-align: center;
-    color: var(--muted);
-    margin-bottom: 30px;
+main {
+    padding: 20px;
+    max-width: 900px;
+    margin: 0 auto;
 }
 
-/* Day Select */
-.day-select {
-    margin-bottom: 20px;
-    padding: 10px;
-    background: var(--bg2);
-    border-radius: 8px;
+h1, h2, h3 {
+    color: var(--text-light);
+    margin-top: 0;
+}
+
+/* --- Filter Days (PERBAIKAN VISUAL) --- */
+.filter-days {
     display: flex;
-    gap: 15px;
-    align-items: center;
-}
-.day-select label {
-    font-weight: bold;
-    color: var(--muted);
-}
-.day-select input[type="checkbox"] {
-    accent-color: var(--accent);
-}
-
-/* Controls (Buttons) */
-.controls {
-    text-align: center;
-    margin-top: 30px;
-}
-.controls button {
-    background: var(--accent);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
-    font-size: 1.1em;
-    cursor: pointer;
-    transition: background 0.2s;
-    margin: 0 5px;
-}
-.controls button:hover {
-    background: #4a54c9;
-}
-
-
-/* --- Category Card (Level 1) --- */
-.category-card {
-    background: var(--bg2);
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-}
-
-.category-card h3 {
-    color: var(--text-primary);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 10px;
-    margin-bottom: 10px;
-}
-
-/* --- Collapsible Sub-tipe (Level 2) --- */
-.subtype-details {
+    justify-content: center;
+    gap: 20px;
     margin-top: 15px;
-    margin-bottom: 5px;
-    border-left: 3px solid var(--accent); 
-    padding-left: 15px;
 }
 
-.subtype-details summary {
-    font-size: 1.1em;
-    font-weight: bold;
-    color: var(--muted); 
+/* Label sebagai tombol */
+.filter-days label {
+    background-color: var(--secondary-color);
+    padding: 8px 15px;
+    border-radius: 20px;
     cursor: pointer;
-    padding: 5px 0;
-    list-style: none;
-    position: relative;
-    margin-bottom: 10px; 
+    transition: background-color 0.2s, box-shadow 0.2s, border 0.2s;
+    border: 2px solid var(--secondary-color); 
 }
 
-.subtype-details summary::before {
-    content: "▶"; 
-    color: var(--accent);
-    margin-right: 8px;
-    transition: transform 0.2s;
-    font-size: 0.8em;
-    display: inline-block;
-}
-
-.subtype-details[open] summary::before {
-    content: "▼"; 
-    transform: rotate(0deg);
-}
-
-.subtype-details summary::-webkit-details-marker {
+.filter-days input[type="checkbox"] {
     display: none;
 }
 
-/* Style untuk konten Level 3/Item Level 2 di dalam collapse */
-.subtype-details .options-wrap {
-    padding-top: 10px;
-    display: flex; 
-    flex-wrap: wrap;
-    gap: 10px;
+/* Style ketika checkbox DICHCECKED */
+.filter-days input[type="checkbox"]:checked ~ span {
+    font-weight: bold;
 }
 
-/* Style untuk item opsi (gambar dan teks) */
-.option-item {
-    width: calc(50% - 5px); 
-    margin-bottom: 10px;
+.filter-days input[type="checkbox"]:checked ~ label {
+    background-color: var(--primary-color);
+    border: 2px solid var(--text-light); 
+    box-shadow: 0 0 12px rgba(93, 93, 255, 0.7); 
+    font-weight: bold;
+    color: var(--text-light);
 }
+
+/* Style hover/active */
+.filter-days label:hover {
+    background-color: #6a6a80; 
+}
+
+
+/* --- Controls & Buttons --- */
+.controls {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: bold;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn.primary {
+    background-color: var(--primary-color);
+    color: var(--text-light);
+}
+
+.btn.secondary {
+    background-color: var(--secondary-color);
+    color: var(--text-light);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+.btn.primary:hover {
+    background-color: #7a7aff;
+}
+
+.btn.full-width {
+    width: 100%;
+    margin-top: 30px;
+    padding: 15px;
+    font-size: 1.2em;
+}
+
+/* --- Activity Grid/Display --- */
+.activity-grid {
+    display: flex;
+    flex-direction: column; 
+    gap: 25px;
+    padding: 20px 0;
+}
+
+.category-card {
+    background-color: var(--bg-medium);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.category-card h3 {
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.subtypes-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* FIX: Styling untuk collapse/expand */
+.subtype-details summary {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: var(--primary-color);
+    cursor: pointer;
+    padding: 5px 0;
+    list-style: none; /* Hilangkan default arrow */
+    position: relative;
+    padding-left: 20px; /* Ruang untuk custom arrow */
+}
+
+.subtype-details summary::before {
+    content: '▶ ';
+    color: var(--text-light);
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%) rotate(0deg);
+    transition: transform 0.2s;
+    font-size: 0.8em;
+}
+
+.subtype-details[open] summary::before {
+    transform: translateY(-50%) rotate(90deg);
+}
+
+
+.options-wrap {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+    padding: 10px 0;
+}
+
+.option-item {
+    border: 1px solid var(--secondary-color);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+    background-color: var(--bg-dark);
+}
+
+.option-item:has(input:checked) {
+    border-color: var(--success-color);
+    box-shadow: 0 0 10px rgba(72, 207, 173, 0.4);
+}
+
+.option-item label {
+    display: block;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.option-item input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
 .option-item img {
     width: 100%;
     height: 100px;
     object-fit: cover;
-    border-radius: 8px;
-    margin-bottom: 5px;
-}
-.option-item label {
     display: block;
-    cursor: pointer;
-    border: 2px solid transparent;
-    border-radius: 10px;
-    padding: 5px;
-    transition: border-color 0.2s;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    transition: transform 0.3s;
 }
-.option-item input[type="checkbox"] {
-    display: none;
-}
-/* Style saat terpilih */
-.option-item input[type="checkbox"]:checked + img {
-    filter: brightness(0.7);
-    border-color: var(--accent);
-}
-.option-item input[type="checkbox"]:checked ~ span, 
-.option-item input[type="checkbox"]:checked ~ small {
-    color: var(--accent);
+
+.option-item:hover img {
+    transform: scale(1.03);
 }
 
 
-/* --- Modal (Tambah Ide) --- */
+/* --- Secret Note --- */
+.secret-note {
+    margin: 30px 0;
+    padding: 20px;
+    background-color: var(--bg-medium);
+    border-radius: 12px;
+}
+
+.secret-note textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 10px;
+    border: 1px solid var(--secondary-color);
+    border-radius: 6px;
+    background-color: var(--bg-dark);
+    color: var(--text-light);
+    box-sizing: border-box;
+    resize: vertical;
+}
+
+
+/* --- Modal Form --- */
 .modal {
     position: fixed;
-    top: 0;
+    z-index: 500; 
     left: 0;
+    top: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.8);
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.7);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background-color: var(--bg-medium);
+    padding: 30px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
 }
 
 .modal.hidden {
     display: none;
 }
 
-.modal-inner {
-    background: var(--bg2);
-    padding: 25px;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 450px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
-}
-
-.modal-inner h3 {
-    color: var(--accent);
-    margin-top: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+.modal-content h2 {
+    border-bottom: 2px solid var(--primary-color);
     padding-bottom: 10px;
     margin-bottom: 20px;
 }
 
-.modal-inner label {
+.modal-content form label {
     display: block;
-    margin-bottom: 15px;
+    margin: 15px 0 5px;
     font-weight: bold;
-    color: var(--muted);
 }
 
-.modal-inner input[type="text"], 
-.modal-inner select,
-.modal-inner #ideaTitle {
+.modal-content form input[type="text"],
+.modal-content form select,
+.modal-content form input[type="file"] {
     width: 100%;
     padding: 10px;
-    margin-top: 5px;
-    border-radius: 4px;
-    border: 1px solid #333;
-    background: #0f131a;
-    color: var(--text-primary);
+    margin-bottom: 10px;
+    border: 1px solid var(--secondary-color);
+    border-radius: 6px;
+    background-color: var(--bg-dark);
+    color: var(--text-light);
     box-sizing: border-box;
-}
-
-.modal-inner input[type="file"] {
-    display: block;
-    width: 100%;
-    margin-top: 5px;
 }
 
 .modal-actions {
@@ -236,216 +308,71 @@ h1 {
     margin-top: 20px;
 }
 
-.modal-actions button {
-    padding: 8px 15px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
+
+/* --- Image Modal Pop-up (NEW) --- */
+.image-modal {
+    display: none; 
+    position: fixed; 
+    z-index: 1000; 
+    padding-top: 60px; 
+    left: 0;
+    top: 0;
+    width: 100%; 
+    height: 100%; 
+    overflow: auto; 
+    background-color: rgba(0,0,0,0.95); 
+    backdrop-filter: blur(5px);
 }
 
-.modal-actions button[type="submit"] {
-    background: var(--accent);
-    color: white;
-    border: none;
-}
-
-.modal-actions #cancelIdea {
-    background: #333;
-    color: var(--text-primary);
-    border: none;
-}
-
-
-/* --- Summary Page Header --- */
-
-.header-summary {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 25px;
-}
-
-.header-summary h1 {
-    font-size: 2em;
-    color: var(--accent); 
-}
-
-.header-summary .actions button {
-    background: var(--accent);
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 6px;
-    cursor: pointer;
-    margin-left: 10px;
-}
-
-
-/* --- Karcis Boarding Pass (Styling) --- */
-
-#ticketsContainer {
-    display: flex;
-    flex-direction: column; 
-    gap: 30px; 
-}
-
-.ticket-card {
-    background: #151a23; 
-    border-radius: 12px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-    display: flex; 
-    width: 100%;
-    max-width: 700px; 
-    margin: 0 auto; 
-    overflow: hidden; 
-    position: relative;
-    color: var(--text-primary);
-    min-height: 250px; 
-}
-
-/* Bagian Kiri Tiket */
-.ticket-left {
-    flex: 0 0 40%; 
-    padding: 25px 20px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: center;
-    text-align: center;
-    border-right: 2px dashed rgba(255, 255, 255, 0.1); 
-    position: relative; 
-}
-
-.pass-type {
-    font-size: 0.9em;
-    color: var(--muted);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: 20px;
-}
-
-.names {
-    font-size: 2.2em;
-    font-weight: bold;
-    margin-bottom: 30px;
-    color: var(--accent);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.names .heart {
-    color: #ff69b4; 
-    font-size: 0.8em;
-}
-
-.detail-block {
-    margin-bottom: 20px;
-    width: 100%;
-}
-.detail-label {
-    font-size: 0.8em;
-    color: var(--muted);
-    margin: 0;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-.detail-value {
-    font-size: 1.2em;
-    font-weight: bold;
-    color: var(--text-primary);
-    margin: 5px 0 0 0;
-}
-
-
-/* Bagian Kanan Tiket */
-.ticket-right {
-    flex: 1; 
-    padding: 25px 20px;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-}
-
-.section-title {
-    font-size: 1.3em;
-    font-weight: bold;
-    color: var(--accent);
-    margin-bottom: 15px;
-    padding-bottom: 5px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.plan-list {
-    list-style: none;
+/* Modal Content (Image) */
+.image-modal .modal-content {
+    margin: auto;
+    display: block;
+    width: 80%;
+    max-width: 700px;
+    animation-name: zoom;
+    animation-duration: 0.3s;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    background-color: transparent; 
     padding: 0;
-    margin: 0;
-    flex-grow: 1; 
-}
-.plan-list li {
-    margin-bottom: 8px;
-    font-size: 1em;
-    color: var(--text-primary);
-}
-.plan-list li .plan-subtitle {
-    color: var(--muted);
-    font-size: 0.9em;
-    font-style: italic;
 }
 
-.special-note {
-    font-style: italic;
-    color: #ff99cc; 
-    margin-top: 20px;
-    text-align: right;
-    font-size: 0.9em;
-}
-
-/* --- Efek Lubang dan Garis Potong --- */
-
-/* Efek Lubang di Garis Potong Vertikal */
-.ticket-card::before,
-.ticket-card::after {
-    content: '';
+/* Close Button */
+.close-btn {
     position: absolute;
-    background: var(--bg-main); /* Warna background body */
-    z-index: 2;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    left: 40%; /* Pindah ke tengah garis potong */
-    transform: translateX(-50%); 
-}
-.ticket-card::before {
-    top: -10px; /* Di atas tiket */
-}
-.ticket-card::after {
-    bottom: -10px; /* Di bawah tiket */
+    top: 15px;
+    right: 35px;
+    color: #fff;
+    font-size: 40px;
+    font-weight: bold;
+    transition: 0.3s;
+    cursor: pointer;
 }
 
-/* Media Queries untuk Responsivitas */
-@media (max-width: 600px) {
-    .ticket-card {
-        flex-direction: column; 
+.close-btn:hover,
+.close-btn:focus {
+    color: #bbb;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Animasi Zoom */
+@keyframes zoom {
+    from {transform:scale(0)} 
+    to {transform:scale(1)}
+}
+
+/* Responsif untuk layar kecil */
+@media only screen and (max-width: 700px){
+    .image-modal .modal-content {
+        width: 100%;
     }
-    .ticket-left {
-        border-right: none;
-        border-bottom: 2px dashed rgba(255, 255, 255, 0.1); 
-        padding-bottom: 20px;
-        flex: auto;
+    .image-modal {
+        padding-top: 20px;
     }
-    
-    /* Pindahkan Lubang ke tengah dan di antara bagian atas/bawah */
-    .ticket-card::before,
-    .ticket-card::after {
-        left: 50%;
-        transform: translateX(-50%);
-        top: auto;
-    }
-    .ticket-card::before {
-        bottom: 59%; 
-    }
-    .ticket-card::after {
-        display: none; 
+    .close-btn {
+        top: 5px;
+        right: 20px;
     }
 }

@@ -1,0 +1,217 @@
+/* css/summary.css */
+
+:root {
+    --bg-dark: #1e1e2d;
+    --bg-medium: #2a2a3f;
+    --text-light: #f0f0f5;
+    --primary-color: #5d5dff; /* Biru/Ungu Cerah */
+    --secondary-color: #4a4a5f; /* Abu-abu gelap */
+    --muted: #a0a0b5;
+    --error-color: #ff6b6b;
+    --success-color: #48cfad;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-light);
+    margin: 0;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 20px 0;
+}
+
+/* --- Controls & Buttons --- */
+.controls {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: bold;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn.primary {
+    background-color: var(--primary-color);
+    color: var(--text-light);
+}
+
+.btn.secondary {
+    background-color: var(--secondary-color);
+    color: var(--text-light);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+.btn.full-width {
+    width: 100%;
+    margin-top: 30px;
+    padding: 15px;
+    font-size: 1.2em;
+}
+
+/* --- TICKET STYLING (The main Karcis) --- */
+.ticket {
+    display: flex;
+    background-color: var(--bg-medium);
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+    color: var(--text-light);
+}
+
+/* Kiri: Info Utama */
+.ticket-left {
+    flex: 0 0 45%; 
+    padding: 30px 20px;
+    text-align: center;
+    background-color: #2e2e4a; /* Warna sedikit berbeda untuk sisi kiri */
+    position: relative;
+    z-index: 10;
+}
+
+.pass-title {
+    display: block;
+    font-size: 0.8em;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+}
+
+.title-main {
+    font-size: 1.8em;
+    color: var(--primary-color);
+    margin-bottom: 40px;
+}
+
+.ticket-info {
+    margin-bottom: 25px;
+}
+
+.info-label {
+    font-size: 0.8em;
+    color: var(--muted);
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.info-value {
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+
+/* Kanan: Daftar Rencana */
+.ticket-right {
+    flex: 1; 
+    padding: 30px 20px;
+    background-color: var(--bg-medium);
+}
+
+.right-title {
+    color: var(--primary-color);
+    border-bottom: 1px solid var(--secondary-color);
+    padding-bottom: 10px;
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.selection-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    font-size: 1em;
+    line-height: 2;
+}
+
+.selection-list li {
+    border-bottom: 1px dashed var(--secondary-color);
+    padding-bottom: 5px;
+    margin-bottom: 5px;
+}
+
+.selection-list li:last-child {
+    border-bottom: none;
+}
+
+.secret-message {
+    font-style: italic;
+    color: #ff85a2; /* Warna pink manis */
+    text-align: right;
+    margin-top: 25px;
+    font-size: 0.95em;
+    display: none; 
+}
+
+/* Perforasi/Garis Putus-putus */
+.perforation {
+    position: absolute;
+    top: 0;
+    left: 45%;
+    width: 2px;
+    height: 100%;
+    background: repeating-linear-gradient(to bottom, var(--bg-dark), var(--bg-dark) 5px, transparent 5px, transparent 10px);
+    z-index: 20;
+    transform: translateX(-1px);
+}
+
+.perforation::before, .perforation::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: var(--bg-dark);
+    border-radius: 50%;
+    z-index: 25;
+}
+
+/* Setengah lingkaran di ujung garis perforasi */
+.perforation::before {
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.perforation::after {
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+@media (max-width: 550px) {
+    .ticket {
+        flex-direction: column;
+        text-align: center;
+    }
+    .ticket-left, .ticket-right {
+        flex: 1;
+        padding: 20px;
+    }
+    .perforation {
+        width: 100%;
+        height: 2px;
+        top: auto;
+        bottom: 55%; 
+        left: 0;
+        background: repeating-linear-gradient(to right, var(--bg-dark), var(--bg-dark) 5px, transparent 5px, transparent 10px);
+    }
+    .perforation::before, .perforation::after {
+        display: none;
+    }
+}

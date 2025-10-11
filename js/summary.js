@@ -1,247 +1,180 @@
-// js/summary.js (Logika Karcis Boarding Pass)
+// js/summary.js (Logika untuk halaman summary.html - FINAL Share Gambar)
 
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/+esm';
-
-// Konfigurasi Supabase Anda (Harus sama dengan main.js)
-const supabaseUrl = "https://rdoywpzkfddvrxrwmvsc.supabase.co"; 
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkb3l3cHprZmRkdnJ4cndtdnNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxMDIyNzUsImV4cCI6MjA3NTY3ODI3NX0.CxlF8rihbLEOSef4ItWelqoCVIgr7JL03uGdpWNKGIU";
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-const ticketsContainer = document.getElementById('ticketsContainer'); 
+const selectionList = document.getElementById('selectionList');
+const tripDayDisplay = document.getElementById('tripDayDisplay');
+const tripDateDisplay = document.getElementById('tripDateDisplay');
+const secretMessageDisplay = document.getElementById('secretMessageDisplay');
 const downloadBtn = document.getElementById('downloadBtn');
-const shareBtn = document.getElementById('shareBtn');
+const shareBtn = document.getElementById('shareBtn'); // Ini akan kita ubah fungsinya
+const ticketDiv = document.getElementById('ticket');
 
-let categoriesCache = [];
-let ideasCache = [];
+// --- PENGATURAN AWAL & DATA LOADING (Sama seperti sebelumnya) ---
 
-async function fetchData() {
-    const { data: categories } = await supabase.from('idea_categories').select('*');
-    if (categories) categoriesCache = categories;
-
-    const { data: ideas } = await supabase.from('trip_ideas_v2').select('*');
-    if (ideas) ideasCache = ideas;
-}
-
-// Fungsi untuk mendapatkan tanggal (misal: Sabtu ini atau Minggu ini)
 function getTripDate(dayOfWeek) {
     const today = new Date();
     const currentDay = today.getDay(); // 0 = Minggu, 6 = Sabtu
-    const targetDayMap = {
-        'Minggu': 0,
-        'Sabtu': 6
-    };
+    const targetDayMap = { 'Minggu': 0, 'Sabtu': 6 };
     const targetDay = targetDayMap[dayOfWeek];
 
     let date = new Date(today);
     let diff = targetDay - currentDay;
-    if (diff < 0) { // Jika target hari sudah lewat di minggu ini
+    if (diff < 0) {
         diff += 7;
-    } else if (diff === 0 && today.getHours() >= 18) { // Jika hari ini adalah hari target dan sudah sore (asumsi trip besok)
+    } else if (diff === 0 && today.getHours() >= 18) {
         diff = 7;
     }
-    
     date.setDate(today.getDate() + diff);
+    return date; 
+}
 
-    const options = { day: 'numeric', month: 'long', year: 'numeric' };
-    return date.toLocaleDateString('id-ID', options);
+function loadSummary() {
+    const selectedDays = JSON.parse(localStorage.getItem('tripDays') || '[]');
+    const selections = JSON.parse(localStorage.getItem('tripSelections') || '[]');
+    const secretMessage = localStorage.getItem('secretMessage') || '';
+
+    if (selectedDays.length === 0 || selections.length === 0) {
+        window.location.href = 'index.html'; 
+        return;
+    }
+
+    const mainDay = selectedDays[0];
+    const tripDate = getTripDate(mainDay);
+    
+    tripDayDisplay.textContent = mainDay;
+    tripDateDisplay.textContent = tripDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    
+    selectionList.innerHTML = '';
+    selections.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = `${item.name} (${item.subtype})`;
+        selectionList.appendChild(li);
+    });
+    
+    if (secretMessage) {
+        secretMessageDisplay.textContent = secretMessage + ' 🎤';
+        secretMessageDisplay.style.display = 'block';
+    } else {
+        secretMessageDisplay.style.display = 'none';
+    }
+    
+    // UBAH TAMPILAN TOMBOL SHARE
+    shareBtn.textContent = '📲 Share Tiket (WA/Foto)';
+    shareBtn.classList.remove('secondary');
+    shareBtn.classList.add('primary'); // Beri warna yang menonjol
 }
 
 
-function renderSummary() {
-    const tripDays = JSON.parse(localStorage.getItem('tripDays') || '[]');
-    const tripSelections = JSON.parse(localStorage.getItem('tripSelections') || '[]');
+// --- FUNGSI SHARE KARCIS SEBAGAI GAMBAR KE WA/SOSMED ---
+// Ini adalah fokus utama perbaikan Anda.
 
-    if (tripSelections.length === 0) {
-        ticketsContainer.innerHTML = '<p>Anda belum memilih aktivitas. Kembali ke halaman utama untuk memilih ide trip.</p>';
+shareBtn.addEventListener('click', async () => {
+    if (typeof html2canvas === 'undefined') {
+        alert('Gagal memuat library gambar.');
         return;
     }
-
-    ticketsContainer.innerHTML = ''; 
-
-    const groupedByDay = tripDays.reduce((acc, day) => {
-        // Filter seleksi yang cocok dengan hari atau yang "all days"
-        acc[day] = tripSelections.filter(item => {
-            const idea = ideasCache.find(i => i.id == item.ideaId);
-            const ideaDay = idea ? idea.day_of_week : ''; 
-            return ideaDay === day || ideaDay === '' || item.ideaId.startsWith('cat-');
+    
+    shareBtn.textContent = 'Memproses Gambar... ⏳';
+    shareBtn.disabled = true;
+    
+    let canvas;
+    try {
+        // 1. Buat gambar HD
+        canvas = await html2canvas(ticketDiv, { 
+            scale: 3, // HD Resolution
+            useCORS: true, // PENTING untuk gambar dari luar domain (Supabase)
+            logging: true 
         });
-        return acc;
-    }, {});
 
-
-    Object.entries(groupedByDay).forEach(([day, selectionsForDay]) => {
-        if (selectionsForDay.length === 0) return; 
-
-        const tripDate = getTripDate(day);
-        const uniqueIdeaNames = new Set(); 
+        if (canvas.width === 0 || canvas.height === 0) {
+            throw new Error('Canvas gagal dibuat.');
+        }
         
-        const plansHtml = selectionsForDay.map((item) => {
-            const displayName = item.name === item.subtype ? item.subtype : item.name;
-            const fullDescription = `${displayName} (${item.subtype})`;
-            
-            if (uniqueIdeaNames.has(fullDescription)) {
-                return ''; 
-            }
-            uniqueIdeaNames.add(fullDescription);
-            return `<li>${displayName} <span class="plan-subtitle">(${item.subtype})</span></li>`;
-        }).filter(Boolean).join(''); 
-
-        const ticketHtml = `
-            <div class="ticket-card" id="ticket-${day.toLowerCase()}">
-                <div class="ticket-left">
-                    <p class="pass-type">Weekend Pass</p>
-                    <div class="names">
-                        <span>Ciaaa</span> <span class="heart">💙</span> <span>Kamu</span>
-                    </div>
-                    <div class="detail-block">
-                        <p class="detail-label">Hari</p>
-                        <p class="detail-value">${day}</p>
-                    </div>
-                    <div class="detail-block">
-                        <p class="detail-label">Tanggal</p>
-                        <p class="detail-value">${tripDate}</p>
-                    </div>
-                </div>
-                <div class="ticket-right">
-                    <p class="section-title">Rencana Kita</p>
-                    <ul class="plan-list">
-                        ${plansHtml}
-                    </ul>
-                    <p class="special-note">Aku janji gak bakal nyanyi kenceng kecuali kamu minta 🎤</p>
-                </div>
-            </div>
-        `;
-        ticketsContainer.innerHTML += ticketHtml;
-    });
-}
-
-
-// --- HANDLER DOWNLOAD ---
-downloadBtn.addEventListener('click', () => {
-    const ticketCards = document.querySelectorAll('.ticket-card');
-
-    if (ticketCards.length === 0) {
-        alert('Tidak ada tiket yang bisa di-download.');
+    } catch (error) {
+        console.error('Pembuatan Canvas Gagal:', error);
+        alert('Gagal membuat gambar karcis. Coba tekan "Download Tiket" terlebih dahulu.');
+        shareBtn.textContent = '📲 Share Karcis (WA/Foto)';
+        shareBtn.disabled = false;
         return;
     }
-    
-    // Download semua tiket satu per satu
-    ticketCards.forEach((card, index) => {
-        html2canvas(card, {
-            scale: 2, 
-            allowTaint: true, 
-            useCORS: true 
-        }).then(canvas => {
-            const link = document.createElement('a');
-            link.download = `Karcis_Trip_Ciaaa_${card.id.replace('ticket-', '')}.png`;
-            link.href = canvas.toDataURL('image/png');
-            
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            if (index === 0) {
-                 console.log(`Tiket Hari ${card.id.replace('ticket-', '')} berhasil di-download!`);
-            }
-        }).catch(error => {
-            console.error(`Gagal mengkonversi tiket ${card.id}:`, error);
-            alert('Gagal membuat gambar. Pastikan gambar Anda memiliki CORS yang benar (cek RLS Storage).');
-        });
-    });
-    alert('Download tiket berhasil! Cek folder unduhan Anda.');
-});
 
-
-// --- HANDLER SHARE (FOTO/FILE) ---
-shareBtn.addEventListener('click', () => {
-    const ticketCard = document.querySelector('.ticket-card');
-
-    if (!ticketCard) {
-        alert('Tidak ada tiket yang bisa dibagikan.');
-        return;
-    }
-    
-    const tripSelections = JSON.parse(localStorage.getItem('tripSelections') || '[]');
-    const tripDays = JSON.parse(localStorage.getItem('tripDays') || '[]');
-    
-    // Buat pesan teks pendamping
-    const formattedSelections = tripDays.map(day => {
-        const selectionsForDay = tripSelections.filter(item => {
-             const idea = ideasCache.find(i => i.id == item.ideaId);
-             const ideaDay = idea ? idea.day_of_week : ''; 
-             return ideaDay === day || ideaDay === '' || item.ideaId.startsWith('cat-');
-        });
-
-        const uniqueIdeaNames = new Set();
-        const ideasList = selectionsForDay.map(i => {
-             const displayName = i.name === i.subtype ? i.subtype : i.name;
-             const fullDescription = `${displayName} (${i.subtype})`;
-             if (uniqueIdeaNames.has(fullDescription)) return null;
-             uniqueIdeaNames.add(fullDescription);
-             return `- ${displayName} (${i.subtype})`;
-        }).filter(Boolean).join('\n');
+    // 2. Coba kirim via Web Share API
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([], 'dummy.png')] })) {
         
-        return `*Hari ${day} (${getTripDate(day)}):*\n${ideasList}`;
-    }).join('\n\n');
+        // Konversi canvas ke blob untuk Web Share API
+        canvas.toBlob(async (blob) => {
+            if (!blob) {
+                alert('Gagal konversi gambar. Silakan coba tombol Download.');
+                return;
+            }
+            
+            const file = new File([blob], 'karcis-trip-ciaaa.png', { type: 'image/png' });
+            
+            try {
+                // Mencoba membagikan file
+                await navigator.share({
+                    files: [file],
+                    title: 'Karcis Weekend Pass Ciaaa ❤️ Lino',
+                    text: 'Ini karcis trip kita! Cek lampiran fotonya ya!',
+                });
+                console.log('Successful share via Web Share API');
 
-
-    const shareText = `🎟️ Karcis Trip Ciaaa! 
-${formattedSelections}
-
-Jangan lupa bawa kamera yaa 💕
-Aku janji gak bakal nyanyi kenceng kecuali kamu minta 🎤`;
-    
-    
-    // Coba berbagi File/Foto
-    if (navigator.share) {
-        html2canvas(ticketCard, {
-            scale: 2, 
-            allowTaint: true, 
-            useCORS: true 
-        }).then(canvas => {
-            canvas.toBlob(async (blob) => {
-                const fileName = `Karcis_Trip_Ciaaa_${ticketCard.id.replace('ticket-', '')}.png`;
-                const file = new File([blob], fileName, {type: "image/png"});
+            } catch (error) {
+                console.log('Gagal membagikan file, mencoba fallback download:', error);
+                alert('Gagal membagikan langsung. Silakan tekan tombol "Download Tiket", lalu kirim manual dari galeri.');
                 
-                try {
-                    // Coba berbagi file gambar
-                    await navigator.share({
-                        files: [file], 
-                        title: 'Karcis Trip Ciaaa',
-                        text: shareText, 
-                    });
-                    
-                } catch (error) {
-                    console.error('Sharing file failed, fallback to text/link:', error);
-                    // FALLBACK: Jika berbagi file (foto) gagal, coba berbagi teks saja.
-                    if (error.name === 'AbortError') return; 
-                    
-                    navigator.share({
-                        title: 'Karcis Trip Ciaaa',
-                        text: shareText,
-                    }).catch(err => {
-                        console.error('Fallback text sharing failed:', err);
-                        alert('Berbagi gagal! Silakan tekan "Download" dan kirim foto dari galeri Anda.');
-                    });
-                }
-            }, 'image/png');
-        }).catch(error => {
-            console.error("Gagal membuat gambar untuk share:", error);
-            alert('Gagal membuat gambar untuk dibagikan. Silakan tekan "Download" dan bagikan secara manual.');
-        });
+                // Jika share gagal, panggil tombol download manual
+                downloadCanvas(canvas); 
+            }
+        }, 'image/png');
         
     } else {
-        // Jika navigator.share tidak didukung (misal, di desktop)
-        window.open(`whatsapp://send?text=${encodeURIComponent(shareText)}`);
-        setTimeout(() => {
-             alert('Browser Anda tidak mendukung berbagi foto otomatis. Silakan tekan tombol "Download" untuk mendapatkan foto karcis.');
-        }, 1000);
+        // 3. Fallback: Download manual (Jika tidak support Web Share API File Sharing)
+        alert('Browser Anda tidak mendukung share gambar langsung. Silakan tekan tombol "Download Tiket" dan kirim foto dari galeri/folder download Anda.');
+        downloadCanvas(canvas); 
     }
+    
+    shareBtn.textContent = '📲 Share Karcis (WA/Foto)';
+    shareBtn.disabled = false;
 });
 
 
+// --- FUNGSI DOWNLOAD MANUAL (dipanggil dari downloadBtn atau sebagai fallback share) ---
+
+function downloadCanvas(canvas) {
+    const link = document.createElement('a');
+    link.download = 'karcis-trip-ciaaa.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+}
+
+downloadBtn.addEventListener('click', () => {
+    // Fungsi ini tetap ada untuk opsi download manual yang terpisah
+    if (typeof html2canvas === 'undefined') {
+        alert('Gagal memuat library gambar.');
+        return;
+    }
+
+    downloadBtn.textContent = 'Memproses Gambar... ⏳';
+    downloadBtn.disabled = true;
+    
+    html2canvas(ticketDiv, { 
+        scale: 3, 
+        useCORS: true, 
+    }).then(canvas => {
+        downloadCanvas(canvas);
+    }).catch(error => {
+        console.error('Download Gagal:', error);
+        alert('Gagal membuat gambar karcis. Cek console browser Anda.');
+    }).finally(() => {
+        downloadBtn.textContent = '🖼️ Download Tiket';
+        downloadBtn.disabled = false;
+    });
+});
+
+
+// --- FUNGSI SHARE TEKS (Dibuat terpisah jika Anda ingin mengembalikannya) ---
+// Note: Kode ini dihilangkan karena permintaan Anda adalah share gambar, 
+// tetapi bisa ditambahkan kembali sebagai tombol terpisah jika diperlukan.
+
 // Init
-(async function init() {
-    await fetchData();
-    renderSummary();
-})();
+loadSummary();

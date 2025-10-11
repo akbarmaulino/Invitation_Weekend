@@ -1,13 +1,10 @@
-// js/main.js (Logika utama)
+// js/main.js (Logika utama - Final Version yang disempurnakan)
 
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/+esm';
+import { SUPABASE_CONFIG } from './config.js'; // <-- Import Config
 
 /* ====== Supabase Config ====== */
-// GANTI DENGAN KREDENSIAL ANDA
-const supabaseUrl = "https://rdoywpzkfddvrxrwmvsc.supabase.co"; 
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkb3l3cHprZmRkdnJ4cndtdnNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxMDIyNzUsImV4cCI6MjA3NTY3ODI3NX0.CxlF8rihbLEOSef4ItWelqoCVIgr7JL03uGdpWNKGIU";
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
 
 let currentUser = { id: 'anon' }; 
 
@@ -22,6 +19,13 @@ const ideaSubtype = document.getElementById('ideaSubtype');
 const ideaDay = document.getElementById('ideaDay');
 const ideaTitle = document.getElementById('ideaTitle'); 
 const cancelIdea = document.getElementById('cancelIdea');
+const countdownDisplay = document.getElementById('countdownDisplay'); 
+const secretMessage = document.getElementById('secretMessage'); 
+
+// NEW: Modal Refs
+const imageModal = document.getElementById('imageModal');
+const modalImage = document.getElementById('modalImage');
+const closeBtn = document.querySelector('.close-btn');
 
 // Input KUSTOM dan FOTO
 const newCategoryInput = document.getElementById('newCategoryInput');
@@ -35,6 +39,50 @@ let ideasCache = [];
 
 // --- HELPER FUNCTIONS ---
 
+function getTripDate(dayOfWeek) {
+    const today = new Date();
+    const currentDay = today.getDay(); // 0 = Minggu, 6 = Sabtu
+    const targetDayMap = { 'Minggu': 0, 'Sabtu': 6 };
+    const targetDay = targetDayMap[dayOfWeek];
+
+    let date = new Date(today);
+    let diff = targetDay - currentDay;
+    if (diff < 0) {
+        diff += 7;
+    } else if (diff === 0 && today.getHours() >= 18) {
+        diff = 7;
+    }
+    date.setDate(today.getDate() + diff);
+    return date; 
+}
+
+function startCountdown() {
+    const targetSabtu = getTripDate('Sabtu').getTime();
+    const targetMinggu = getTripDate('Minggu').getTime();
+    const targetTime = Math.min(targetSabtu, targetMinggu);
+    
+    const targetDayName = new Date(targetTime).toLocaleDateString('id-ID', { weekday: 'long' });
+
+    const interval = setInterval(() => {
+        const now = new Date().getTime();
+        const distance = targetTime - now;
+
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        if (distance < 0) {
+            clearInterval(interval);
+            countdownDisplay.textContent = `Trip sudah dimulai! Selamat bersenang-senang! 🎉`;
+            return;
+        }
+
+        countdownDisplay.textContent = `Tinggal ${days} hari, ${hours} jam, ${minutes} menit, ${seconds} detik lagi menuju ${targetDayName}! ❤️`;
+    }, 1000);
+}
+
+
 function getSelectedDays(){
     return Array.from(document.querySelectorAll("input[name='hari']:checked")).map(i=>i.value);
 }
@@ -43,23 +91,53 @@ async function fetchData() {
     const { data: categories, error: catError } = await supabase
         .from('idea_categories')
         .select('*');
-    if (catError) { console.error('Supabase fetch categories error', catError); return; }
-    categoriesCache = categories;
+    if (catError) { console.error('Supabase fetch categories error', catError); }
+    categoriesCache = categories || [];
 
     const { data: ideas, error: ideaError } = await supabase
         .from('trip_ideas_v2') 
         .select('*')
         .order('created_at', { ascending: false });
-    if (ideaError) { console.error('Supabase fetch ideas error', ideaError); return; }
-    ideasCache = ideas;
+    if (ideaError) { console.error('Supabase fetch ideas error', ideaError); }
+    ideasCache = ideas || [];
 }
+
+/**
+ * FIX V3: Helper untuk penanganan path gambar (Lokal vs Supabase)
+ * Memastikan foto lokal muncul kembali.
+ */
+function getPublicImageUrl(photoUrl) {
+    if (!photoUrl) return 'images/placeholder.jpg';
+    
+    // 1. Cek apakah ini sudah URL publik penuh (http/https)
+    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
+        return photoUrl; 
+    }
+
+    // 2. Jika path adalah folder lokal ('images/'), kembalikan langsung.
+    if (photoUrl.startsWith('images/')) {
+        return photoUrl;
+    }
+    
+    // 3. Jika tidak, asumsikan itu path Supabase Storage.
+    try {
+        const { data } = supabase.storage
+            .from('trip-ideas-images') 
+            .getPublicUrl(photoUrl);
+        
+        return data.publicUrl;
+    } catch (e) {
+        console.error('FAILED to convert path to public URL (Supabase issue likely):', photoUrl, e);
+        return photoUrl; 
+    }
+}
+
 
 async function uploadImage(file){
     if (!file) return null;
     const uid = currentUser.id || 'anon';
     const path = `${uid}/${Date.now()}_${file.name}`;
     
-    // Pastikan RLS Storage di bucket 'trip-ideas-images' mengizinkan INSERT untuk peran 'anon'
     const { error } = await supabase.storage
       .from('trip-ideas-images') 
       .upload(path, file);
@@ -74,6 +152,7 @@ async function uploadImage(file){
       .from('trip-ideas-images')
       .getPublicUrl(path);
 
+    // Supabase returns the path, but we need the full URL
     return publicUrlData.publicUrl;
 }
 
@@ -108,7 +187,7 @@ function populateIdeaCategorySelect(){
         opt.textContent = cat;
         ideaCategory.appendChild(opt);
     });
-    populateIdeaSubtypeSelect(uniqueCategories[0]);
+    populateIdeaSubtypeSelect(uniqueCategories[0]); 
     const custom = document.createElement('option');
     custom.value = 'custom';
     custom.textContent = 'Tambah kategori baru...';
@@ -141,13 +220,74 @@ function populateIdeaSubtypeSelect(selectedCategory){
 }
 
 
-// --- RENDER FUNCTION (DENGAN COLLAPSIBLE) ---
+// --- Image Modal Handlers ---
 
-async function renderCategoriesForDay(day){
-    if (categoriesCache.length === 0) { await fetchData(); }
+function setupImageClickHandlers() {
+    document.querySelectorAll('#activityArea img').forEach(img => {
+        img.removeEventListener('click', openModalWithImage);
+        img.addEventListener('click', openModalWithImage);
+        img.style.cursor = 'pointer'; 
+    });
+}
 
+function openModalWithImage(event) {
+    const imgSrc = event.target.src;
+    modalImage.src = imgSrc;
+    imageModal.style.display = 'block';
+}
+
+if (closeBtn) {
+    closeBtn.onclick = function() {
+        imageModal.style.display = "none";
+    }
+}
+
+window.onclick = function(event) {
+    if (event.target == imageModal) {
+        imageModal.style.display = "none";
+    }
+}
+
+// --- AUTO COLLAPSE LOGIC (PERBAIKAN #3) ---
+
+/**
+ * Logika: Saat satu details dibuka, tutup details lain dalam kategori yang sama.
+ */
+function setupDetailsCollapse() {
+    // Targetkan semua elemen <details> yang punya class subtype-details
+    document.querySelectorAll('.subtype-details').forEach(details => {
+        // Hilangkan listener lama sebelum menambahkan yang baru untuk menghindari duplikasi
+        details.removeEventListener('toggle', handleDetailsToggle); 
+        details.addEventListener('toggle', handleDetailsToggle);
+    });
+}
+
+function handleDetailsToggle(event) {
+    const details = event.target;
+    // Hanya jalankan jika details dibuka
+    if (details.open) {
+        // Cari wrapper kategori terdekat (parent dari details)
+        const categoryCard = details.closest('.category-card');
+        
+        // Cari semua details di dalam kategori yang sama
+        categoryCard.querySelectorAll('.subtype-details').forEach(otherDetails => {
+            // Jika details lain terbuka dan bukan details yang sedang diklik
+            if (otherDetails !== details && otherDetails.open) {
+                otherDetails.open = false; // Tutup details lain
+            }
+        });
+    }
+}
+
+
+// --- RENDER FUNCTION (FILTRASI BERDASARKAN HARI) ---
+
+function renderCategoriesForDay(day){
+    
     activityArea.innerHTML = '';
     
+    const savedSelections = JSON.parse(localStorage.getItem('savedSelections') || '{}');
+
     const groupedCategories = categoriesCache.reduce((acc, current) => {
         const key = current.category;
         if (!acc[key]) { acc[key] = { category: key, subtypes: [] }; }
@@ -173,45 +313,40 @@ async function renderCategoriesForDay(day){
         catGroup.subtypes.forEach(subtype => {
             const ideasList = ideasBySubtype[subtype.type_key] || [];
             
-            // Tentukan apakah subtype ini memiliki konten
-            const hasContent = ideasList.length > 0 || subtype.photo_url;
+            const isLevel2DayMatch = !day || subtype.day_of_week === day || subtype.day_of_week === '' || !subtype.day_of_week;
+            const hasContent = ideasList.length > 0 || (subtype.photo_url && isLevel2DayMatch);
 
             if (hasContent) {
-                // Gunakan <details> untuk efek collapse
                 const details = document.createElement('details');
                 details.className = 'subtype-details';
-
-                // Buka jika kontennya sedikit (1 atau 2 item)
-                const shouldBeOpen = ideasList.length + (subtype.photo_url ? 1 : 0) <= 2;
-                if (shouldBeOpen) {
-                    details.setAttribute('open', '');
-                }
-
-                // LEVEL 2 SUMMARY (JUDUL)
+                details.setAttribute('open', ''); // Tetap terbuka secara default
+                
                 const summary = document.createElement('summary');
                 summary.textContent = subtype.subtype;
                 details.appendChild(summary);
 
-                // LEVEL 3 WRAPPER
                 const optionsWrap = document.createElement('div');
                 optionsWrap.className = 'options-wrap';
                 optionsWrap.dataset.typeKey = subtype.type_key;
                 
-                // Opsi Level 2 (jika ada foto)
-                if (subtype.photo_url) {
+                // Opsi Level 2 (jika ada foto di tabel idea_categories)
+                if (subtype.photo_url && isLevel2DayMatch) {
                     const div = document.createElement('div');
                     div.className = 'option-item';
-                    div.datasetSource = 'subtype'; 
+                    const itemId = `cat-${subtype.type_key}`; 
+                    const isChecked = savedSelections[itemId] === true; 
+
                     div.innerHTML = `
                         <label>
                             <input type="checkbox" 
                                 data-cat="${catGroup.category}" 
                                 data-subtype="${subtype.subtype}" 
                                 data-name="${subtype.subtype}" 
-                                data-ideaid="cat-${subtype.type_key}">
-                            <img src="${subtype.photo_url}" alt="${subtype.subtype}">
+                                data-ideaid="${itemId}"
+                                ${isChecked ? 'checked' : ''}>
+                            <img src="${getPublicImageUrl(subtype.photo_url)}" alt="${subtype.subtype}">
                             <span style="display:block; font-weight:bold;">${subtype.subtype}</span>
-                            <small style="display:block; color: #bcd8ff; opacity:0.9">(Pilih Sub-tipe)</small>
+                            <small style="display:block; color: var(--muted); opacity:0.9">(Pilih Sub-tipe)</small>
                         </label>
                     `;
                     optionsWrap.appendChild(div);
@@ -221,17 +356,20 @@ async function renderCategoriesForDay(day){
                 ideasList.forEach(item => {
                     const div = document.createElement('div');
                     div.className = 'option-item';
-                    div.datasetSource = 'idea';
+                    const itemId = item.id;
+                    const isChecked = savedSelections[itemId] === true; 
+                    
                     div.innerHTML = `
                         <label>
                             <input type="checkbox" 
                                 data-cat="${catGroup.category}" 
                                 data-subtype="${subtype.subtype}" 
                                 data-name="${item.idea_name}" 
-                                data-ideaid="${item.id}">
-                            <img src="${item.photo_url || 'images/placeholder.jpg'}" alt="${item.idea_name}">
+                                data-ideaid="${itemId}"
+                                ${isChecked ? 'checked' : ''}>
+                            <img src="${getPublicImageUrl(item.photo_url)}" alt="${item.idea_name}">
                             <span style="display:block; font-weight:bold;">${item.idea_name}</span>
-                            <small style="display:block; color: #bcd8ff; opacity:0.9">(${subtype.subtype})</small>
+                            <small style="display:block; color: var(--muted); opacity:0.9">(${subtype.subtype})</small>
                         </label>
                     `;
                     optionsWrap.appendChild(div);
@@ -247,11 +385,48 @@ async function renderCategoriesForDay(day){
         }
     });
 
+    document.querySelectorAll('#activityArea input[type="checkbox"]').forEach(chk => {
+        chk.addEventListener('change', saveProgress);
+    });
+
+    // Panggil handler untuk gambar
+    setupImageClickHandlers(); 
+    
+    // Panggil fungsi auto-collapse (FIX #3)
+    setupDetailsCollapse();
+
     populateIdeaCategorySelect();
 }
 
+// --- SAVE PROGRESS ---
+function saveProgress() {
+    const selections = {};
+    document.querySelectorAll('#activityArea input[type="checkbox"]').forEach(chk => {
+        if (chk.checked) {
+            selections[chk.dataset.ideaid] = true;
+        }
+    });
+    localStorage.setItem('savedSelections', JSON.stringify(selections));
 
-// --- EVENT LISTENERS (Open/Close Modal & Change Dropdowns) ---
+    localStorage.setItem('secretMessage', secretMessage.value);
+}
+
+function loadInitialState() {
+    secretMessage.value = localStorage.getItem('secretMessage') || '';
+    secretMessage.addEventListener('input', saveProgress);
+    
+    const tripDays = JSON.parse(localStorage.getItem('tripDays') || '[]');
+    document.querySelectorAll("input[name='hari']").forEach(chk => {
+        if (tripDays.includes(chk.value)) {
+             chk.checked = true;
+        }
+    });
+
+    const currentDays = getSelectedDays();
+    renderCategoriesForDay(currentDays[0] || '');
+}
+
+// --- EVENT LISTENERS ---
 
 ideaCategory.addEventListener('change', (e) => {
     populateIdeaSubtypeSelect(e.target.value);
@@ -285,7 +460,6 @@ ideaForm.addEventListener('submit', async (e) => {
     const day = ideaDay.value; 
     const file = ideaImageInput.files[0]; 
 
-    // Validasi: Jika Level 3 kosong, harus ada kategori/sub-tipe baru atau foto untuk sub-tipe lama
     if (!title && cat !== 'custom' && subtypeVal !== 'custom-new' && !file) {
          alert('Jika Nama Ide kosong, Anda harus membuat Kategori/Sub-tipe baru ATAU menambahkan foto untuk Sub-tipe yang sudah ada.');
          return;
@@ -295,7 +469,6 @@ ideaForm.addEventListener('submit', async (e) => {
     let imageUrl = file ? await uploadImage(file) : null;
     let isNewCombo = false;
 
-    // LOGIKA HANDLING KUSTOM (Level 1 & 2)
     if (cat === 'custom' || subtypeVal === 'custom-new') {
         const newCategoryName = cat === 'custom' ? newCategoryInput.value.trim() : cat;
         const newSubtypeName = subtypeVal === 'custom-new' ? newSubtypeInput.value.trim() : categoriesCache.find(c => c.type_key === subtypeVal)?.subtype;
@@ -307,7 +480,6 @@ ideaForm.addEventListener('submit', async (e) => {
         isNewCombo = !categoriesCache.some(c => c.type_key === finalTypeKey);
 
         if (isNewCombo) {
-            // INSERT BARU (Level 1 & 2)
             const { error: catInsertError } = await supabase
                 .from('idea_categories')
                 .insert({ 
@@ -315,7 +487,8 @@ ideaForm.addEventListener('submit', async (e) => {
                     subtype: newSubtypeName, 
                     icon: '🆕', 
                     type_key: finalTypeKey,
-                    photo_url: imageUrl 
+                    photo_url: imageUrl,
+                    day_of_week: day || ""
                 });
             if (catInsertError) {
                  console.error('Gagal insert kategori kustom:', catInsertError);
@@ -326,9 +499,8 @@ ideaForm.addEventListener('submit', async (e) => {
         } 
     } 
     
-    // UPDATE FOTO LEVEL 2 (Jika Kategori Lama & Level 3 Kosong & Ada Foto)
     else if (!isNewCombo && imageUrl && !title) {
-        // Logika ini hanya berjalan jika tidak ada Level 3 (title)
+        // Ini adalah update foto Level 2
         const { error: catUpdateError } = await supabase
             .from('idea_categories')
             .update({ photo_url: imageUrl })
@@ -342,9 +514,8 @@ ideaForm.addEventListener('submit', async (e) => {
         await fetchData(); 
     }
 
-
-    // INSERT IDEAS (Level 3) HANYA JIKA NAMA IDE (TITLE) DIISI
     if (title) {
+        // Ini adalah insert ide Level 3
         const doc = {
             idea_name: title,
             type_key: finalTypeKey, 
@@ -377,7 +548,6 @@ ideaForm.addEventListener('submit', async (e) => {
     renderCategoriesForDay(days[0] || '');
 });
 
-
 // Generate ticket
 generateBtn.addEventListener('click', () => {
     const days = getSelectedDays();
@@ -395,17 +565,24 @@ generateBtn.addEventListener('click', () => {
 
     localStorage.setItem('tripDays', JSON.stringify(days));
     localStorage.setItem('tripSelections', JSON.stringify(checked));
+    localStorage.setItem('secretMessage', secretMessage.value);
+
     window.location.href = 'summary.html';
 });
+
 
 // Init
 (async function init(){
     await fetchData(); 
+    
     document.querySelectorAll("input[name='hari']").forEach(chk => {
         chk.addEventListener('change', () => {
             const days = getSelectedDays();
+            localStorage.setItem('tripDays', JSON.stringify(days)); 
             renderCategoriesForDay(days[0] || '');
         });
     });
-    renderCategoriesForDay('');
+    
+    loadInitialState();
+    startCountdown();
 })();
