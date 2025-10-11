@@ -1,61 +1,104 @@
-/* css/summary.css */
+/*==================================================
+  GLOBAL PALETTE & BASE STYLES
+==================================================*/
 
 :root {
-    --bg-dark: #1e1e2d;
-    --bg-medium: #2a2a3f;
-    --text-light: #f0f0f5;
-    --primary-color: #5d5dff; /* Biru/Ungu Cerah */
-    --secondary-color: #4a4a5f; /* Abu-abu gelap */
-    --muted: #a0a0b5;
-    --error-color: #ff6b6b;
-    --success-color: #48cfad;
+    /* Color Palette (Biru Dingin/Profesional) - TEMA TERANG KONSISTEN */
+    --color-primary: #03254C; /* Biru Gelap/Ungu - Primary Text & Accent */
+    --color-secondary: #C4E8FF; /* Biru Muda - Secondary Background/Border */
+    --color-background-light: #d0efff; /* Latar Belakang Utama (Biru Pastel) */
+    --color-background-medium: #E1F3FF; /* Latar Belakang Card/Modal (Biru Terang) */
+    --color-text-dark: #03254C; /* Warna Teks Utama (Sama dengan Primary) */
+    --color-muted: #a0a0b5; /* Warna Muted/Placeholder */
+
+    /* Status Colors */
+    --color-error: #ff6b6b; /* Merah untuk Error / Catatan Rahasia */
+    --color-success: #03254C; /* Menggunakan Primary Color untuk Success/Selected */
+    
+    /* Warna Khusus */
+    --color-text-light: #FFFFFF; /* Teks Putih untuk tombol gelap */
+    --ticket-separator-color: #5b7999; /* Biru sedang untuk garis pemisah tiket */
 }
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: var(--bg-dark);
-    color: var(--text-light);
+    background-color: var(--color-background-light);
+    color: var(--color-text-dark);
     margin: 0;
-    padding: 20px;
+    padding: 0;
     line-height: 1.6;
+    min-height: 100vh;
 }
 
-.container {
-    max-width: 700px;
+header {
+    background-color: var(--color-background-medium);
+    padding: 20px;
+    text-align: center;
+    border-bottom: 3px solid var(--color-primary);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+main {
+    padding: 20px;
+    max-width: 900px;
     margin: 0 auto;
-    padding: 20px 0;
 }
 
-/* --- Controls & Buttons --- */
+h1, h2, h3 {
+    color: var(--color-text-dark);
+    margin-top: 0;
+}
+
+/*==================================================
+  CONTROLS, BUTTONS & FORM ELEMENTS
+==================================================*/
+
 .controls {
     display: flex;
     justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 30px;
+    gap: 15px; /* Jarak antar tombol dikurangi sedikit */
+    margin-bottom: 30px; 
+    padding: 10px 0;
+    /* PENTING: Memastikan controls menempati lebar penuh di dalam main */
+    width: 100%; 
+    box-sizing: border-box; 
 }
 
 .btn {
-    padding: 10px 15px;
+    /* Properti umum tombol */
     border: none;
     border-radius: 8px;
     cursor: pointer;
     font-size: 1em;
     font-weight: bold;
-    transition: background-color 0.2s, transform 0.1s;
+    transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); 
+    
+    /* PENTING FIX: Menggunakan flex-basis 0 dan flex-grow 1 */
+    flex-grow: 1; /* Tumbuh untuk mengisi ruang yang tersedia */
+    flex-basis: 0; /* Memberi titik awal yang sama untuk perhitungan lebar */
+    text-align: center; 
 }
 
 .btn.primary {
-    background-color: var(--primary-color);
-    color: var(--text-light);
+    background-color: var(--color-secondary);
+    color: rgba(0, 0, 0, 0.7); 
+    box-shadow: 0 4px 6px rgba(3, 37, 76, 0.3); 
 }
 
 .btn.secondary {
-    background-color: var(--secondary-color);
-    color: var(--text-light);
+    background-color: var(--color-secondary);
+    color: rgba(0, 0, 0, 0.7);
 }
 
 .btn:hover {
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn.primary:hover {
+    background-color: #7282a5; 
+    box-shadow: 0 6px 10px rgba(3, 37, 76, 0.4);
 }
 
 .btn.full-width {
@@ -65,23 +108,264 @@ body {
     font-size: 1.2em;
 }
 
-/* --- TICKET STYLING (The main Karcis) --- */
+/* --- Secret Note Textarea --- */
+.secret-note {
+    margin: 30px 0;
+    padding: 20px;
+    background-color: var(--color-background-medium);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.secret-note textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 10px;
+    border: 1px solid var(--color-muted);
+    border-radius: 6px;
+    background-color: var(--color-background-light);
+    color: var(--color-text-dark);
+    box-sizing: border-box;
+    resize: vertical;
+    transition: border-color 0.2s;
+}
+
+.secret-note textarea:focus {
+    border-color: var(--color-primary);
+    outline: none;
+}
+
+
+/*==================================================
+  FILTER DAYS (Checkbox Look)
+==================================================*/
+
+.filter-days {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.filter-days label {
+    background-color: var(--color-secondary);
+    padding: 8px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s, color 0.2s;
+    border: 1px solid var(--color-secondary); 
+    color: var(--color-text-dark);
+    font-weight: normal;
+}
+
+.filter-days input[type="checkbox"] {
+    display: none;
+}
+
+.filter-days input[type="checkbox"]:checked + label {
+    background-color: var(--color-primary);
+    border: 2px solid var(--color-text-dark); 
+    box-shadow: 0 4px 8px rgba(3, 37, 76, 0.4); 
+    font-weight: bold;
+    color: var(--color-background-light); 
+}
+
+.filter-days label:hover {
+    background-color: var(--color-muted); 
+    opacity: 0.8;
+}
+
+
+/*==================================================
+  ACTIVITY GRID & CARDS
+==================================================*/
+
+.activity-grid {
+    display: flex;
+    flex-direction: column; 
+    gap: 25px;
+    padding: 20px 0;
+}
+
+.category-card {
+    background-color: var(--color-background-medium);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+}
+
+.category-card h3 {
+    border-bottom: 2px solid var(--color-primary);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.subtypes-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.subtype-details summary {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: var(--color-primary);
+    cursor: pointer;
+    padding: 8px 0; 
+    list-style: none; 
+    position: relative;
+    padding-left: 20px; 
+    border-bottom: 1px solid var(--color-secondary);
+    margin-bottom: 5px;
+}
+
+.subtype-details summary::before {
+    content: '▶ ';
+    color: var(--color-primary);
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%) rotate(0deg);
+    transition: transform 0.2s;
+    font-size: 0.8em;
+}
+
+.subtype-details[open] summary::before {
+    transform: translateY(-50%) rotate(90deg);
+}
+
+.options-wrap {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); 
+    gap: 15px;
+    padding: 10px 0;
+}
+
+.option-item {
+    border: 2px solid var(--color-secondary);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background-color: var(--color-background-light);
+}
+
+.option-item:has(input:checked) {
+    border-color: var(--color-success); 
+    box-shadow: 0 0 10px rgba(3, 37, 76, 0.5); 
+}
+
+.option-item label {
+    display: block;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.option-item input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.option-item img {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    display: block;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    transition: transform 0.3s;
+}
+
+.option-item:hover img {
+    transform: scale(1.05);
+}
+
+
+/*==================================================
+  MODAL UTAMA & MODAL ALERT (Light Theme)
+==================================================*/
+
+.modal {
+    position: fixed;
+    z-index: 500; 
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(5px);
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content-light {
+    background-color: var(--color-background-medium);
+    padding: 30px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    color: var(--color-text-dark);
+}
+
+.modal-content-light h2 {
+    border-bottom: 2px solid var(--color-primary);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+
+/*==================================================
+  TICKET SUMMARY MODAL (Light Theme KONSISTEN)
+==================================================*/
+
+/* TICKET STYLING */
 .ticket {
     display: flex;
-    background-color: var(--bg-medium);
+    background-color: var(--color-background-light); 
     border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     position: relative;
     overflow: hidden;
-    color: var(--text-light);
+    
+    /* FIX UKURAN: Menambah lebar maksimum tiket */
+    width: 100%; 
+    max-width: 950px; /* <--- Diperbesar dari 700px menjadi 950px */
+    height: auto; /* Memastikan tinggi menyesuaikan konten */
+    
+    color: var(--color-text-dark); 
+    animation-name: zoom;
+    animation-duration: 0.3s;
+    border: 1px solid var(--color-primary); 
+}
+
+@keyframes zoom {
+    from {transform:scale(0.8)} 
+    to {transform:scale(1)}
 }
 
 /* Kiri: Info Utama */
 .ticket-left {
-    flex: 0 0 45%; 
+    flex: 0 0 35%; /* <--- FIX RASIO: Mengurangi persentase lebar bagian kiri */
     padding: 30px 20px;
     text-align: center;
-    background-color: #2e2e4a; /* Warna sedikit berbeda untuk sisi kiri */
+    background-color: var(--color-background-medium); 
     position: relative;
     z-index: 10;
 }
@@ -89,14 +373,15 @@ body {
 .pass-title {
     display: block;
     font-size: 0.8em;
-    color: var(--muted);
+    color: var(--color-muted);
     letter-spacing: 2px;
     margin-bottom: 10px;
+    text-transform: uppercase;
 }
 
 .title-main {
     font-size: 1.8em;
-    color: var(--primary-color);
+    color: var(--color-primary); 
     margin-bottom: 40px;
 }
 
@@ -106,7 +391,7 @@ body {
 
 .info-label {
     font-size: 0.8em;
-    color: var(--muted);
+    color: var(--color-muted);
     margin-bottom: 5px;
     font-weight: bold;
 }
@@ -121,12 +406,12 @@ body {
 .ticket-right {
     flex: 1; 
     padding: 30px 20px;
-    background-color: var(--bg-medium);
+    background-color: var(--color-background-light); 
 }
 
 .right-title {
-    color: var(--primary-color);
-    border-bottom: 1px solid var(--secondary-color);
+    color: var(--color-primary);
+    border-bottom: 1px solid var(--color-secondary);
     padding-bottom: 10px;
     margin-top: 0;
     margin-bottom: 15px;
@@ -141,7 +426,7 @@ body {
 }
 
 .selection-list li {
-    border-bottom: 1px dashed var(--secondary-color);
+    border-bottom: 1px dashed var(--ticket-separator-color);
     padding-bottom: 5px;
     margin-bottom: 5px;
 }
@@ -152,7 +437,7 @@ body {
 
 .secret-message {
     font-style: italic;
-    color: #ff85a2; /* Warna pink manis */
+    color: rgba(0, 0, 0, 0.7); 
     text-align: right;
     margin-top: 25px;
     font-size: 0.95em;
@@ -166,7 +451,7 @@ body {
     left: 45%;
     width: 2px;
     height: 100%;
-    background: repeating-linear-gradient(to bottom, var(--bg-dark), var(--bg-dark) 5px, transparent 5px, transparent 10px);
+    background: repeating-linear-gradient(to bottom, var(--color-background-light), var(--color-background-light) 5px, transparent 5px, transparent 10px);
     z-index: 20;
     transform: translateX(-1px);
 }
@@ -176,12 +461,11 @@ body {
     position: absolute;
     width: 20px;
     height: 20px;
-    background-color: var(--bg-dark);
+    background-color: var(--color-background-light); 
     border-radius: 50%;
     z-index: 25;
 }
 
-/* Setengah lingkaran di ujung garis perforasi */
 .perforation::before {
     top: -10px;
     left: 50%;
@@ -194,24 +478,35 @@ body {
     transform: translateX(-50%);
 }
 
+/*==================================================
+  RESPONSIVE DESIGN (Summary Modal)
+==================================================*/
+
 @media (max-width: 550px) {
     .ticket {
         flex-direction: column;
         text-align: center;
+        max-width: 95%;
     }
     .ticket-left, .ticket-right {
         flex: 1;
         padding: 20px;
     }
+    
     .perforation {
         width: 100%;
         height: 2px;
         top: auto;
-        bottom: 55%; 
+        bottom: 50%; 
         left: 0;
-        background: repeating-linear-gradient(to right, var(--bg-dark), var(--bg-dark) 5px, transparent 5px, transparent 10px);
+        background: repeating-linear-gradient(to right, var(--color-background-light), var(--color-background-light) 5px, transparent 5px, transparent 10px);
     }
+    
     .perforation::before, .perforation::after {
         display: none;
+    }
+
+    .title-main {
+        margin-bottom: 20px;
     }
 }

@@ -452,14 +452,19 @@ cancelIdea.addEventListener('click', () => {
 
 // --- SUBMIT FORM ---
 
+// js/main.js (BAGIAN FUNGSI SUBMIT FORM YANG DIPERBAIKI)
+
+// js/main.js (FUNGSI SUBMIT DENGAN PERBAIKAN SKEMA)
+
 ideaForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const cat = ideaCategory.value;
     const subtypeVal = ideaSubtype.value;
     const title = ideaTitle.value.trim();
-    const day = ideaDay.value; 
+    const day = ideaDay.value; // Nilai hari dari form
     const file = ideaImageInput.files[0]; 
 
+    // Validasi dasar
     if (!title && cat !== 'custom' && subtypeVal !== 'custom-new' && !file) {
          alert('Jika Nama Ide kosong, Anda harus membuat Kategori/Sub-tipe baru ATAU menambahkan foto untuk Sub-tipe yang sudah ada.');
          return;
@@ -469,38 +474,60 @@ ideaForm.addEventListener('submit', async (e) => {
     let imageUrl = file ? await uploadImage(file) : null;
     let isNewCombo = false;
 
-    if (cat === 'custom' || subtypeVal === 'custom-new') {
-        const newCategoryName = cat === 'custom' ? newCategoryInput.value.trim() : cat;
-        const newSubtypeName = subtypeVal === 'custom-new' ? newSubtypeInput.value.trim() : categoriesCache.find(c => c.type_key === subtypeVal)?.subtype;
+    // --- LOGIKA PENENTUAN NAMA KATEGORI & SUB-TIPE BARU ---
+    
+    let finalCategoryName;
+    if (cat === 'custom') {
+        finalCategoryName = newCategoryInput.value.trim();
+        if (!finalCategoryName) { alert('Nama kategori baru tidak boleh kosong.'); return; }
+    } else {
+        finalCategoryName = ideaCategory.options[ideaCategory.selectedIndex].text;
+    }
 
-        if (cat === 'custom' && !newCategoryName) { alert('Nama kategori baru tidak boleh kosong.'); return; }
-        if (subtypeVal === 'custom-new' && !newSubtypeName) { alert('Nama sub-tipe baru tidak boleh kosong.'); return; }
-        
-        finalTypeKey = `${newCategoryName.toLowerCase().replace(/\s/g, '-')}-${newSubtypeName.toLowerCase().replace(/\s/g, '-')}`;
+    let finalSubtypeName;
+    if (subtypeVal === 'custom-new') {
+        finalSubtypeName = newSubtypeInput.value.trim();
+        if (!finalSubtypeName) { alert('Nama sub-tipe baru tidak boleh kosong.'); return; }
+    } else {
+        finalSubtypeName = ideaSubtype.options[ideaSubtype.selectedIndex].text;
+    }
+
+    // --- LOGIKA INSERT / UPDATE ---
+
+    if (cat === 'custom' || subtypeVal === 'custom-new') {
+        // Generate type_key untuk combo yang mungkin baru
+        finalTypeKey = `${finalCategoryName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${finalSubtypeName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+        finalTypeKey = finalTypeKey.replace(/--+/g, '-').replace(/^-|-$/g, ''); 
+
+        // Cek apakah kombinasi Kategori dan Sub-tipe ini benar-benar baru di database
         isNewCombo = !categoriesCache.some(c => c.type_key === finalTypeKey);
 
         if (isNewCombo) {
+            console.log('Inserting NEW Category/Subtype combo (idea_categories).');
+
             const { error: catInsertError } = await supabase
                 .from('idea_categories')
                 .insert({ 
-                    category: newCategoryName, 
-                    subtype: newSubtypeName, 
+                    category: finalCategoryName, 
+                    subtype: finalSubtypeName, 
                     icon: '🆕', 
                     type_key: finalTypeKey,
                     photo_url: imageUrl,
-                    day_of_week: day || ""
+                    // HAPUS ATAU JANGAN SERTAKAN day_of_week DI SINI! (FIX ERROR)
                 });
+
             if (catInsertError) {
-                 console.error('Gagal insert kategori kustom:', catInsertError);
-                 alert('Gagal menyimpan kategori baru. **Pastikan RLS di idea_categories mengizinkan INSERT untuk peran anon!**');
+                 console.error('Gagal insert kategori kustom (idea_categories):', catInsertError);
+                 alert(`Gagal menyimpan kategori baru. Error Supabase: ${catInsertError.message}. Cek Console!`);
                  return;
             }
             await fetchData(); 
         } 
     } 
     
-    else if (!isNewCombo && imageUrl && !title) {
-        // Ini adalah update foto Level 2
+    else if (imageUrl && !title) {
+        // Ini adalah update foto Level 2 untuk sub-tipe yang sudah ada
+        console.log('Updating photo for existing subtype (idea_categories).');
         const { error: catUpdateError } = await supabase
             .from('idea_categories')
             .update({ photo_url: imageUrl })
@@ -515,23 +542,24 @@ ideaForm.addEventListener('submit', async (e) => {
     }
 
     if (title) {
-        // Ini adalah insert ide Level 3
+        // Ini adalah insert ide Level 3 (trip_ideas_v2)
         const doc = {
             idea_name: title,
             type_key: finalTypeKey, 
-            day_of_week: day || "",
+            day_of_week: day || "", // day_of_week HANYA ADA DI SINI
             photo_url: imageUrl, 
         };
         
         try {
+            console.log('Inserting new idea Level 3 (trip_ideas_v2).', doc);
             const { error } = await supabase
               .from('trip_ideas_v2') 
               .insert([doc]);
 
             if (error) throw error;
         } catch (err) {
-            console.error(err);
-            alert('Gagal menyimpan ide Level 3. **Pastikan RLS di trip_ideas_v2 mengizinkan INSERT untuk peran anon!**');
+            console.error('Gagal insert ide Level 3:', err);
+            alert(`Gagal menyimpan ide Level 3. Error Supabase: ${err.message}.`);
             return;
         }
     }
@@ -540,13 +568,14 @@ ideaForm.addEventListener('submit', async (e) => {
     modal.classList.add('hidden');
     ideaForm.reset();
     
-    newCategoryInput.style.display = 'none'; 
-    newSubtypeInput.style.display = 'none';
+    // ... (reset input display) ...
 
     await fetchData();
     const days = getSelectedDays();
     renderCategoriesForDay(days[0] || '');
 });
+
+// ... (kode selanjutnya) ...
 
 // Generate ticket
 generateBtn.addEventListener('click', () => {
