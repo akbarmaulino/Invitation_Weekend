@@ -1,4 +1,4 @@
-// js/main.js (Logika utama - Final Version yang disempurnakan)
+// js/main.js (Logika utama - Setelah dipisah ke history.js)
 
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/+esm';
 import { SUPABASE_CONFIG } from './config.js'; // <-- Import Config
@@ -8,7 +8,7 @@ const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
 
 let currentUser = { id: 'anon' }; 
 
-// UI refs
+// UI refs (Hanya yang terkait fungsi utama)
 const activityArea = document.getElementById('activityArea');
 const generateBtn = document.getElementById('generateBtn');
 const addIdeaBtn = document.getElementById('addIdeaBtn');
@@ -21,8 +21,10 @@ const ideaTitle = document.getElementById('ideaTitle');
 const cancelIdea = document.getElementById('cancelIdea');
 const countdownDisplay = document.getElementById('countdownDisplay'); 
 const secretMessage = document.getElementById('secretMessage'); 
+const activityCount = document.getElementById('activityCount');
+const countDisplay = document.getElementById('countDisplay');
 
-// NEW: Modal Refs
+// Modal Refs untuk Image Zoom (DIUTAMAKAN UNTUK MAIN.JS AGAR BISA ZOOM FOTO DI ACTIVITY AREA)
 const imageModal = document.getElementById('imageModal');
 const modalImage = document.getElementById('modalImage');
 const closeBtn = document.querySelector('.close-btn');
@@ -36,8 +38,9 @@ const ideaImageInput = document.getElementById('ideaImageInput');
 let categoriesCache = [];
 let ideasCache = [];
 
-
-// --- HELPER FUNCTIONS ---
+// =================================================================
+// START: HELPER FUNCTIONS
+// =================================================================
 
 function getTripDate(dayOfWeek) {
     const today = new Date();
@@ -103,31 +106,28 @@ async function fetchData() {
 }
 
 /**
- * FIX V3: Helper untuk penanganan path gambar (Lokal vs Supabase)
- * Memastikan foto lokal muncul kembali.
+ * Helper untuk penanganan path gambar (Lokal vs Supabase)
  */
 function getPublicImageUrl(photoUrl) {
     if (!photoUrl) return 'images/placeholder.jpg';
     
-    // 1. Cek apakah ini sudah URL publik penuh (http/https)
     if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
         return photoUrl; 
     }
 
-    // 2. Jika path adalah folder lokal ('images/'), kembalikan langsung.
     if (photoUrl.startsWith('images/')) {
         return photoUrl;
     }
     
-    // 3. Jika tidak, asumsikan itu path Supabase Storage.
     try {
+        // Asumsi bucket 'trip-ideas-images' untuk ide trip
         const { data } = supabase.storage
             .from('trip-ideas-images') 
             .getPublicUrl(photoUrl);
         
         return data.publicUrl;
     } catch (e) {
-        console.error('FAILED to convert path to public URL (Supabase issue likely):', photoUrl, e);
+        console.error('FAILED to convert path to public URL:', photoUrl, e);
         return photoUrl; 
     }
 }
@@ -152,7 +152,6 @@ async function uploadImage(file){
       .from('trip-ideas-images')
       .getPublicUrl(path);
 
-    // Supabase returns the path, but we need the full URL
     return publicUrlData.publicUrl;
 }
 
@@ -248,15 +247,10 @@ window.onclick = function(event) {
     }
 }
 
-// --- AUTO COLLAPSE LOGIC (PERBAIKAN #3) ---
+// --- AUTO COLLAPSE LOGIC ---
 
-/**
- * Logika: Saat satu details dibuka, tutup details lain dalam kategori yang sama.
- */
 function setupDetailsCollapse() {
-    // Targetkan semua elemen <details> yang punya class subtype-details
     document.querySelectorAll('.subtype-details').forEach(details => {
-        // Hilangkan listener lama sebelum menambahkan yang baru untuk menghindari duplikasi
         details.removeEventListener('toggle', handleDetailsToggle); 
         details.addEventListener('toggle', handleDetailsToggle);
     });
@@ -264,16 +258,12 @@ function setupDetailsCollapse() {
 
 function handleDetailsToggle(event) {
     const details = event.target;
-    // Hanya jalankan jika details dibuka
     if (details.open) {
-        // Cari wrapper kategori terdekat (parent dari details)
         const categoryCard = details.closest('.category-card');
         
-        // Cari semua details di dalam kategori yang sama
         categoryCard.querySelectorAll('.subtype-details').forEach(otherDetails => {
-            // Jika details lain terbuka dan bukan details yang sedang diklik
             if (otherDetails !== details && otherDetails.open) {
-                otherDetails.open = false; // Tutup details lain
+                otherDetails.open = false; 
             }
         });
     }
@@ -319,7 +309,7 @@ function renderCategoriesForDay(day){
             if (hasContent) {
                 const details = document.createElement('details');
                 details.className = 'subtype-details';
-                details.setAttribute('open', ''); // Tetap terbuka secara default
+                details.setAttribute('open', ''); 
                 
                 const summary = document.createElement('summary');
                 summary.textContent = subtype.subtype;
@@ -389,26 +379,27 @@ function renderCategoriesForDay(day){
         chk.addEventListener('change', saveProgress);
     });
 
-    // Panggil handler untuk gambar
     setupImageClickHandlers(); 
-    
-    // Panggil fungsi auto-collapse (FIX #3)
     setupDetailsCollapse();
-
     populateIdeaCategorySelect();
 }
 
 // --- SAVE PROGRESS ---
 function saveProgress() {
     const selections = {};
+    let count = 0;
     document.querySelectorAll('#activityArea input[type="checkbox"]').forEach(chk => {
         if (chk.checked) {
             selections[chk.dataset.ideaid] = true;
+            count++;
         }
     });
     localStorage.setItem('savedSelections', JSON.stringify(selections));
-
     localStorage.setItem('secretMessage', secretMessage.value);
+    
+    // Update count display
+    countDisplay.textContent = count;
+    activityCount.style.display = count > 0 ? 'block' : 'none';
 }
 
 function loadInitialState() {
@@ -424,9 +415,14 @@ function loadInitialState() {
 
     const currentDays = getSelectedDays();
     renderCategoriesForDay(currentDays[0] || '');
+    
+    // Panggil saveProgress sekali untuk menginisialisasi hitungan
+    saveProgress();
 }
 
-// --- EVENT LISTENERS ---
+// =================================================================
+// START: EVENT LISTENERS UTAMA
+// =================================================================
 
 ideaCategory.addEventListener('change', (e) => {
     populateIdeaSubtypeSelect(e.target.value);
@@ -452,29 +448,22 @@ cancelIdea.addEventListener('click', () => {
 
 // --- SUBMIT FORM ---
 
-// js/main.js (BAGIAN FUNGSI SUBMIT FORM YANG DIPERBAIKI)
-
-// js/main.js (FUNGSI SUBMIT DENGAN PERBAIKAN SKEMA)
-
 ideaForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const cat = ideaCategory.value;
     const subtypeVal = ideaSubtype.value;
     const title = ideaTitle.value.trim();
-    const day = ideaDay.value; // Nilai hari dari form
+    const day = ideaDay.value; 
     const file = ideaImageInput.files[0]; 
-
-    // Validasi dasar
-    if (!title && cat !== 'custom' && subtypeVal !== 'custom-new' && !file) {
-         alert('Jika Nama Ide kosong, Anda harus membuat Kategori/Sub-tipe baru ATAU menambahkan foto untuk Sub-tipe yang sudah ada.');
-         return;
-    }
     
     let finalTypeKey = subtypeVal;
     let imageUrl = file ? await uploadImage(file) : null;
     let isNewCombo = false;
 
-    // --- LOGIKA PENENTUAN NAMA KATEGORI & SUB-TIPE BARU ---
+    if (!title && cat !== 'custom' && subtypeVal !== 'custom-new' && !file) {
+         alert('Nama Ide kosong, dan tidak ada Kategori/Sub-tipe baru atau foto untuk Sub-tipe yang sudah ada.');
+         return;
+    }
     
     let finalCategoryName;
     if (cat === 'custom') {
@@ -492,19 +481,13 @@ ideaForm.addEventListener('submit', async (e) => {
         finalSubtypeName = ideaSubtype.options[ideaSubtype.selectedIndex].text;
     }
 
-    // --- LOGIKA INSERT / UPDATE ---
-
     if (cat === 'custom' || subtypeVal === 'custom-new') {
-        // Generate type_key untuk combo yang mungkin baru
         finalTypeKey = `${finalCategoryName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${finalSubtypeName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
         finalTypeKey = finalTypeKey.replace(/--+/g, '-').replace(/^-|-$/g, ''); 
 
-        // Cek apakah kombinasi Kategori dan Sub-tipe ini benar-benar baru di database
         isNewCombo = !categoriesCache.some(c => c.type_key === finalTypeKey);
 
         if (isNewCombo) {
-            console.log('Inserting NEW Category/Subtype combo (idea_categories).');
-
             const { error: catInsertError } = await supabase
                 .from('idea_categories')
                 .insert({ 
@@ -513,7 +496,6 @@ ideaForm.addEventListener('submit', async (e) => {
                     icon: '🆕', 
                     type_key: finalTypeKey,
                     photo_url: imageUrl,
-                    // HAPUS ATAU JANGAN SERTAKAN day_of_week DI SINI! (FIX ERROR)
                 });
 
             if (catInsertError) {
@@ -526,8 +508,6 @@ ideaForm.addEventListener('submit', async (e) => {
     } 
     
     else if (imageUrl && !title) {
-        // Ini adalah update foto Level 2 untuk sub-tipe yang sudah ada
-        console.log('Updating photo for existing subtype (idea_categories).');
         const { error: catUpdateError } = await supabase
             .from('idea_categories')
             .update({ photo_url: imageUrl })
@@ -542,16 +522,14 @@ ideaForm.addEventListener('submit', async (e) => {
     }
 
     if (title) {
-        // Ini adalah insert ide Level 3 (trip_ideas_v2)
         const doc = {
             idea_name: title,
             type_key: finalTypeKey, 
-            day_of_week: day || "", // day_of_week HANYA ADA DI SINI
+            day_of_week: day || "", 
             photo_url: imageUrl, 
         };
         
         try {
-            console.log('Inserting new idea Level 3 (trip_ideas_v2).', doc);
             const { error } = await supabase
               .from('trip_ideas_v2') 
               .insert([doc]);
@@ -567,15 +545,11 @@ ideaForm.addEventListener('submit', async (e) => {
     alert('Idemu tersimpan! 🎉');
     modal.classList.add('hidden');
     ideaForm.reset();
-    
-    // ... (reset input display) ...
 
     await fetchData();
     const days = getSelectedDays();
     renderCategoriesForDay(days[0] || '');
 });
-
-// ... (kode selanjutnya) ...
 
 // Generate ticket
 generateBtn.addEventListener('click', () => {
@@ -587,11 +561,12 @@ generateBtn.addEventListener('click', () => {
           cat: i.dataset.cat, 
           subtype: i.dataset.subtype, 
           name: i.dataset.name, 
-          ideaId: i.dataset.ideaid || null 
+          ideaId: i.dataset.ideaid || null // PENTING: data-ideaid adalah ID unik
       }));
 
     if (checked.length === 0) { alert('Pilih minimal satu aktivitas'); return; }
 
+    // Simpan ke localStorage
     localStorage.setItem('tripDays', JSON.stringify(days));
     localStorage.setItem('tripSelections', JSON.stringify(checked));
     localStorage.setItem('secretMessage', secretMessage.value);

@@ -6,7 +6,7 @@
     <title>Trip Ciaaa ❤️ Kamu</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>❤️</text></svg>">
     <link rel="stylesheet" href="css/style.css">
-</head>
+    <link rel="stylesheet" href="css/review.css"> </head>
 <body>
 
     <header>
@@ -22,33 +22,34 @@
         
         <div class="controls">
             <button id="addIdeaBtn" class="btn primary">Tambah Ide Baru ✨</button>
-            <button id="randomPlanBtn" class="btn secondary" style="display: none;">
-                ✨ Mode Surprise (Random Plan)
-            </button>
+            <button id="viewHistoryBtn" class="btn secondary">Lihat Riwayat & Review 📖</button>
         </div>
 
-        <section id="activityArea" class="activity-grid">
-            <p style="text-align: center; color: var(--text-muted);">Pilih hari di atas untuk melihat ide aktivitas.</p>
-        </section>
-
-        <section class="secret-note">
-            <h2>Pesan Rahasia untuk Ticket 💌</h2>
-            <textarea id="secretMessage" placeholder="Tuliskan pesan manis atau janji rahasia untuk dimasukkan di tiket (ex: Aku janji nggak bakal nyanyi kenceng kecuali kamu minta)"></textarea>
-        </section>
+        <p id="activityCount" class="summary-text" style="display: none;">Total <span id="countDisplay">0</span> Aktivitas Terpilih</p>
         
-        <button id="generateBtn" class="btn full-width">
-            Buat Karcis Trip Sekarang! 🎫
-        </button>
+        <div id="activityArea" class="activity-area">
+            <p style="text-align: center;">Pilih hari atau Tambah Ide Baru</p>
+        </div>
+        
+        <hr style="margin: 20px 0;">
 
+        <div class="footer-controls">
+            <div class="secret-message-area">
+                <label for="secretMessage">Pesan Rahasia (Opsional):</label>
+                <textarea id="secretMessage" placeholder="Tuliskan pesan rahasia untuk diprint di karcis..."></textarea>
+            </div>
+            <button id="generateBtn" class="btn full-width primary">Generate Karcis Weekend Pass 🎟️</button>
+        </div>
+        
     </main>
 
     <div id="modal" class="modal hidden">
         <div class="modal-content">
-            <h2>Tambah Ide Perjalanan</h2>
+            <h3>Tambahkan Ide Trip Baru</h3>
             <form id="ideaForm">
-                <label for="ideaDay">Hari (opsional):</label>
-                <select id="ideaDay" >
-                    <option value="">(kosong = semua hari)</option>
+                <label for="ideaDay">Berlaku untuk Hari:</label>
+                <select id="ideaDay">
+                    <option value="">Sabtu & Minggu</option>
                     <option value="Sabtu">Sabtu</option>
                     <option value="Minggu">Minggu</option>
                 </select>
@@ -80,6 +81,64 @@
         <img class="modal-content" id="modalImage">
     </div>
 
-    <script type="module" src="js/main.js"></script>
+    <div id="historyListModal" class="modal hidden"> 
+        <div class="modal-content">
+            <div id="historyList" class="history-list"> 
+            </div>
+            <button type="button" id="closeHistoryListModal" class="btn secondary">Tutup</button>
+        </div>
+    </div>
+
+    <div id="historyDetailModal" class="modal hidden"> 
+        <div class="modal-content">
+            <ul id="historyDetailList" class="selection-list">
+            </ul>
+            <button type="button" id="cancelReview" class="btn secondary">Kembali ke Daftar</button> 
+        </div>
+    </div>
+
+    <div id="historyDetailModal" class="modal hidden">
+        <div class="modal-content">
+            <h3 id="historyModalTitle">Detail Trip</h3>
+            <p style="margin-bottom: 15px; border-bottom: 1px dashed var(--color-muted); padding-bottom: 10px;">Pesan: <span id="historySecretMessage" style="font-style: italic;"></span></p>
+
+            <h4 style="margin-top: 0;">Aktivitas & Review</h4>
+            <ul id="historyDetailList" class="selection-list" style="padding-left: 0;">
+                </ul>
+            
+            <div class="modal-actions">
+                <button type="button" id="cancelReview" class="btn secondary">Kembali ke Riwayat</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ideaReviewModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Review untuk <span id="reviewIdeaName"></span></h3>
+            <form id="ideaReviewForm">
+                <input type="hidden" id="reviewIdeaId">
+                
+                <label>Rating (1-5 Bintang):</label>
+                <div id="ideaReviewRating" class="star-rating">
+                    </div>
+                <label for="ideaReviewText">Bagaimana pengalaman Anda di sini?</label>
+                <textarea id="ideaReviewText" placeholder="Tuliskan kesan, pendapat, dan rating Anda..." rows="4"></textarea>
+
+                <label for="ideaReviewPhotoInput">Unggah Foto (Opsional):</label>
+                <input type="file" id="ideaReviewPhotoInput" accept="image/*">
+                <div id="ideaReviewPhotoPreview" style="margin-top: 10px;"></div>
+
+                <p id="ideaReviewStatus" style="margin-top: 10px;"></p>
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn primary" id="submitIdeaReviewBtn">Kirim Review ✨</button>
+                    <button type="button" id="cancelIdeaReview" class="btn secondary">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/history.js"></script> 
+    <script type="module" src="js/main.js"></script> 
 </body>
 </html>

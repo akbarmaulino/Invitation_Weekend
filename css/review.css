@@ -1,0 +1,133 @@
+/*==================================================
+  REVIEW.CSS (Styles Khusus untuk Riwayat & Review)
+==================================================*/
+
+/* --- HISTORY LIST MODAL --- */
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 10px 0;
+    max-height: 400px; /* Batasi tinggi list riwayat */
+    overflow-y: auto;
+}
+
+.history-item {
+    background-color: var(--color-background-light);
+    border: 1px solid var(--color-secondary);
+    padding: 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.history-item:hover {
+    background-color: var(--color-secondary);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.history-item[data-active="true"] {
+    border: 2px solid var(--color-primary);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.history-item h4 {
+    margin-top: 0;
+    margin-bottom: 5px;
+    color: var(--color-primary);
+}
+
+/* --- HISTORY DETAIL MODAL (Review per Tempat) --- */
+
+.selection-list {
+    list-style: none;
+    padding: 0;
+}
+
+.review-item {
+    margin-bottom: 15px;
+    padding: 10px 0;
+}
+
+.review-status {
+    font-size: 0.9em;
+    font-weight: bold;
+    margin: 5px 0;
+}
+
+.review-content {
+    background-color: var(--color-background-light);
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 10px !important;
+}
+
+/* PERBAIKAN FIX ZOOM: Mengatasi masalah foto review terlalu zoom */
+.review-content img {
+    /* Pastikan gambar tidak melebihi wadah */
+    max-width: 100%; 
+    height: auto; 
+    /* Batasi ukuran maksimum agar tidak terlalu besar di modal detail */
+    max-height: 120px; 
+    object-fit: contain; /* Agar gambar tidak terdistorsi */
+    border-radius: 4px;
+    border: 1px solid var(--color-muted);
+}
+
+/* --- IDEA REVIEW MODAL --- */
+
+#ideaReviewModal textarea {
+    min-height: 100px;
+}
+
+#ideaReviewPhotoPreview img {
+    max-width: 100%; 
+    max-height: 150px; /* Pratinjau gambar di form review */
+    object-fit: contain;
+    display: block;
+    margin-top: 10px;
+    border-radius: 4px;
+}
+
+/* css/review.css (Penambahan Star Rating Style) */
+
+/* --- STAR RATING --- */
+.star-rating {
+    font-size: 2em;
+    color: var(--color-primary); /* Warna bintang */
+    margin-bottom: 15px;
+    display: flex;
+    gap: 5px; /* Jarak antar bintang */
+}
+
+.star {
+    cursor: pointer;
+    transition: color 0.1s ease;
+}
+
+.rating-stars {
+    font-size: 1em; /* Mengatur ukuran tampilan bintang di modal detail */
+    color: gold; 
+    letter-spacing: 2px;
+}
+
+
+/* --- PERBAIKAN TINGGI MODAL DETAIL (Untuk mengatasi masalah penuh layar) --- */
+
+.history-list {
+    /* Batasi tinggi list riwayat */
+    max-height: 350px; 
+    overflow-y: auto;
+    border-bottom: 1px solid var(--color-muted);
+    margin-bottom: 15px;
+}
+
+.selection-list {
+    list-style: none;
+    padding: 0;
+    
+    /* Batasi tinggi list aktivitas di modal detail */
+    max-height: 350px; 
+    overflow-y: auto; 
+    padding-right: 10px; 
+}
