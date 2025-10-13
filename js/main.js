@@ -482,7 +482,7 @@ function renderCategoriesForDay(day){
                             <img src="${getPublicImageUrl(subtype.photo_url)}" alt="${subtype.subtype}">
                             <div class="idea-text-info">
                                 <span style="display:block; font-weight:bold;">${subtype.subtype}</span>
-                                <small style="display:block; color: var(--muted); opacity:0.9">(Pilih Sub-tipe)</small>
+                                <small style="display:block; color: var(--color-muted); opacity:0.9">(Pilih Sub-tipe)</small>
                             </div>
                         </label>
                          `;
@@ -511,7 +511,7 @@ function renderCategoriesForDay(day){
                             <img src="${getPublicImageUrl(item.photo_url)}" alt="${item.idea_name}">
                             <div class="idea-text-info">
                                 <span style="display:block; font-weight:bold;">${item.idea_name}</span>
-                                <small style="display:block; color: var(--muted); opacity:0.9">(${subtype.subtype})</small>
+                                <small style="display:block; color: var(--color-muted); opacity:0.9">(${subtype.subtype})</small>
                                 ${ratingHtml} </div>
                         </label>
                     `;
