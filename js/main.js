@@ -24,7 +24,7 @@ const secretMessage = document.getElementById('secretMessage');
 const activityCount = document.getElementById('activityCount');
 const countDisplay = document.getElementById('countDisplay');
 
-// Modal Refs untuk Image Zoom (DIUTAMAKAN UNTUK MAIN.JS AGAR BISA ZOOM FOTO DI ACTIVITY AREA)
+// Modal Refs untuk Image Zoom 
 const imageModal = document.getElementById('imageModal');
 const modalImage = document.getElementById('modalImage');
 const closeBtn = document.querySelector('.close-btn');
@@ -34,9 +34,22 @@ const newCategoryInput = document.getElementById('newCategoryInput');
 const newSubtypeInput = document.getElementById('newSubtypeInput');
 const ideaImageInput = document.getElementById('ideaImageInput'); 
 
+// NEW: IDEA DETAIL MODAL REFS
+const ideaDetailModal = document.getElementById('ideaDetailModal');
+const detailIdeaName = document.getElementById('detailIdeaName');
+const detailIdeaImage = document.getElementById('detailIdeaImage');
+const detailRatingSummary = document.getElementById('detailRatingSummary');
+const detailReviewList = document.getElementById('detailReviewList');
+const noReviewsMessage = document.getElementById('noReviewsMessage');
+const closeDetailModal = document.getElementById('closeDetailModal');
+
 // Cache data
 let categoriesCache = [];
 let ideasCache = [];
+let ideaRatings = {}; // { 'idea_id': { average: 4.5, count: 10 } }
+// NEW: Cache semua review
+let allReviews = []; 
+
 
 // =================================================================
 // START: HELPER FUNCTIONS
@@ -72,7 +85,7 @@ function startCountdown() {
 
         const days = Math.floor(distance / (1000 * 60 * 60 * 24));
         const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const minutes = Math.floor((distance % (1000 * 60)) / (1000 * 60));
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
         if (distance < 0) {
@@ -90,19 +103,52 @@ function getSelectedDays(){
     return Array.from(document.querySelectorAll("input[name='hari']:checked")).map(i=>i.value);
 }
 
+// FUNGSI UTAMA UNTUK MENGAMBIL DATA DAN MENGHITUNG RATING
 async function fetchData() {
+    // 1. Ambil Kategori
     const { data: categories, error: catError } = await supabase
         .from('idea_categories')
         .select('*');
     if (catError) { console.error('Supabase fetch categories error', catError); }
     categoriesCache = categories || [];
 
+    // 2. Ambil Ide
     const { data: ideas, error: ideaError } = await supabase
         .from('trip_ideas_v2') 
         .select('*')
         .order('created_at', { ascending: false });
     if (ideaError) { console.error('Supabase fetch ideas error', ideaError); }
     ideasCache = ideas || [];
+    
+    // 3. Ambil Semua Review (Untuk rating rata-rata dan detail modal)
+    const { data: reviews, error: reviewError } = await supabase
+        .from('idea_reviews')
+        .select('*'); // Ambil semua data review
+    if (reviewError) { console.error('Supabase fetch reviews error', reviewError); }
+    
+    allReviews = reviews || []; // Simpan semua review
+    
+    const ratingsMap = {};
+    (allReviews).forEach(review => {
+        const id = review.idea_id;
+        const rating = review.rating || 0;
+        
+        if (!ratingsMap[id]) {
+            ratingsMap[id] = { total: 0, count: 0 };
+        }
+        ratingsMap[id].total += rating;
+        ratingsMap[id].count += 1;
+    });
+
+    // Hitung Rata-rata Akhir dan simpan ke ideaRatings
+    ideaRatings = {};
+    for (const id in ratingsMap) {
+        const { total, count } = ratingsMap[id];
+        ideaRatings[id] = {
+            average: (total / count).toFixed(1), // Dibulatkan satu desimal
+            count: count
+        };
+    }
 }
 
 /**
@@ -219,7 +265,7 @@ function populateIdeaSubtypeSelect(selectedCategory){
 }
 
 
-// --- Image Modal Handlers ---
+// --- Image Modal Handlers (Zoom) ---
 
 function setupImageClickHandlers() {
     document.querySelectorAll('#activityArea img').forEach(img => {
@@ -227,9 +273,20 @@ function setupImageClickHandlers() {
         img.addEventListener('click', openModalWithImage);
         img.style.cursor = 'pointer'; 
     });
+    
+    // NEW: Review detail image click
+    document.querySelectorAll('#detailReviewList img').forEach(img => {
+        img.removeEventListener('click', openModalWithImage);
+        img.addEventListener('click', openModalWithImage);
+        img.style.cursor = 'pointer';
+    });
 }
 
 function openModalWithImage(event) {
+    // Stop propagation agar tidak memicu event di parent (misalnya View Detail button)
+    if (event.target.tagName === 'IMG') {
+        event.stopPropagation();
+    }
     const imgSrc = event.target.src;
     modalImage.src = imgSrc;
     imageModal.style.display = 'block';
@@ -244,6 +301,10 @@ if (closeBtn) {
 window.onclick = function(event) {
     if (event.target == imageModal) {
         imageModal.style.display = "none";
+    }
+    // NEW: Tutup modal detail jika klik di luar
+    if (event.target == ideaDetailModal) {
+        ideaDetailModal.classList.add('hidden');
     }
 }
 
@@ -269,6 +330,90 @@ function handleDetailsToggle(event) {
     }
 }
 
+/**
+ * Membuat tampilan rating bintang (misalnya: '⭐️⭐️⭐️⭐️ (4.5) | 12 Review')
+ * @param {string} ideaId - ID dari ide (trip_ideas_v2.id).
+ * @returns {string} HTML untuk rating.
+ */
+function createRatingDisplay(ideaId) {
+    const ratingData = ideaRatings[ideaId];
+    
+    if (!ratingData || ratingData.count === 0) {
+        return '<span class="rating-display muted">Belum ada review</span>';
+    }
+
+    const avg = parseFloat(ratingData.average);
+    const fullStars = Math.round(avg);
+    const starIcon = '⭐'; // Emoji bintang
+
+    // Membuat string bintang penuh
+    const stars = starIcon.repeat(fullStars); 
+
+    return `<span class="rating-display"><span class="star-icon">${stars}</span> (${ratingData.average}) | ${ratingData.count} Review</span>`;
+}
+
+// NEW: RENDER IDEA DETAIL MODAL
+function renderIdeaDetailModal(ideaId) {
+    const idea = ideasCache.find(i => i.id === ideaId);
+    if (!idea) return;
+
+    const reviews = allReviews.filter(r => r.idea_id === ideaId);
+    const ratingData = ideaRatings[ideaId];
+
+    // 1. Update Header
+    detailIdeaName.textContent = idea.idea_name;
+    detailIdeaImage.src = getPublicImageUrl(idea.photo_url);
+    detailIdeaImage.onerror = () => detailIdeaImage.src = 'images/placeholder.jpg'; 
+
+    // 2. Update Rating Summary
+    if (ratingData && ratingData.count > 0) {
+        const avg = parseFloat(ratingData.average);
+        const fullStars = Math.round(avg);
+        const starsHtml = '⭐'.repeat(fullStars);
+
+        detailRatingSummary.innerHTML = `
+            <span class="avg-rating">${starsHtml} ${avg}</span>
+            <span>dari ${ratingData.count} Review</span>
+        `;
+        noReviewsMessage.style.display = 'none';
+    } else {
+        detailRatingSummary.innerHTML = `
+            <span class="avg-rating">N/A</span>
+            <span>Belum ada review</span>
+        `;
+        noReviewsMessage.style.display = 'block';
+    }
+
+    // 3. Update Review List
+    detailReviewList.innerHTML = '';
+    if (reviews.length > 0) {
+        reviews.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Terbaru di atas
+
+        reviews.forEach(review => {
+            const reviewItem = document.createElement('div');
+            reviewItem.className = 'review-item';
+
+            const reviewStars = '⭐'.repeat(review.rating || 0);
+            const reviewPhotoHtml = review.photo_url ? 
+                `<div class="review-photo-preview"><img src="${getPublicImageUrl(review.photo_url)}" alt="Review Photo"></div>` : 
+                '';
+
+            reviewItem.innerHTML = `
+                <div class="review-rating">${reviewStars}</div>
+                <p class="review-text">${review.review_text || '(Tidak ada komentar)'}</p>
+                ${reviewPhotoHtml}
+            `;
+            detailReviewList.appendChild(reviewItem);
+        });
+        noReviewsMessage.style.display = 'none';
+    } else {
+        detailReviewList.appendChild(noReviewsMessage);
+    }
+
+    // 4. Tampilkan Modal
+    ideaDetailModal.classList.remove('hidden');
+    setupImageClickHandlers(); // Re-setup handler untuk foto review
+}
 
 // --- RENDER FUNCTION (FILTRASI BERDASARKAN HARI) ---
 
@@ -325,7 +470,7 @@ function renderCategoriesForDay(day){
                     div.className = 'option-item';
                     const itemId = `cat-${subtype.type_key}`; 
                     const isChecked = savedSelections[itemId] === true; 
-
+                    
                     div.innerHTML = `
                         <label>
                             <input type="checkbox" 
@@ -335,10 +480,12 @@ function renderCategoriesForDay(day){
                                 data-ideaid="${itemId}"
                                 ${isChecked ? 'checked' : ''}>
                             <img src="${getPublicImageUrl(subtype.photo_url)}" alt="${subtype.subtype}">
-                            <span style="display:block; font-weight:bold;">${subtype.subtype}</span>
-                            <small style="display:block; color: var(--muted); opacity:0.9">(Pilih Sub-tipe)</small>
+                            <div class="idea-text-info">
+                                <span style="display:block; font-weight:bold;">${subtype.subtype}</span>
+                                <small style="display:block; color: var(--muted); opacity:0.9">(Pilih Sub-tipe)</small>
+                            </div>
                         </label>
-                    `;
+                         `;
                     optionsWrap.appendChild(div);
                 }
 
@@ -349,7 +496,11 @@ function renderCategoriesForDay(day){
                     const itemId = item.id;
                     const isChecked = savedSelections[itemId] === true; 
                     
+                    // PANGGIL FUNGSI RATING BARU
+                    const ratingHtml = createRatingDisplay(item.id);
+
                     div.innerHTML = `
+                        <button class="view-detail-btn" data-ideaid="${itemId}" title="Lihat Detail & Review">👁️</button>
                         <label>
                             <input type="checkbox" 
                                 data-cat="${catGroup.category}" 
@@ -358,8 +509,10 @@ function renderCategoriesForDay(day){
                                 data-ideaid="${itemId}"
                                 ${isChecked ? 'checked' : ''}>
                             <img src="${getPublicImageUrl(item.photo_url)}" alt="${item.idea_name}">
-                            <span style="display:block; font-weight:bold;">${item.idea_name}</span>
-                            <small style="display:block; color: var(--muted); opacity:0.9">(${subtype.subtype})</small>
+                            <div class="idea-text-info">
+                                <span style="display:block; font-weight:bold;">${item.idea_name}</span>
+                                <small style="display:block; color: var(--muted); opacity:0.9">(${subtype.subtype})</small>
+                                ${ratingHtml} </div>
                         </label>
                     `;
                     optionsWrap.appendChild(div);
@@ -377,6 +530,15 @@ function renderCategoriesForDay(day){
 
     document.querySelectorAll('#activityArea input[type="checkbox"]').forEach(chk => {
         chk.addEventListener('change', saveProgress);
+    });
+
+    // NEW: Tambahkan event listener untuk tombol view detail
+    document.querySelectorAll('.view-detail-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Penting agar tidak memilih checkbox
+            const ideaId = e.currentTarget.dataset.ideaid;
+            renderIdeaDetailModal(ideaId);
+        });
     });
 
     setupImageClickHandlers(); 
@@ -444,6 +606,13 @@ cancelIdea.addEventListener('click', () => {
     newCategoryInput.style.display = 'none'; 
     newSubtypeInput.style.display = 'none'; 
 });
+
+// NEW: Close Detail Modal
+if (closeDetailModal) {
+    closeDetailModal.addEventListener('click', () => {
+        ideaDetailModal.classList.add('hidden');
+    });
+}
 
 
 // --- SUBMIT FORM ---
