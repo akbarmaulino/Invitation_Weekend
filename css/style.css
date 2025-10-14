@@ -532,18 +532,30 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
     font-size: 0.85em;
 }
 
+/* --- RATING DISPLAY --- */
 .rating-display {
-    font-size: 0.9em;
-    color: var(--color-muted);
-    margin-top: 3px;
+    font-size: 0.7em; /* Ukuran teks rating, misalnya 4.5 */
+    color: var(--color-text-dark); 
+    margin-top: 5px; 
     display: flex;
     align-items: center;
     gap: 5px;
+    font-weight: 500; 
+    padding: 2px 0; 
 }
 
 .rating-display .star-icon {
-    font-size: 1.1em;
+    /* KRITIS: Ukuran Ikon Bintang Dibuat LEBIH BESAR dari teks (misalnya 1.2em > 0.85em) */
+    font-size: 1em; 
+    
+    color: #FFC300; 
+    line-height: 1; 
+    /* Tambahan: Tarik ikon sedikit ke atas agar lebih sejajar sempurna */
+    position: relative; 
+    top: -1px; 
 }
+
+    
 
 
 /* ==================================================
