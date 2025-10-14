@@ -1,39 +1,20 @@
-// js/history.js (Revisi: Review Per Trip & Kalkulasi Rata-Rata)
+// js/history.js (REVISI FINAL: Memastikan Inisialisasi & Tampilan Modal Instan)
 
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/+esm';
-import { SUPABASE_CONFIG } from './config.js'; 
-
-/* ====== Supabase Config dan Referensi UI ====== */
-const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+import { supabase } from './supabaseClient.js'; 
 let currentUser = { id: 'anon' }; 
 
-// UI Refs Modal History
-const viewHistoryBtn = document.getElementById('viewHistoryBtn'); 
-const historyListModal = document.getElementById('historyListModal'); 
-const closeHistoryListModal = document.getElementById('closeHistoryListModal'); 
-const historyList = document.getElementById('historyList'); 
-const historyDetailModal = document.getElementById('historyDetailModal'); 
-const cancelReview = document.getElementById('cancelReview'); 
-const historyDetailList = document.getElementById('historyDetailList');
-const historyModalTitle = document.getElementById('historyModalTitle');
-const historySecretMessage = document.getElementById('historySecretMessage');
+// Deklarasi variabel referensi global 
+let viewHistoryBtn, historyListModal, historyList, historyDetailModal, 
+    cancelReview, historyDetailList, historyModalTitle, historySecretMessage, 
+    ideaReviewModal, reviewIdeaName, ideaReviewForm, reviewIdeaId, reviewTripId, 
+    ideaReviewText, ideaReviewPhotoInput, ideaReviewPhotoPreview, ideaReviewStatus, 
+    submitIdeaReviewBtn, cancelIdeaReview, ideaReviewRatingDiv,
+    closeHistoryListModal, backToHistoryList; // <-- Tambah backToHistoryList
 
-// UI Refs Modal Review Per Ide
-const ideaReviewModal = document.getElementById('ideaReviewModal');
-const reviewIdeaName = document.getElementById('reviewIdeaName');
-const ideaReviewForm = document.getElementById('ideaReviewForm');
-const reviewIdeaId = document.getElementById('reviewIdeaId');
-const reviewTripId = document.getElementById('reviewTripId'); // PERUBAHAN: Tambah ini di HTML
-const ideaReviewText = document.getElementById('ideaReviewText');
-const ideaReviewPhotoInput = document.getElementById('ideaReviewPhotoInput');
-const ideaReviewPhotoPreview = document.getElementById('ideaReviewPhotoPreview');
-const ideaReviewStatus = document.getElementById('ideaReviewStatus');
-const submitIdeaReviewBtn = document.getElementById('submitIdeaReviewBtn');
-const cancelIdeaReview = document.getElementById('cancelIdeaReview');
-
-// Star Rating Global State
 let currentRating = 0;
-const ideaReviewRatingDiv = document.getElementById('ideaReviewRating');
+let currentTrip = null; 
+let allReviewsCache = []; 
+
 
 // =========================================================
 // 1. UTILITY & RENDER
@@ -43,6 +24,21 @@ function formatTanggalIndonesia(date) {
     return new Date(date).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+function getPublicImageUrl(photoUrl) {
+    if (!photoUrl) return 'images/placeholder.jpg';
+    if (photoUrl.startsWith('http')) return photoUrl;
+    try {
+        // Asumsi nama bucket Supabase Storage adalah 'trip-ideas-images'
+        const { data } = supabase.storage
+            .from('trip-ideas-images') 
+            .getPublicUrl(photoUrl);
+        return data.publicUrl || photoUrl; 
+    } catch (e) {
+        console.error("Error getting public URL:", e);
+        return photoUrl;
+    }
+}
+
 function calculateAverageRating(allReviewsForIdea) {
     if (!allReviewsForIdea || allReviewsForIdea.length === 0) {
         return { average: 0, count: 0 };
@@ -50,20 +46,26 @@ function calculateAverageRating(allReviewsForIdea) {
     const sum = allReviewsForIdea.reduce((total, review) => total + (review.rating || 0), 0);
     const average = (sum / allReviewsForIdea.length);
     return { 
-        average: average.toFixed(1), // Satu angka di belakang koma
+        average: average.toFixed(1), 
         count: allReviewsForIdea.length 
     };
 }
 
+function renderStars(rating, isAverage = true) {
+    const roundedRating = isAverage ? Math.round(parseFloat(rating)) : rating;
+    const filled = '★'.repeat(roundedRating);
+    const empty = '☆'.repeat(5 - roundedRating);
+    return `<span class="rating-stars">${filled}${empty}</span>`;
+}
+
+
 function renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews) {
-    // Current Trip Review: Review spesifik untuk IdeaID ini di TripID ini.
     const isReviewedInThisTrip = currentTripReview !== null;
-    const reviewInTripHtml = `<span class="rating-stars">${'★'.repeat(currentTripReview?.rating || 0)}${'☆'.repeat(5 - (currentTripReview?.rating || 0))}</span>`;
+    const reviewInTripHtml = renderStars(currentTripReview?.rating || 0, false);
     const buttonText = isReviewedInThisTrip ? 'Ubah Review Trip ⭐' : 'Beri Review Trip ⭐';
     
-    // Global Review: Rata-rata dari SEMUA review untuk IdeaID ini.
     const { average, count } = calculateAverageRating(allIdeaReviews);
-    const globalRatingHtml = `<span class="rating-stars">${'★'.repeat(Math.round(average))}${'☆'.repeat(5 - Math.round(average))}</span>`;
+    const globalRatingHtml = renderStars(average);
 
     return `
         <div class="idea-detail-item">
@@ -71,7 +73,7 @@ function renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews) {
                 <div class="idea-icon">${idea.icon || '📍'}</div>
                 <div>
                     <h4>${idea.name}</h4>
-                    <p class="idea-subtitle">${idea.cat} / ${idea.subtype}</p>
+                    <p class="idea-subtitle">${idea.category} / ${idea.subtype}</p>
                 </div>
             </div>
 
@@ -82,8 +84,8 @@ function renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews) {
                 </p>
             </div>
 
-            <button class="btn secondary small review-btn" 
-                    data-idea-id="${idea.ideaId}" 
+            <button class="btn secondary small review-btn-handler" 
+                    data-idea-id="${idea.idea_id}" 
                     data-idea-name="${idea.name}"
                     data-trip-id="${tripId}">
                 ${buttonText}
@@ -92,327 +94,428 @@ function renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews) {
             ${isReviewedInThisTrip ? `
                 <div class="review-content">
                     <p><strong>Review Anda di Trip Ini:</strong> ${currentTripReview.review_text || '-'}</p>
-                    ${currentTripReview.photo_url ? `<img src="${currentTripReview.photo_url}" alt="Foto Review" class="review-photo">` : ''}
+                    ${currentTripReview.photo_url ? `<img src="${getPublicImageUrl(currentTripReview.photo_url)}" alt="Foto Review" class="review-photo">` : ''}
                 </div>
             ` : ''}
         </div>
     `;
 }
 
+
 // =========================================================
-// 2. FUNGSI PERSISTENSI REVIEW PER TRIP
+// 2. DATA FETCHING (Hanya memuat data, tanpa mengatur display)
 // =========================================================
 
-function openIdeaReviewModal(ideaId, ideaName, tripId) {
-    // 1. Reset Form & State
-    ideaReviewForm.reset();
-    ideaReviewStatus.textContent = '';
-    currentRating = 0;
-    ideaReviewPhotoPreview.innerHTML = '';
+async function loadHistory() {
+    if (!historyList) return;
+    historyList.innerHTML = '<p>Memuat riwayat trip...</p>';
     
-    // 2. Set Idea ID dan Trip ID
-    reviewIdeaId.value = ideaId;
-    reviewIdeaName.textContent = ideaName;
-    reviewTripId.value = tripId; // KRITIS: Simpan Trip ID
-
-    // 3. Ambil Review SPESIFIK yang Sudah Ada (Berdasarkan IdeaID & TripID)
-    supabase
-        .from('idea_reviews')
+    // 1. Ambil semua trip history
+    const { data: trips, error: tripError } = await supabase
+        .from('trip_history')
         .select('*')
-        .eq('idea_id', ideaId)
-        .eq('user_id', currentUser.id)
-        .eq('trip_id', tripId) // KRITIS: Filter berdasarkan Trip ID
-        .single()
-        .then(({ data, error }) => {
-            if (data) {
-                // Isi form dengan data review trip ini
-                ideaReviewText.value = data.review_text || '';
-                currentRating = data.rating || 0;
-                
-                // Set bintang di UI
-                document.querySelectorAll('.star').forEach(star => {
-                    const starValue = parseInt(star.dataset.value);
-                    star.textContent = starValue <= currentRating ? '★' : '☆';
-                });
-                
-                if (data.photo_url) {
-                    ideaReviewPhotoPreview.innerHTML = `<img src="${data.photo_url}" alt="Foto Review Lama" style="max-height: 150px; object-fit: contain;">`;
-                }
-                submitIdeaReviewBtn.textContent = 'Ubah Review Trip ✨';
+        .eq('user_id', currentUser.id || 'anon')
+        .order('trip_date', { ascending: false });
 
-            } else {
-                // Tidak ada review lama untuk trip ini
-                document.querySelectorAll('.star').forEach(star => star.textContent = '☆');
-                submitIdeaReviewBtn.textContent = 'Kirim Review Trip ✨';
-            }
-            
-            // 4. Tampilkan Modal
-            ideaReviewModal.classList.remove('hidden');
-        })
-        .catch(err => {
-            console.error('Gagal memuat review lama:', err);
-            ideaReviewModal.classList.remove('hidden');
-        });
+    if (tripError) {
+        console.error('Error fetching trip history:', tripError);
+        historyList.innerHTML = `<p style="color: var(--color-error);">Gagal memuat riwayat trip: ${tripError.message}</p>`;
+        return;
+    }
+
+    // 2. Ambil semua review sekaligus
+    const { data: reviews, error: reviewError } = await supabase
+        .from('idea_reviews')
+        .select('*');
+        
+    if (reviewError) {
+        console.error('Error fetching all reviews:', reviewError);
+    }
+    allReviewsCache = reviews || [];
+    
+    renderHistoryList(trips);
 }
 
-// =========================================================
-// 3. FUNGSI UTAMA DISPLAY TRIP DETAILS
-// =========================================================
+function renderHistoryList(trips) {
+    if (!historyList) return;
+    historyList.innerHTML = '';
+    if (!trips || trips.length === 0) {
+        historyList.innerHTML = '<p>Belum ada riwayat trip tersimpan.</p>';
+        return;
+    }
+
+    trips.forEach(trip => {
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        item.dataset.tripId = trip.id;
+        item.innerHTML = `
+            <h4>Trip ${formatTanggalIndonesia(trip.trip_date)} (${trip.trip_day})</h4>
+            <p>${trip.selection_json.length} aktivitas terpilih.</p>
+        `;
+        
+        item.addEventListener('click', () => showTripDetails(trip.id));
+        historyList.appendChild(item);
+    });
+}
+
 
 async function showTripDetails(tripId) {
-    historyDetailList.innerHTML = '';
-    historyDetailModal.classList.remove('hidden');
-    historyListModal.classList.add('hidden');
-    historyDetailModal.dataset.tripId = tripId; 
+    // Sembunyikan list, tampilkan detail
+    if (historyListModal) {
+        historyListModal.classList.add('hidden');
+        historyListModal.style.display = 'none'; 
+    }
+    
+    if (historyDetailModal) {
+        historyDetailModal.classList.remove('hidden');
+        historyDetailModal.style.display = 'block'; 
+        if (historyDetailList) {
+            historyDetailList.innerHTML = '<p>Memuat detail trip...</p>';
+        }
+    } else {
+        return;
+    }
 
-    // 1. Ambil Data Riwayat Trip
-    const { data: tripData, error: tripError } = await supabase
+    // 1. Ambil detail trip
+    const { data: trip, error: tripError } = await supabase
         .from('trip_history')
         .select('*')
         .eq('id', tripId)
         .single();
-
-    if (tripError || !tripData) {
-        historyDetailList.innerHTML = '<p>Gagal memuat detail trip.</p>';
+    
+    if (tripError) {
+        console.error('Error fetching trip detail:', tripError);
+        historyDetailList.innerHTML = `<p style="color: var(--color-error);">Gagal memuat detail trip: ${tripError.message}</p>`;
         return;
     }
 
-    const selections = tripData.selection_json || [];
-    historyModalTitle.textContent = `Riwayat Trip: ${tripData.trip_day}`;
-    historySecretMessage.innerHTML = tripData.secret_message ? `<p class="secret-message-detail">Pesan Rahasia: ${tripData.secret_message}</p>` : '';
-
-    const ideaIdsInTrip = selections.map(s => s.ideaId).filter(id => id);
-
-    // 2. Ambil SEMUA Data Review Terkait (untuk semua ideaIds)
-    // KRITIS: Kita harus ambil SEMUA review untuk kalkulasi rata-rata global
-    let allReviewsData = [];
-    if (ideaIdsInTrip.length > 0) {
-        const { data: reviews, error: reviewsError } = await supabase
-            .from('idea_reviews')
-            .select('*')
-            .in('idea_id', ideaIdsInTrip)
-            .eq('user_id', currentUser.id);
+    currentTrip = trip; // Simpan trip yang sedang dilihat
+    
+    // Update header modal detail
+    if (historyModalTitle) historyModalTitle.textContent = `Trip ${formatTanggalIndonesia(trip.trip_date)} (${trip.trip_day})`;
+    if (historySecretMessage) historySecretMessage.textContent = trip.secret_message || 'Tidak ada pesan rahasia.';
+    
+    historyDetailList.innerHTML = '';
+    
+    // 2. Filter reviews yang relevan untuk trip ini
+    const reviewsForThisTrip = allReviewsCache.filter(r => r.trip_id == tripId);
+    
+    trip.selection_json.forEach(idea => {
+        // Cari review spesifik untuk ide ini di trip ini
+        const currentTripReview = reviewsForThisTrip.find(r => r.idea_id == idea.idea_id) || null;
         
-        if (reviewsError) {
-            console.error("Gagal memuat semua reviews:", reviewsError);
-        } else {
-            allReviewsData = reviews;
-        }
-    }
-    
-    // Map reviews menjadi { ideaId: [review1, review2, ...], ... } untuk rata-rata global
-    const allReviewsMap = allReviewsData.reduce((map, review) => {
-        if (!map[review.idea_id]) {
-            map[review.idea_id] = [];
-        }
-        map[review.idea_id].push(review);
-        return map;
-    }, {});
+        // Cari semua review untuk ide ini (global)
+        const allIdeaReviews = allReviewsCache.filter(r => r.idea_id == idea.idea_id);
 
-    // Map reviews menjadi { ideaId: reviewObject } untuk review SPESIFIK trip ini
-    const currentTripReviewsMap = allReviewsData
-        .filter(review => review.trip_id === tripId)
-        .reduce((map, review) => {
-            map[review.idea_id] = review;
-            return map;
-        }, {});
-
-
-    // 3. Render HTML
-    let htmlContent = '';
-    const daysSelected = (tripData.trip_day || '').split(' & ').map(d => d.trim());
-    
-    // Tampilkan pemisah hari
-    daysSelected.forEach(day => {
-        htmlContent += `<h3 class="day-separator">Aktivitas ${day}</h3>`;
+        const ideaDetailHtml = renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews);
+        historyDetailList.innerHTML += ideaDetailHtml;
     });
     
-    htmlContent += `<div class="all-ideas-list">`;
-    selections.forEach(idea => {
-        const currentTripReview = currentTripReviewsMap[idea.ideaId] || null;
-        const allIdeaReviews = allReviewsMap[idea.ideaId] || [];
-        
-        // KRITIS: Panggil renderIdeaDetail dengan data review spesifik & global
-        htmlContent += renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews);
-    });
-    htmlContent += `</div>`;
-    
-    historyDetailList.innerHTML = htmlContent;
-
-    // 4. Event Listener untuk Tombol Review
-    document.querySelectorAll('.review-btn').forEach(button => {
+    // KRITIS: Tambahkan listener untuk tombol review yang baru di-render
+    document.querySelectorAll('.review-btn-handler').forEach(button => {
         button.addEventListener('click', (e) => {
-            const ideaId = e.target.dataset.ideaId;
-            const ideaName = e.target.dataset.ideaName;
-            const tripId = e.target.dataset.tripId; // Ambil Trip ID dari tombol
+            const ideaId = e.currentTarget.dataset.ideaId;
+            const ideaName = e.currentTarget.dataset.ideaName;
+            const tripId = e.currentTarget.dataset.tripId;
             
-            openIdeaReviewModal(ideaId, ideaName, tripId);
+            // Cari review yang sudah ada
+            const existingReview = reviewsForThisTrip.find(r => r.idea_id == ideaId);
+
+            showReviewModal(tripId, ideaId, ideaName, existingReview);
         });
     });
 }
 
 
-// =========================================================
-// 4. FUNGSI SUBMIT REVIEW
-// =========================================================
+function showReviewModal(tripId, ideaId, ideaName, existingReview = null) {
+    if (historyDetailModal) {
+        historyDetailModal.classList.add('hidden');
+        historyDetailModal.style.display = 'none'; 
+    }
 
-async function handleIdeaReviewSubmit(e) {
-    e.preventDefault();
-    
-    const ideaId = reviewIdeaId.value;
-    const tripId = reviewTripId.value; // KRITIS: Ambil Trip ID dari hidden input
-    const reviewText = ideaReviewText.value.trim();
-    const rating = currentRating;
-    
-    if (!ideaId || !tripId) {
-        alert('Data trip atau ide tidak lengkap. Coba muat ulang.');
+    if (ideaReviewModal) {
+        ideaReviewModal.classList.remove('hidden');
+        ideaReviewModal.style.display = 'block';
+    } else {
         return;
     }
 
-    if (rating === 0) {
-        alert('Mohon berikan rating minimal 1 bintang.');
-        return;
-    }
-
-    ideaReviewStatus.textContent = 'Mengirim review...';
-    submitIdeaReviewBtn.disabled = true;
-
-    // Logika upload foto dihilangkan untuk fokus pada konsep inti.
-    let photoUrl = null; 
+    if (reviewIdeaName) reviewIdeaName.textContent = ideaName;
+    if (reviewTripId) reviewTripId.value = tripId;
+    if (reviewIdeaId) reviewIdeaId.value = ideaId;
     
-    const reviewData = {
-        idea_id: ideaId,
-        user_id: currentUser.id, // 'anon'
-        trip_id: tripId, // KRITIS: Tambahkan Trip ID
-        review_text: reviewText,
-        rating: rating,
-        photo_url: photoUrl
-    };
-
-    try {
-        // Menggunakan UPSERT dengan ON CONFLICT (idea_id, user_id, trip_id)
-        // Ini memastikan hanya ada satu review per idea_id per user_id PER TRIP_ID
-        const { error } = await supabase
-            .from('idea_reviews')
-            .upsert(
-                reviewData,
-                { 
-                    onConflict: 'idea_id, user_id, trip_id', // KRITIS: Tiga kolom untuk conflict
-                    columns: 'review_text, rating, photo_url, created_at' // Tambahkan created_at untuk update timestamp
-                }
-            );
-
-        if (error) {
-            console.error('Error submitting review:', error);
-            alert(`Gagal mengirim review: ${error.message}.`);
-            ideaReviewStatus.textContent = `Gagal: ${error.message}`;
-            
-        } else {
-            alert('Review berhasil disimpan/diubah! 🎉');
-            ideaReviewModal.classList.add('hidden');
-            
-            // Refresh detail trip agar review baru muncul dan kalkulasi terupdate
-            if (tripId) {
-                showTripDetails(tripId);
-            }
+    // Reset form
+    if (ideaReviewForm) ideaReviewForm.reset();
+    if (ideaReviewPhotoInput) ideaReviewPhotoInput.value = '';
+    if (ideaReviewPhotoPreview) ideaReviewPhotoPreview.innerHTML = '';
+    if (ideaReviewStatus) ideaReviewStatus.textContent = '';
+    currentRating = 0;
+    
+    // Isi form jika ada review yang sudah ada
+    if (existingReview) {
+        if (ideaReviewText) ideaReviewText.value = existingReview.review_text || '';
+        currentRating = existingReview.rating || 0;
+        
+        if (existingReview.photo_url && ideaReviewPhotoPreview) {
+            ideaReviewPhotoPreview.innerHTML = `<img src="${getPublicImageUrl(existingReview.photo_url)}" alt="Review Photo Preview" style="max-width: 100px; height: auto; border-radius: 4px;">`;
         }
-    } catch (e) {
-        console.error('Exception during review submission:', e);
-        alert('Terjadi kesalahan tak terduga saat mengirim review.');
-        ideaReviewStatus.textContent = `Kesalahan: ${e.message}`;
+        if (submitIdeaReviewBtn) submitIdeaReviewBtn.textContent = 'Ubah Review ✨';
+    } else {
+        if (submitIdeaReviewBtn) submitIdeaReviewBtn.textContent = 'Kirim Review ✨';
     }
 
-    submitIdeaReviewBtn.disabled = false;
+    // Render ulang bintang dengan rating yang sudah ada
+    if (ideaReviewRatingDiv) setupStarRating(ideaReviewRatingDiv, currentRating);
 }
 
-// ... (Fungsi loadHistory dan setupStarRating sama) ...
-async function loadHistory() {
-    // ... (Kode loadHistory lama)
-    const { data: trips, error } = await supabase
-        .from('trip_history')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-    if (error) {
-        historyList.innerHTML = '<p>Gagal memuat riwayat: ' + error.message + '</p>';
-        return;
-    }
-
-    if (trips.length === 0) {
-        historyList.innerHTML = '<p>Anda belum membuat riwayat trip. Silakan buat satu!</p>';
-        return;
-    }
-
-    historyList.innerHTML = trips.map(trip => `
-        <div class="history-item" data-id="${trip.id}">
-            <h4>${trip.trip_day} (${formatTanggalIndonesia(trip.created_at)})</h4>
-            <p>${trip.selection_json.length} Aktivitas | ${trip.secret_message ? 'Ada Pesan Rahasia' : 'Tidak Ada Pesan'}</p>
-        </div>
-    `).join('');
+function setupStarRating(container, initialRating) {
+    container.innerHTML = '';
+    currentRating = initialRating;
     
-    document.querySelectorAll('.history-item').forEach(item => {
-        item.addEventListener('click', () => showTripDetails(item.dataset.id));
-    });
-}
-
-function setupStarRating() {
-    if (!ideaReviewRatingDiv) return;
-    for (let i = 1; i <= 5; i++) {
+    const maxRating = 5;
+    
+    for (let i = 1; i <= maxRating; i++) {
         const star = document.createElement('span');
-        star.classList.add('star');
+        star.className = 'star clickable';
         star.dataset.value = i;
-        star.textContent = '☆'; 
+        star.textContent = i <= currentRating ? '★' : '☆'; 
+        
         star.addEventListener('click', () => {
             currentRating = i;
-            document.querySelectorAll('.star').forEach(s => {
+            // Update tampilan semua bintang
+            document.querySelectorAll('#ideaReviewRatingDiv .star').forEach(s => {
                 const starValue = parseInt(s.dataset.value);
                 s.textContent = starValue <= currentRating ? '★' : '☆';
             });
         });
-        ideaReviewRatingDiv.appendChild(star);
+        container.appendChild(star);
     }
 }
 
 
 // =========================================================
-// 5. EVENT LISTENERS
+// 4. MAIN INIT & EVENT LISTENERS
 // =========================================================
 
-// 1. Tampil Modal Riwayat List
-if (viewHistoryBtn) {
-    viewHistoryBtn.addEventListener('click', () => {
-        loadHistory();
-        historyListModal.classList.remove('hidden');
-    });
-}
+document.addEventListener('DOMContentLoaded', () => {
+    // Inisialisasi semua referensi UI
+    viewHistoryBtn = document.getElementById('viewHistoryBtn'); 
+    historyListModal = document.getElementById('historyListModal'); 
+    closeHistoryListModal = document.getElementById('closeHistoryListModal'); 
+    historyList = document.getElementById('historyList'); 
+    historyDetailModal = document.getElementById('historyDetailModal'); 
+    cancelReview = document.getElementById('cancelReview'); 
+    historyDetailList = document.getElementById('historyDetailList');
+    historyModalTitle = document.getElementById('historyModalTitle');
+    historySecretMessage = document.getElementById('historySecretMessage');
+    ideaReviewModal = document.getElementById('ideaReviewModal');
+    reviewIdeaName = document.getElementById('reviewIdeaName');
+    ideaReviewForm = document.getElementById('ideaReviewForm');
+    reviewIdeaId = document.getElementById('reviewIdeaId');
+    reviewTripId = document.getElementById('reviewTripId'); 
+    ideaReviewText = document.getElementById('ideaReviewText');
+    ideaReviewPhotoInput = document.getElementById('ideaReviewPhotoInput');
+    ideaReviewPhotoPreview = document.getElementById('ideaReviewPhotoPreview');
+    ideaReviewStatus = document.getElementById('ideaReviewStatus');
+    submitIdeaReviewBtn = document.getElementById('submitIdeaReviewBtn');
+    cancelIdeaReview = document.getElementById('cancelIdeaReview');
+    ideaReviewRatingDiv = document.getElementById('ideaReviewRatingDiv');
+    backToHistoryList = document.getElementById('backToHistoryList'); // <-- Ambil referensi tombol baru
 
-// 2. Tutup Modal Riwayat List
-if (closeHistoryListModal) {
-    closeHistoryListModal.addEventListener('click', () => {
-        historyListModal.classList.add('hidden');
-    });
-}
+    
+    // 1. Tampil Modal Riwayat List
+    if (viewHistoryBtn && historyListModal) { 
+        viewHistoryBtn.addEventListener('click', () => {
+            historyListModal.style.display = 'block'; 
+            historyListModal.classList.remove('hidden');
+            loadHistory(); 
+        });
+    }
 
-// 3. Tutup Modal Detail/Review (Kembali ke List)
-if (cancelReview) {
-    cancelReview.addEventListener('click', () => {
+    // 2. Tutup Modal Riwayat List (Tombol X/Tutup)
+    if (closeHistoryListModal && historyListModal) {
+        closeHistoryListModal.addEventListener('click', () => {
+            historyListModal.classList.add('hidden');
+            historyListModal.style.display = 'none'; 
+        });
+    }
+    
+    // 2.5 Tutup Modal Riwayat List (Tombol Batal di bawah)
+    const cancelHistoryList = document.getElementById('cancelHistoryList');
+    if (cancelHistoryList && historyListModal) {
+        cancelHistoryList.addEventListener('click', () => {
+            historyListModal.classList.add('hidden');
+            historyListModal.style.display = 'none'; 
+        });
+    }
+
+    // 3. Tutup Modal Detail/Review (Tombol X atau Kembali ke Daftar Trip)
+    const detailModalCloseHandler = () => {
         historyDetailModal.classList.add('hidden');
+        historyDetailModal.style.display = 'none'; 
         loadHistory(); 
         historyListModal.classList.remove('hidden'); 
+        historyListModal.style.display = 'block'; 
+    };
+
+    if (cancelReview) {
+        cancelReview.addEventListener('click', detailModalCloseHandler);
+    }
+    
+    // KRITIS: Menambahkan event listener untuk tombol 'Kembali ke Daftar Trip'
+    if (backToHistoryList) {
+        backToHistoryList.addEventListener('click', detailModalCloseHandler);
+    }
+
+    // 4. Tutup Modal Review Per Ide (Kembali ke Detail Trip)
+    if (cancelIdeaReview && ideaReviewModal && historyDetailModal) {
+        cancelIdeaReview.addEventListener('click', () => {
+            ideaReviewModal.classList.add('hidden');
+            ideaReviewModal.style.display = 'none'; 
+    
+            if (currentTrip) {
+                showTripDetails(currentTrip.id);
+            } else {
+                historyDetailModal.classList.add('hidden');
+                historyDetailModal.style.display = 'none';
+                historyListModal.classList.remove('hidden');
+                historyListModal.style.display = 'block';
+            }
+        });
+    }
+
+    // 5. GLOBAL LISTENER: Tutup modal saat klik di luar konten modal (backdrop)
+    window.addEventListener('click', (event) => {
+        // ... (Logika backdrop tetap sama) ...
+        if (historyListModal && event.target === historyListModal) {
+            historyListModal.classList.add('hidden');
+            historyListModal.style.display = 'none';
+        }
+        if (historyDetailModal && event.target === historyDetailModal) {
+            detailModalCloseHandler();
+        }
+        if (ideaReviewModal && event.target === ideaReviewModal) {
+            ideaReviewModal.classList.add('hidden');
+            ideaReviewModal.style.display = 'none'; 
+            if (currentTrip) {
+                showTripDetails(currentTrip.id);
+            }
+        }
     });
-}
 
-// 4. Tutup Modal Review Per Ide
-if (cancelIdeaReview) {
-    cancelIdeaReview.addEventListener('click', () => {
-        ideaReviewModal.classList.add('hidden');
-    });
-}
+    // 6. Submit Review 
+    if (ideaReviewForm) {
+        ideaReviewForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-// 5. Submit Form Review Per Ide
-if (ideaReviewForm) {
-    ideaReviewForm.addEventListener('submit', handleIdeaReviewSubmit);
-}
+            const ideaId = reviewIdeaId.value;
+            const tripId = reviewTripId.value;
+            const reviewText = ideaReviewText.value.trim();
+            const rating = currentRating;
+            const imageFile = ideaReviewPhotoInput.files[0];
 
-// Init
-setupStarRating();
+            if (rating === 0) {
+                if (ideaReviewStatus) ideaReviewStatus.textContent = 'Beri minimal 1 bintang!';
+                return;
+            }
+
+            if (ideaReviewStatus) ideaReviewStatus.textContent = 'Memproses...';
+            if (submitIdeaReviewBtn) submitIdeaReviewBtn.disabled = true;
+
+            let photoUrl = null;
+            
+            const existingReview = allReviewsCache.find(r => r.idea_id == ideaId && r.trip_id == tripId);
+            const oldPhotoUrl = existingReview?.photo_url;
+            
+            // --- Proses Upload Foto ---
+            if (imageFile) {
+                const fileExtension = imageFile.name.split('.').pop();
+                const path = `${currentUser.id}/review-${tripId}-${ideaId}-${Date.now()}.${fileExtension}`;
+                
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('trip-ideas-images') 
+                    .upload(path, imageFile, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
+
+                if (uploadError) {
+                    console.error('Supabase photo upload error', uploadError);
+                    if (ideaReviewStatus) ideaReviewStatus.textContent = `Gagal upload foto: ${uploadError.message}`;
+                    if (submitIdeaReviewBtn) submitIdeaReviewBtn.disabled = false;
+                    return;
+                }
+                photoUrl = uploadData.path; 
+                
+                if (oldPhotoUrl && oldPhotoUrl !== photoUrl) {
+                     const { error: removeError } = await supabase.storage
+                        .from('trip-ideas-images')
+                        .remove([oldPhotoUrl]);
+                    if (removeError) {
+                         console.warn('Gagal menghapus foto lama:', removeError);
+                    }
+                }
+
+            } else {
+                photoUrl = oldPhotoUrl || null; 
+            }
+
+
+            // --- Proses Simpan Review (UPSERT) ---
+            const { error } = await supabase
+                .from('idea_reviews')
+                .upsert({ 
+                    idea_id: ideaId, 
+                    trip_id: tripId, 
+                    user_id: currentUser.id,
+                    rating: rating,
+                    review_text: reviewText,
+                    photo_url: photoUrl,
+                    created_at: new Date().toISOString()
+                }, { 
+                    onConflict: 'idea_id, trip_id',
+                    ignoreDuplicates: false
+                });
+
+            if (error) {
+                console.error('Supabase review submit error', error);
+                if (ideaReviewStatus) ideaReviewStatus.textContent = `Gagal menyimpan review. Error: ${error.message}`;
+                if (submitIdeaReviewBtn) submitIdeaReviewBtn.disabled = false;
+                return;
+            }
+
+            if (ideaReviewStatus) ideaReviewStatus.textContent = 'Review tersimpan! 🎉';
+            
+            // Muat ulang cache review
+            const { data: reviews, error: reviewError } = await supabase.from('idea_reviews').select('*');
+            if (!reviewError) allReviewsCache = reviews;
+
+            setTimeout(() => {
+                if (ideaReviewModal) {
+                    ideaReviewModal.classList.add('hidden');
+                    ideaReviewModal.style.display = 'none';
+                }
+                
+                showTripDetails(tripId);
+            }, 1000);
+        });
+    }
+
+
+    // Event listener untuk preview foto di modal review
+    if (ideaReviewPhotoInput) {
+        ideaReviewPhotoInput.addEventListener('change', (e) => {
+            if (!ideaReviewPhotoPreview) return;
+            ideaReviewPhotoPreview.innerHTML = '';
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    ideaReviewPhotoPreview.innerHTML = `<img src="${event.target.result}" alt="Review Photo Preview" style="max-width: 100px; height: auto; border-radius: 4px;">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+});

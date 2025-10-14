@@ -8,8 +8,11 @@
     flex-direction: column;
     gap: 15px;
     padding: 10px 0;
-    max-height: 400px; /* Batasi tinggi list riwayat */
+    /* Batasi tinggi list riwayat */
+    max-height: 350px; 
     overflow-y: auto;
+    border-bottom: 1px solid var(--color-muted);
+    margin-bottom: 15px;
 }
 
 .history-item {
@@ -42,6 +45,11 @@
 .selection-list {
     list-style: none;
     padding: 0;
+    
+    /* Batasi tinggi list aktivitas di modal detail */
+    max-height: 350px; 
+    overflow-y: auto; 
+    padding-right: 10px; 
 }
 
 .review-item {
@@ -62,7 +70,6 @@
     margin-bottom: 10px !important;
 }
 
-/* PERBAIKAN FIX ZOOM: Mengatasi masalah foto review terlalu zoom */
 .review-content img {
     /* Pastikan gambar tidak melebihi wadah */
     max-width: 100%; 
@@ -89,60 +96,34 @@
     border-radius: 4px;
 }
 
-/* css/review.css (Penambahan Star Rating Style) */
-
-/* --- STAR RATING --- */
+/* --- STAR RATING (DENGAN SPESIFISITAS TINGGI) --- */
 .star-rating {
     font-size: 2em;
-    color: var(--color-primary); 
     margin-bottom: 15px;
     display: flex;
     gap: 5px; 
 }
 
-.star {
-    /* Style dasar bintang */
+/* ATURAN BINTANG KOSONG (Warna Abu-Abu Terang) */
+/* Menggunakan ID #ideaReviewRatingDiv untuk Spesifisitas Tinggi */
+#ideaReviewRatingDiv .star {
+    cursor: pointer;
+    font-size: 1.5rem; 
+    color: #ccc; /* WARNA BINTANG KOSONG (Abu-abu terang) */
     transition: color 0.1s ease;
-    /* Hilangkan cursor: pointer di sini, kita pakai .clickable */
 }
 
-/* KRITIS: Style untuk bintang yang bisa diklik */
-.star.clickable {
-    cursor: pointer !important; /* Memaksa kursor tangan */
+/* ATURAN BINTANG AKTIF (Warna Emas) */
+#ideaReviewRatingDiv .star.active {
+    color: gold; /* WARNA BINTANG TERISI (Emas yang kontras) */
 }
 
-/* KRITIS: Style saat bintang yang bisa diklik disentuh (hover) */
-.star.clickable:hover {
-    color: var(--color-error); /* Gunakan warna Error atau Gold yang kontras (misal: merah/oranye) */
+/* ATURAN HOVER (Umpan Balik Saat Kursor Menunjuk) */
+#ideaReviewRatingDiv .star.clickable:hover {
+    color: orange; /* Warna saat cursor menunjuk (hover) */
 }
 
-/* Style untuk bintang yang sudah aktif/terisi */
-.star.active {
-    color: gold; 
-}
-
-/* Tambahan: Pastikan hover tetap berfungsi pada bintang aktif yang bisa diklik */
-.star.active.clickable:hover {
-    /* Sedikit berbeda dari gold agar ada feedback saat disentuh */
-    color: orange; 
-}
-
-/* --- PERBAIKAN TINGGI MODAL DETAIL (Untuk mengatasi masalah penuh layar) --- */
-
-.history-list {
-    /* Batasi tinggi list riwayat */
-    max-height: 350px; 
-    overflow-y: auto;
-    border-bottom: 1px solid var(--color-muted);
-    margin-bottom: 15px;
-}
-
-.selection-list {
-    list-style: none;
-    padding: 0;
-    
-    /* Batasi tinggi list aktivitas di modal detail */
-    max-height: 350px; 
-    overflow-y: auto; 
-    padding-right: 10px; 
+/* Tambahan: Pastikan hover tetap berfungsi pada bintang aktif */
+#ideaReviewRatingDiv .star.active.clickable:hover {
+    color: darkorange; /* Warna saat bintang aktif di-hover */
 }

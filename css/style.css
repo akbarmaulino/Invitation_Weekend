@@ -12,6 +12,7 @@
     --color-muted: #8b9bb2; /* Warna Muted/Placeholder - Lebih gelap agar jelas */
     --color-shadow-light: rgba(0, 0, 0, 0.05);
     --color-shadow-medium: rgba(0, 0, 0, 0.1);
+    --color-primary-light: #6699ff; /* Untuk efek glow/shadow seleksi */
 
     /* Status Colors */
     --color-error: #ff6b6b;
@@ -31,7 +32,13 @@ header {
     background-color: var(--color-background-medium);
     padding: 20px;
     text-align: center;
-    border-bottom: 3px solid var(--color-primary);
+    /* [UPDATE MINOR UI]: Mengganti border tebal dengan shadow yang lebih lembut dan membuat sticky */
+    box-shadow: 0 2px 8px var(--color-shadow-medium); 
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    margin-bottom: 20px;
+    border-radius: 0 0 12px 12px;
 }
 
 main {
@@ -40,9 +47,31 @@ main {
     margin: 0 auto;
 }
 
+header h1 {
+    font-family: var(--font-heading);
+    font-size: 1.8em;
+    color: var(--color-primary);
+    margin: 0;
+}
+
 h1, h2, h3 {
     color: var(--color-text-light);
     margin-top: 0;
+}
+
+/* ==================================================
+   MINOR UI TWEAK: ACCESSIBILITY & FOCUS
+   ================================================== */
+
+*:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+    border-radius: 6px;
+    transition: outline-color 0.1s;
+}
+
+button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days label:focus-within, .option-item label:focus-within {
+    outline: none;
 }
 
 
@@ -119,91 +148,238 @@ h1, h2, h3 {
 
 
 /*==================================================
-  FILTER DAYS (Radio/Checkbox Look)
+  FILTER DAYS (Date Input Look)
 ==================================================*/
 
-.filter-days {
+.date-control {
     display: flex;
-    justify-content: center;
-    gap: 15px; /* Jarak antar tombol dikurangi */
+    flex-direction: column;
+    align-items: center;
     margin-top: 15px;
+    gap: 5px;
 }
 
-/* Label sebagai tombol */
-.filter-days label {
-    background-color: var(--color-secondary);
-    padding: 8px 15px;
-    border-radius: 20px;
+.date-control label {
+    font-size: 0.9em;
+    font-weight: bold;
+    color: var(--color-primary);
+}
+
+.date-control input[type="date"] { 
+    padding: 10px 15px;
+    border: 2px solid var(--color-secondary); 
+    border-radius: 8px; 
+    background-color: #fff; 
+    color: var(--color-text-light);
+    font-size: 1em;
     cursor: pointer;
-    transition: all 0.2s;
-    border: 1px solid var(--color-secondary); /* Border lebih tipis */
-    box-shadow: 0 1px 3px var(--color-shadow-light);
+    box-shadow: 0 2px 5px var(--color-shadow-light);
+    transition: border-color 0.2s;
+    min-width: 200px;
+    text-align: center;
+    appearance: none; 
+    -webkit-appearance: none;
+    -moz-appearance: none;
 }
 
-.filter-days input[type="checkbox"] {
-    display: none;
-}
-
-/* Style ketika checkbox DICHCECKED */
-.filter-days input[type="checkbox"]:checked + span {
-    background-color: var(--color-primary);
-    border: 1px solid var(--color-primary); 
-    box-shadow: 0 3px 8px rgba(3, 37, 76, 0.5); 
-    font-weight: bold;
-    color: var(--color-background-light);
-}
-/* Memastikan gaya diterapkan pada span di dalam label */
-.filter-days input[type="checkbox"]:checked ~ span {
-    background-color: var(--color-primary);
-    border: 1px solid var(--color-primary); 
-    box-shadow: 0 3px 8px rgba(3, 37, 76, 0.5); 
-    font-weight: bold;
-    color: var(--color-background-light); 
-} 
-
-.filter-days label:hover {
-    background-color: #d8ecff; /* Hover sedikit lebih gelap dari secondary */
-}
-
-.filter-days label span {
-    /* Gaya untuk span yang membungkus teks hari */
-    display: inline-block;
-    padding: 0;
-    margin: 0;
-    border-radius: 18px;
-    line-height: 1;
+.date-control input[type="date"]:hover {
+    border-color: var(--color-primary);
 }
 
 
 /*==================================================
+  MODAL STYLES (Umum)
+==================================================*/
+
+.modal {
+    position: fixed;
+    z-index: 100; /* Disesuaikan */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4); /* Disesuaikan */
+    padding-top: 50px; /* Disesuaikan */
+    backdrop-filter: blur(2px); /* NEW: Efek blur */
+    display: none; 
+}
+
+.modal:not(.hidden) {
+    display: block; /* Menggantikan .modal.hidden */
+}
+
+.modal-content {
+    background-color: var(--color-background-medium); /* Disesuaikan */
+    margin: 5% auto;
+    padding: 25px; /* Disesuaikan */
+    border-radius: 12px; /* Disesuaikan */
+    max-width: 450px; /* Disesuaikan */
+    box-shadow: 0 8px 16px var(--color-shadow-medium); /* Disesuaikan */
+    position: relative;
+    color: var(--color-text-dark); /* Menggunakan dark text color agar kontras */
+}
+
+/* Styling untuk h2 dan h3 di modal (h3 untuk form "Tambah Ide") */
+.modal-content h2,
+.modal-content h3 {
+    font-family: var(--font-heading);
+    margin-top: 0;
+    border-bottom: 2px solid var(--color-secondary);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    color: var(--color-primary);
+}
+
+.modal-content label {
+    display: block;
+    margin-top: 15px; 
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: var(--color-text-dark);
+}
+
+/* --- Style Input dan Select Universal --- */
+.modal-content input[type="text"], 
+.modal-content select,
+.modal-content textarea,
+.modal-content input[type="file"] {
+    width: 100%;
+    padding: 12px; 
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px; 
+    box-sizing: border-box;
+    font-size: 1em;
+    background-color: var(--color-background-light); 
+    transition: border-color 0.2s ease;
+}
+
+.modal-content input[type="text"]:focus, 
+.modal-content select:focus,
+.modal-content textarea:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--color-primary);
+    background-color: var(--color-background-light);
+}
+
+.modal-content input[type="file"] {
+    padding: 12px 10px; 
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px; /* Disesuaikan */
+    gap: 10px;
+}
+
+/* --- Close Button Styles --- */
+.close-btn {
+    color: var(--color-muted);
+    position: absolute;
+    top: 15px;
+    right: 25px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    background: none;
+    border: none;
+    transition: color 0.2s ease;
+}
+
+.close-btn:hover,
+.close-btn:focus {
+    color: var(--color-error); /* Warna yang menonjol saat hover */
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Hapus style .close yang duplikat */
+.close:hover,
+.close:focus {
+    color: var(--color-error);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+
+
+.close-btn:hover,
+.close-btn:focus {
+    color: var(--color-error);
+    text-decoration: none;
+}
+
+/* Modal Image Zoom */
+.image-zoom-content {
+    background: none;
+    box-shadow: none;
+    max-width: 90%;
+    margin: 2% auto;
+    padding: 0;
+}
+
+#modalImage {
+    width: 100%;
+    height: auto;
+    display: block;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 12px;
+}
+
+.image-zoom-content .close-btn {
+    color: white;
+    text-shadow: 0 0 5px black;
+    top: 0;
+    right: 15px;
+    font-size: 40px;
+}
+
+/* ==================================================
   ACTIVITY GRID & CARDS
 ==================================================*/
 
+.activity-area {
+    margin-top: 20px;
+}
+
+.info-message {
+    text-align: center;
+    padding: 20px;
+    background-color: var(--color-secondary);
+    border-radius: 8px;
+    color: var(--color-primary);
+}
+
 .activity-grid {
     display: flex;
-    flex-direction: column; 
-    gap: 20px; /* Jarak antar kategori dikurangi */
+    flex-direction: column;
+    gap: 20px; 
     padding: 20px 0;
 }
 
 .category-card {
     background-color: var(--color-background-medium);
-    padding: 15px; /* Padding dikurangi */
-    border-radius: 10px; /* Lebih halus */
-    box-shadow: 0 3px 8px var(--color-shadow-medium); /* Shadow lebih lembut */
+    padding: 15px; 
+    border-radius: 10px; 
+    margin-bottom: 25px;
+    box-shadow: 0 3px 8px var(--color-shadow-medium); 
 }
 
 .category-card h3 {
-    border-bottom: 1px solid var(--color-secondary); /* Garis pemisah lebih tipis */
+    border-bottom: 1px solid var(--color-secondary); 
     padding-bottom: 8px;
     margin-bottom: 12px;
     font-size: 1.2em;
+    margin-top: 0;
 }
 
 .subtypes-wrap {
     display: flex;
     flex-direction: column;
-    gap: 10px; /* Jarak antar subtype dikurangi */
+    gap: 10px;
 }
 
 .subtype-details summary {
@@ -211,15 +387,15 @@ h1, h2, h3 {
     font-weight: bold;
     color: var(--color-primary);
     cursor: pointer;
-    padding: 8px 0; /* Padding vertikal yang cukup */
+    padding: 8px 0; 
     list-style: none;
     position: relative;
-    padding-left: 20px; 
-    border-bottom: 1px dashed #c0d3e7; /* Garis pemisah halus antar subtype */
+    padding-left: 20px;
+    border-bottom: 1px dashed #c0d3e7;
 }
 
 .subtype-details[open] summary {
-    border-bottom: none; /* Hilangkan garis saat terbuka */
+    border-bottom: none;
 }
 
 .subtype-details summary::before {
@@ -238,269 +414,163 @@ h1, h2, h3 {
 }
 
 .options-wrap {
-    display: grid;
-    /* Grid 150px min, agar bisa muat 3-4 kolom di desktop */
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
-    gap: 12px; /* Jarak antar item dikurangi */
-    padding: 10px 0;
-    background-color: var(--color-background-light); /* Latar belakang untuk opsi */
-    border-radius: 0 0 8px 8px;
-    margin-top: -1px; /* Naikkan sedikit agar menyatu dengan details */
-    padding: 15px;
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+    gap: 10px;
+    padding: 10px 0; 
 }
 
+
+/* Style untuk Item Aktivitas */
 .option-item {
-    border: 1px solid #d0e0f0; /* Border lebih terang */
-    border-radius: 8px;
-    overflow: hidden;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    background-color: #fff; /* Latar belakang item putih */
-    position: relative; 
-    box-shadow: 0 1px 3px var(--color-shadow-light);
-}
-
-.option-item:has(input:checked) {
-    border-color: var(--color-success);
-    box-shadow: 0 0 10px rgba(3, 37, 76, 0.3); 
-    background-color: #e9f0f7; /* Background sedikit berubah saat dipilih */
-}
-
-.option-item label {
-    display: block;
+    background-color: #fff;
+    border: 2px solid var(--color-background-medium);
+    border-radius: 10px; 
+    padding: 10px;
+    display: flex;
+    align-items: center;
     cursor: pointer;
-    padding: 5px;
-    height: 100%; /* Memastikan label mengisi penuh item */
-    box-sizing: border-box;
+    transition: all 0.2s ease;
+    min-height: 80px;
+    box-shadow: 0 1px 3px var(--color-shadow-light); 
 }
 
-.option-item input[type="checkbox"] {
-    position: absolute;
-    opacity: 0;
-    cursor: pointer;
-    height: 0;
-    width: 0;
-    z-index: 10; 
+.option-item:hover {
+    border-color: var(--color-secondary);
+    box-shadow: 0 4px 10px var(--color-shadow-medium);
 }
 
-.option-item img {
+.option-item.selected {
+    border-color: var(--color-primary); 
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+    background-color: #f5faff;
+}
+
+
+/* Style Konten */
+.option-item-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
     width: 100%;
-    height: 90px; /* Tinggi gambar dikurangi */
+}
+
+.option-item-content img {
+    width: 60px;
+    height: 60px;
     object-fit: cover;
-    display: block;
-    border-radius: 4px;
-    margin-bottom: 4px;
-    transition: transform 0.3s;
+    border-radius: 8px;
+    flex-shrink: 0;
+    border: 1px solid var(--color-secondary);
 }
 
-.option-item:hover img {
-    transform: scale(1.02);
+/* KRITIS: Kontainer Teks Utama */
+.idea-text-info {
+    flex-grow: 1; /* Ambil ruang maksimal */
+    display: flex; 
+    flex-direction: column; /* Teks dan rating ke bawah */
+    align-items: flex-start; 
 }
 
-/* FIX: Perapian Teks dan Rating */
-.option-item .idea-text-info {
-    padding: 0 2px 5px 2px; 
-    /* Memastikan konten tidak terpotong dengan tinggi yang lebih fleksibel */
+/* NEW: Wrapper untuk nama ide dan tombol detail agar sejajar (MENGGUNAKAN FLEXBOX) */
+.idea-text-wrap {
     display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    height: calc(100% - 100px); /* Kurangi tinggi gambar dan padding label */
-}
-
-.option-item .idea-text-info span {
-    line-height: 1.2;
-    margin-bottom: 2px;
-}
-
-.option-item .rating-display {
-    display: flex;
+    justify-content: space-between; /* Untuk memisahkan teks dan tombol ke ujung */
     align-items: center;
-    font-size: 0.75em; /* Font rating diperkecil agar muat */
-    color: orange; 
-    margin-top: 3px;
-    line-height: 1.1;
-    overflow: hidden; /* Mencegah overflow */
+    width: 100%; 
 }
 
-.option-item .rating-display.muted {
-    color: var(--color-muted);
-    font-style: italic;
-    font-size: 0.7em; 
-}
 
-.option-item .star-icon {
-    margin-right: 3px;
-    white-space: nowrap;
-}
-
-/* Tombol View Detail */
+/* NEW: Style untuk tombol Detail (Mata) - Inline Flex Layout */
 .view-detail-btn {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    background-color: rgba(3, 37, 76, 0.9); /* Sedikit lebih solid */
-    color: white;
+    background: transparent; 
+    color: var(--color-primary);
     border: none;
-    border-radius: 50%;
-    width: 25px; /* Lebih kecil */
-    height: 25px; /* Lebih kecil */
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    padding: 5px 8px;
+    font-size: 1.2em;
     cursor: pointer;
-    font-size: 0.9em;
-    z-index: 20;
-    transition: background-color 0.2s;
-    box-shadow: 0 2px 4px var(--color-shadow-medium);
+    z-index: 10; 
+    transition: color 0.2s;
+    line-height: 1; 
+    flex-shrink: 0; /* Penting agar tidak mengecil */
+    margin-left: 10px; /* Memberi jarak dari teks */
 }
 
 .view-detail-btn:hover {
-    background-color: var(--color-primary);
+    background: transparent;
+    color: var(--color-error); /* Feedback visual saat hover */
 }
 
+.idea-text-info span {
+    color: var(--color-primary);
+    font-size: 1.05em;
+    line-height: 1.2;
+}
 
-/*==================================================
-  MODAL (Generic Form/Message Modal)
-==================================================*/
+.idea-text-info small {
+    font-size: 0.85em;
+}
 
-.modal {
-    position: fixed;
-    z-index: 500; 
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0, 0, 0, 0.5); /* Background gelap yang lebih transparan */
+.rating-display {
+    font-size: 0.9em;
+    color: var(--color-muted);
+    margin-top: 3px;
     display: flex;
-    justify-content: center;
     align-items: center;
-    backdrop-filter: blur(4px); /* Blur lebih lembut */
+    gap: 5px;
 }
 
-.modal.hidden {
-    display: none;
+.rating-display .star-icon {
+    font-size: 1.1em;
 }
 
-.modal-content {
-    background-color: #fff; /* Modal Putih */
-    margin: 10% auto; 
-    padding: 25px; /* Padding lebih besar */
-    border: 1px solid var(--color-secondary);
-    width: 90%; /* Lebih responsif */
-    max-width: 550px; 
-    border-radius: 10px;
-    box-shadow: 0 8px 25px var(--color-shadow-medium);
-    max-height: 85vh; 
-    overflow-y: auto; 
-}
-
-.modal-content h2 {
-    border-bottom: 2px solid var(--color-secondary); /* Garis pemisah yang lebih halus */
-    padding-bottom: 10px;
-    margin-bottom: 20px;
-}
-
-.modal-content form label {
-    display: block;
-    margin: 15px 0 5px;
-    font-weight: bold;
-}
-
-.modal-content form input[type="text"],
-.modal-content form select,
-.modal-content form input[type="file"] {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ddd; /* Border input lebih terang */
-    border-radius: 6px;
-    background-color: #f7f7f7; /* Background input abu-abu muda */
-    color: var(--color-text-light);
-    box-sizing: border-box;
-}
-
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-
-/*==================================================
-  IMAGE MODAL POP-UP (Khusus untuk Gambar)
-==================================================*/
-
-.image-modal {
-    display: none; 
-    position: fixed; 
-    z-index: 1000; 
-    padding-top: 60px; 
-    left: 0;
-    top: 0;
-    width: 100%; 
-    height: 100%; 
-    overflow: auto; 
-    background-color: rgba(0,0,0,0.9); 
-    backdrop-filter: blur(5px);
-}
-
-/* Modal Content (Image) */
-.image-modal .modal-content {
-    margin: auto;
-    display: block;
-    width: 90%;
-    max-width: 800px;
-    animation-name: zoom;
-    animation-duration: 0.3s;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    background-color: transparent; 
-    padding: 0;
-}
-
-/* Close Button */
-.close-btn {
-    position: absolute;
-    top: 15px;
-    right: 35px;
-    color: #fff;
-    font-size: 40px;
-    font-weight: bold;
-    transition: 0.3s;
-    cursor: pointer;
-}
-
-.close-btn:hover,
-.close-btn:focus {
-    color: #bbb;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-/* Animasi Zoom */
-@keyframes zoom {
-    from {transform:scale(0.8)} 
-    to {transform:scale(1)}
-}
-
-/* Responsif untuk layar kecil */
-@media only screen and (max-width: 700px){
-    .image-modal .modal-content {
-        width: 100%;
-    }
-    .image-modal {
-        padding-top: 20px;
-    }
-    .close-btn {
-        top: 5px;
-        right: 20px;
-    }
-}
 
 /* ==================================================
-   IDEA DETAIL MODAL STYLING (PERAPIAN)
-   ================================================== */
+  FOOTER & INFO AREA
+==================================================*/
+
+.info-area {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--color-secondary);
+}
+
+.info-area h4 {
+    color: var(--color-primary);
+    margin-bottom: 10px;
+}
+
+.info-area textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 10px;
+    border: 1px solid var(--color-muted);
+    border-radius: 6px;
+    box-sizing: border-box;
+    background-color: var(--color-background-medium);
+    color: var(--color-text-light);
+}
+
+.count-display {
+    text-align: center;
+    margin: 20px 0;
+    padding: 10px;
+    background-color: var(--color-secondary);
+    border-radius: 8px;
+    font-weight: bold;
+    color: var(--color-primary);
+}
+
+.count-display span#activityCount {
+    font-size: 1.5em;
+    color: var(--color-error);
+    margin: 0 5px;
+}
+
+
+/* ==================================================
+  DETAIL MODAL STYLES
+==================================================*/
 #ideaDetailModal .modal-content {
     max-width: 600px; /* Lebih lebar untuk detail */
 }
@@ -508,7 +578,9 @@ h1, h2, h3 {
 .detail-header-img {
     width: 100%;
     height: 180px; /* Tinggi gambar detail dikurangi */
-    object-fit: cover;
+    /* UBAH BARIS INI: */
+    object-fit: contain; /* SEBELUMNYA: cover */
+    /* END UBAH BARIS INI */
     border-radius: 8px;
     margin-bottom: 15px;
     background-color: var(--color-secondary);
@@ -531,7 +603,7 @@ h1, h2, h3 {
 }
 
 .review-list {
-    max-height: 250px; /* Ketinggian review list dikurangi */
+    max-height: 250px; 
     overflow-y: auto;
     padding-right: 10px;
 }
@@ -545,24 +617,76 @@ h1, h2, h3 {
     border-bottom: none;
 }
 
-.review-item .review-rating {
-    font-size: 1em;
-    color: orange;
-    margin-bottom: 3px;
-}
-
-.review-item .review-text {
-    font-style: italic;
-    color: #444; /* Warna teks review lebih gelap */
+.review-rating {
+    font-size: 1.1em;
     margin-bottom: 5px;
-    font-size: 0.95em;
+    color: gold;
 }
 
-.review-item .review-photo-preview img {
-    max-width: 80px; /* Foto review lebih kecil */
-    max-height: 60px;
-    object-fit: cover;
+.review-text {
+    margin: 0 0 10px 0;
+}
+
+.review-photo-preview img {
+    max-width: 100px;
+    height: auto;
     border-radius: 4px;
-    margin-top: 5px;
-    cursor: pointer;
+    border: 1px solid var(--color-secondary);
+}
+
+.info-message {
+    color: var(--color-muted);
+    font-style: italic;
+    text-align: center;
+}
+
+/* ==================================================
+  RESPONSIVE DESIGN
+==================================================*/
+
+@media (max-width: 768px) {
+    main {
+        padding: 10px;
+    }
+    
+    header h1 {
+        font-size: 1.5em;
+    }
+
+    .controls {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .btn {
+        width: 100%;
+        margin: 5px 0;
+    }
+
+    .modal-content {
+        margin: 20px auto;
+        width: 90%;
+        padding: 20px;
+    }
+    
+    .option-item {
+        flex-direction: row; 
+        gap: 10px;
+        min-height: 70px;
+    }
+    
+    .option-item-content img {
+        width: 50px;
+        height: 50px;
+    }
+    
+    /* Pastikan wrap tetap berfungsi di mobile */
+    .idea-text-wrap {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+    
+    .options-wrap {
+        grid-template-columns: 1fr; /* Satu kolom di mobile */
+    }
 }

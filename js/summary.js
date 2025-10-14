@@ -1,11 +1,6 @@
-// js/summary.js (REVISI TOTAL: Memastikan Load Summary & INSERT trip_history dengan user_id)
+// js/summary.js (REVISI TOTAL: Memastikan Load Summary dengan basis Tanggal & FIX Kolom selection_json)
 
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.2/+esm';
-import { SUPABASE_CONFIG } from './config.js'; 
-// Asumsi Anda sudah memuat html2canvas di summary.html
-
-/* ====== Supabase Config ====== */
-const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+import { supabase } from './supabaseClient.js'; 
 let currentUser = { id: 'anon' }; // Default user
 
 const selectionList = document.getElementById('selectionList');
@@ -19,60 +14,79 @@ const ticketDiv = document.getElementById('ticket');
 // --- PENGATURAN AWAL & DATA LOADING ---
 
 /**
- * Menghitung tanggal weekend berikutnya berdasarkan hari yang dipilih.
- * Ini memastikan tanggal yang ditampilkan di tiket konsisten.
- */
-function getTripDate(dayOfWeek) {
-    const today = new Date();
-    const currentDay = today.getDay(); // 0 = Minggu, 6 = Sabtu
-    const targetDayMap = { 'Minggu': 0, 'Sabtu': 6 };
-    const targetDay = targetDayMap[dayOfWeek];
-
-    let date = new Date(today);
-    let diff = targetDay - currentDay;
-    if (diff < 0) {
-        diff += 7; // Pindah ke minggu depan
-    } else if (diff === 0 && today.getHours() >= 18) {
-        // Jika hari ini Sabtu/Minggu dan sudah jam 6 sore, pindah ke minggu depan
-        diff = 7;
-    }
-    date.setDate(today.getDate() + diff);
-    return date; 
-} 
-
-/**
  * Menyimpan data trip ke tabel trip_history di Supabase.
+ * MENGGUNAKAN KOLOM selection_json.
  */
-async function saveTripHistory(day, date, selections, message) { 
-    const tripDateString = date.toISOString().split('T')[0]; // Format YYYY-MM-DD
+async function saveTripHistory(tripDateString, selections, message) { 
+    
+    // Konversi string tanggal (YYYY-MM-DD) dari localStorage
+    const tripDate = new Date(tripDateString);
+    const dbDateFormat = tripDate.toISOString().split('T')[0]; // Format YYYY-MM-DD
+    
     if (!supabase) { 
         console.error('Supabase client is not initialized.');
         return;
     }
 
     const userId = currentUser.id || 'anon';
-    // KRITIS: Memberikan nama trip yang informatif
-    const tripName = `Trip: ${day} - ${date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}`; 
-
-    console.log('Mencoba menyimpan trip:', { userId, tripName, selections });
     
-    // Pastikan kolom user_id, trip_name, selection_json di database sudah benar
-    const { error } = await supabase
+    // Map selections ke format yang sesuai untuk kolom selection_json
+    const tripDetails = selections.map(s => ({
+        idea_id: s.ideaId.startsWith('cat-') ? null : s.ideaId,
+        name: s.name,
+        category: s.cat,
+        subtype: s.subtype
+    }));
+
+    // Cek apakah trip dengan tanggal yang sama sudah ada di DB
+    const { data: existingTrips, error: fetchError } = await supabase
         .from('trip_history')
-        .insert({
-            trip_name: tripName,
-            trip_day: day,
-            trip_date: tripDateString,
-            selection_json: selections, // KRITIS: Menyimpan array selections
-            secret_message: message,
-            user_id: userId, // KRITIS: Menyimpan user_id
-        });
+        .select('id')
+        .eq('user_id', userId)
+        .eq('trip_date', dbDateFormat);
+
+    if (fetchError) {
+        console.error('Error fetching trip history:', fetchError);
+        return;
+    }
+    
+    // Kolom trip_day di DB Anda adalah 'text', kita isi dengan nama hari
+    const tripDayName = tripDate.toLocaleDateString('id-ID', { weekday: 'long' });
+
+    const insertPayload = {
+        user_id: userId,
+        trip_date: dbDateFormat, 
+        trip_day: tripDayName, // Tambahkan kolom trip_day sesuai skema
+        selection_json: tripDetails, // <-- FIX KRITIS: Menggunakan kolom yang BENAR
+        secret_message: message,
+    };
+    
+    let error = null;
+
+    if (existingTrips && existingTrips.length > 0) {
+        // Update trip yang sudah ada (hanya update data yang berubah)
+        const tripId = existingTrips[0].id;
+        const { error: updateError } = await supabase
+            .from('trip_history')
+            .update({
+                selection_json: tripDetails, // <-- FIX KRITIS
+                secret_message: message,
+            })
+            .eq('id', tripId);
+        error = updateError;
+        if (!error) console.log('Riwayat perjalanan berhasil diperbarui.');
+    } else {
+        // Insert trip baru
+        const { error: insertError } = await supabase
+            .from('trip_history')
+            .insert([insertPayload]); // <-- Menggunakan payload yang benar
+        error = insertError;
+        if (!error) console.log('Riwayat perjalanan berhasil disimpan.');
+    }
         
     if (error) {
         console.error('Error saving trip history:', error);
         alert('Gagal menyimpan riwayat perjalanan: ' + error.message);
-    } else {
-        console.log('Riwayat perjalanan berhasil disimpan.');
     }
 }
 
@@ -81,46 +95,37 @@ async function saveTripHistory(day, date, selections, message) {
  * Fungsi utama untuk memuat data dari localStorage dan merender tiket.
  */
 function loadSummary() {
-    // KRITIS: Ambil data dari localStorage
-    const tripDaysRaw = localStorage.getItem('tripDays');
+    // KRITIS: Ambil data TANGGAL TRIP dari 'tripDate' di localStorage
+    const tripDateString = localStorage.getItem('tripDate');
     const tripSelectionsRaw = localStorage.getItem('tripSelections');
     const secretMessage = localStorage.getItem('secretMessage') || 'Tidak ada pesan rahasia.';
     
-    let tripDays = [];
     let tripSelections = [];
 
     try {
-        tripDays = tripDaysRaw ? JSON.parse(tripDaysRaw) : [];
         tripSelections = tripSelectionsRaw ? JSON.parse(tripSelectionsRaw) : [];
     } catch (e) {
         console.error('Gagal parsing data dari localStorage:', e);
     }
 
     // KRITIS: Pengecekan data harus kuat
-    if (!tripDays || tripDays.length === 0 || !tripSelections || tripSelections.length === 0) {
+    if (!tripDateString || !tripSelections || tripSelections.length === 0) {
         console.error('Tidak ada data trip yang ditemukan di localStorage.');
-        // Jika data kosong, sembunyikan tiket dan tampilkan pesan
         ticketDiv.innerHTML = '<p class="error-message">❌ Gagal memuat data tiket. Coba buat rencana trip baru.</p>';
         downloadBtn.style.display = 'none';
         shareBtn.style.display = 'none';
-        
-        // Alihkan kembali setelah beberapa detik jika benar-benar kosong
-        setTimeout(() => {
-            if (!tripDays.length && !tripSelections.length) {
-                // window.location.href = 'index.html'; 
-            }
-        }, 3000);
         return;
     }
 
-    const dayOfWeek = tripDays.join(' & ');
-    // Gunakan elemen pertama dari array tripDays untuk menghitung tanggal
-    const tripDate = getTripDate(tripDays[0]); 
+    // Konversi string tanggal menjadi objek Date
+    const tripDate = new Date(tripDateString + 'T00:00:00'); // Tambahkan T00:00:00 untuk menghindari masalah zona waktu
+    
+    const dayOfWeek = tripDate.toLocaleDateString('id-ID', { weekday: 'long' });
+    const formattedDate = tripDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
     // Update UI
-    tripDayDisplay.textContent = dayOfWeek;
-    // Format tanggal untuk tampilan yang cantik
-    tripDateDisplay.textContent = tripDate.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+    tripDayDisplay.textContent = dayOfWeek; // Hari (misal: Sabtu)
+    tripDateDisplay.textContent = formattedDate; // Tanggal lengkap (misal: 14 Oktober 2025)
     secretMessageDisplay.textContent = secretMessage;
     
     // Render list aktivitas
@@ -132,15 +137,10 @@ function loadSummary() {
     `).join('');
 
     // KRITIS: Simpan ke Supabase saat halaman Summary di-load
-    saveTripHistory(dayOfWeek, tripDate, tripSelections, secretMessage);
-    
-    // Hapus data lokal setelah berhasil disimpan (opsional, tapi disarankan)
-    // localStorage.removeItem('tripDays');
-    // localStorage.removeItem('tripSelections');
-    // localStorage.removeItem('secretMessage');
+    saveTripHistory(tripDateString, tripSelections, secretMessage);
 }
 
-// --- FUNGSI SHARE & DOWNLOAD (Tidak berubah) ---
+// --- FUNGSI SHARE & DOWNLOAD (Tidak ada perubahan signifikan) ---
 
 // Fungsi downloadCanvas dan shareCanvas
 function downloadCanvas(canvas) {
@@ -154,7 +154,6 @@ async function shareCanvas(canvas) {
     shareBtn.textContent = 'Memproses Gambar... ⏳';
     shareBtn.disabled = true;
 
-    // ... (Logika share gambar seperti kode Anda sebelumnya)
     if (typeof html2canvas === 'undefined') {
         alert('Gagal memuat library gambar.');
         shareBtn.textContent = '📲 Share Karcis (WA/Foto)';
@@ -166,25 +165,51 @@ async function shareCanvas(canvas) {
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         const file = new File([blob], "karcis-trip-ciaaa.png", { type: "image/png" });
         
+        // Buat teks yang akan dishare
+        const tripDateString = localStorage.getItem('tripDate');
+        const selections = JSON.parse(localStorage.getItem('tripSelections') || '[]');
+        const tripDate = new Date(tripDateString + 'T00:00:00');
+        const dayOfWeek = tripDate.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+        let shareText = `**💌 Rencana Trip Kita (${dayOfWeek})!**\n\n`;
+        shareText += "Aktivitas:\n";
+        selections.forEach((item, index) => {
+            shareText += `${index + 1}. ${item.name} (${item.subtype})\n`;
+        });
+        const secretMessage = localStorage.getItem('secretMessage') || '';
+        if (secretMessage) {
+            shareText += `\n*Pesan Rahasia: ${secretMessage}*`;
+        }
+        shareText += `\n\nLihat detailnya di aplikasi Trip Ciaaa.`;
+        
+        
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({
                 files: [file],
                 title: 'Karcis Trip Romantis Kita! ❤️',
-                text: 'Ini rencana trip yang aku buat untuk kita. Cekidot!'
+                text: shareText
             });
+            shareBtn.textContent = '✅ Berbagi Sukses!';
         } else {
             console.warn('Gagal membagikan file, mencoba fallback download.');
-            alert('Gagal membagikan langsung. Silakan tekan tombol "Download Tiket", lalu kirim manual dari galeri.');
+            await navigator.clipboard.writeText(shareText);
+            alert('Rencana disalin ke clipboard! Sekarang klik "Download Tiket" dan kirim foto dari galeri/folder download Anda.');
             downloadCanvas(canvas);
         }
     } catch (error) {
         console.error('Share Gagal:', error);
-        alert('Gagal membagikan. Silakan tekan tombol "Download Tiket" dan kirim foto dari galeri/folder download Anda.');
-        downloadCanvas(canvas);
+        alert('Gagal membagikan. Salin teks atau coba "Download Tiket"');
+        
+        // Fallback: Salin teks
+        const shareText = 'Rencana trip sudah siap! Cek di Karcis Trip Ciaaa.';
+        await navigator.clipboard.writeText(shareText);
+        shareBtn.textContent = 'Teks Disalin! 📋';
     }
     
-    shareBtn.textContent = '📲 Share Karcis (WA/Foto)';
-    shareBtn.disabled = false;
+    // Set ulang teks tombol setelah proses selesai
+    setTimeout(() => {
+        shareBtn.textContent = '📲 Share Karcis (WA/Foto)';
+        shareBtn.disabled = false;
+    }, 1500);
 }
 
 // Event Listeners
