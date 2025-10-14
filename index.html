@@ -89,22 +89,14 @@
         </div>
     </div>
 
-    <div id="historyDetailModal" class="modal hidden"> 
-        <div class="modal-content">
-            <ul id="historyDetailList" class="selection-list">
-            </ul>
-            <button type="button" id="cancelReview" class="btn secondary">Kembali ke Daftar</button> 
-        </div>
-    </div>
-
     <div id="historyDetailModal" class="modal hidden">
         <div class="modal-content">
             <h3 id="historyModalTitle">Detail Trip</h3>
             <p style="margin-bottom: 15px; border-bottom: 1px dashed var(--color-muted); padding-bottom: 10px;">Pesan: <span id="historySecretMessage" style="font-style: italic;"></span></p>
 
             <h4 style="margin-top: 0;">Aktivitas & Review</h4>
-            <ul id="historyDetailList" class="selection-list" style="padding-left: 0;">
-                </ul>
+            <div id="historyDetailList" class="all-ideas-list" style="padding-left: 0;">
+                </div>
             
             <div class="modal-actions">
                 <button type="button" id="cancelReview" class="btn secondary">Kembali ke Riwayat</button>
@@ -117,8 +109,7 @@
             <h3>Review untuk <span id="reviewIdeaName"></span></h3>
             <form id="ideaReviewForm">
                 <input type="hidden" id="reviewIdeaId">
-                
-                <label>Rating (1-5 Bintang):</label>
+                <input type="hidden" id="reviewTripId"> <label>Rating (1-5 Bintang):</label>
                 <div id="ideaReviewRating" class="star-rating">
                     </div>
                 <label for="ideaReviewText">Bagaimana pengalaman Anda di sini?</label>
@@ -137,12 +128,13 @@
             </form>
         </div>
     </div>
+    
     <div id="ideaDetailModal" class="modal hidden">
         <div class="modal-content">
             <button type="button" id="closeDetailModal" class="close-btn" style="top: 0; right: 10px; position: absolute; font-size: 2em; color: var(--color-primary);">&times;</button>
             <h2 id="detailIdeaName">Nama Tempat</h2>
 
-            <img id="detailIdeaImage" class="detail-header-img" src="images/placeholder.jpg" alt="Foto Tempat">
+            <img id="detailIdeaImage" class="detail-header-img" src="images/1.jpg" alt="Foto Tempat">
 
             <h3>Ringkasan Review</h3>
             <div id="detailRatingSummary" class="detail-rating-summary">

@@ -113,12 +113,21 @@ async function fetchData() {
     categoriesCache = categories || [];
 
     // 2. Ambil Ide
+    // 2. Ambil Ide
     const { data: ideas, error: ideaError } = await supabase
         .from('trip_ideas_v2') 
-        .select('*')
+        .select('*, idea_categories (category, subtype, icon, photo_url)') // <-- KEMBALIKAN RELASI INI
         .order('created_at', { ascending: false });
     if (ideaError) { console.error('Supabase fetch ideas error', ideaError); }
-    ideasCache = ideas || [];
+    
+    // NEW: Proses data ide agar category info ada langsung di objek ide (untuk kemudahan rendering)
+    ideasCache = (ideas || []).map(idea => ({
+        ...idea,
+        category_name: idea.idea_categories.category,
+        subtype_name: idea.idea_categories.subtype,
+        icon: idea.idea_categories.icon,
+        photo_url_category: idea.idea_categories.photo_url,
+    }));
     
     // 3. Ambil Semua Review (Untuk rating rata-rata dan detail modal)
     const { data: reviews, error: reviewError } = await supabase

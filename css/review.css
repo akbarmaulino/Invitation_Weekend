@@ -94,23 +94,38 @@
 /* --- STAR RATING --- */
 .star-rating {
     font-size: 2em;
-    color: var(--color-primary); /* Warna bintang */
+    color: var(--color-primary); 
     margin-bottom: 15px;
     display: flex;
-    gap: 5px; /* Jarak antar bintang */
+    gap: 5px; 
 }
 
 .star {
-    cursor: pointer;
+    /* Style dasar bintang */
     transition: color 0.1s ease;
+    /* Hilangkan cursor: pointer di sini, kita pakai .clickable */
 }
 
-.rating-stars {
-    font-size: 1em; /* Mengatur ukuran tampilan bintang di modal detail */
+/* KRITIS: Style untuk bintang yang bisa diklik */
+.star.clickable {
+    cursor: pointer !important; /* Memaksa kursor tangan */
+}
+
+/* KRITIS: Style saat bintang yang bisa diklik disentuh (hover) */
+.star.clickable:hover {
+    color: var(--color-error); /* Gunakan warna Error atau Gold yang kontras (misal: merah/oranye) */
+}
+
+/* Style untuk bintang yang sudah aktif/terisi */
+.star.active {
     color: gold; 
-    letter-spacing: 2px;
 }
 
+/* Tambahan: Pastikan hover tetap berfungsi pada bintang aktif yang bisa diklik */
+.star.active.clickable:hover {
+    /* Sedikit berbeda dari gold agar ada feedback saat disentuh */
+    color: orange; 
+}
 
 /* --- PERBAIKAN TINGGI MODAL DETAIL (Untuk mengatasi masalah penuh layar) --- */
 
