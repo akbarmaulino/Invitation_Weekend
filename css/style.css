@@ -126,24 +126,45 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
 }
 
 /* --- Secret Note Textarea --- */
-.secret-note {
-    margin: 30px 0;
-    padding: 20px;
-    background-color: var(--color-background-medium);
+.secret-message-area {
+    /* Ganti: Menggunakan warna latar yang sama dengan card/modal */
+    background-color: var(--color-background-medium); 
+    padding: var(--space-lg);
     border-radius: 12px;
-    box-shadow: 0 4px 10px var(--color-shadow-light);
+    box-shadow: var(--shadow-soft);
+    margin-top: var(--space-lg);
+
 }
 
-.secret-note textarea {
+.secret-message-area label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: var(--space-sm);
+    color: var(--color-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#secretMessage {
     width: 100%;
     min-height: 80px;
-    padding: 10px;
-    border: 1px solid var(--color-secondary);
+    padding: var(--space-sm);
+    /* Ganti: Border lebih halus */
+    border: 1px solid var(--color-secondary); 
     border-radius: 6px;
-    background-color: #fff; /* Teks area putih agar lebih mudah dibaca */
-    color: var(--color-text-light);
-    box-sizing: border-box;
     resize: vertical;
+    font-size: 1em;
+    box-sizing: border-box;
+    
+    /* Memastikan teks berwarna gelap agar mudah dibaca */
+    color: var(--color-text-dark); 
+    background-color: #fff;
+}
+
+#secretMessage::placeholder {
+    /* Membuat placeholder lebih lembut */
+    color: var(--color-muted);
+    font-style: italic;
 }
 
 
