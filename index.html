@@ -50,17 +50,17 @@
         <div class="modal-content">
             <h3>Tambahkan Ide Trip Baru</h3>
             <form id="ideaForm">
-                <label for="ideaCategory">Pilih Kategori</label>
+                <label for="ideaCategory">Mau Kemana Kitaaa?</label>
                 <select id="ideaCategory" required>
                     </select>
                 <input type="text" id="newCategoryInput" name="newCategory" placeholder="Nama Kategori Baru" style="display: none;" required>
 
-                <label for="ideaSubtype" style="margin-top: 10px;">Pilih Sub-tipe</label>
+                <label for="ideaSubtype" style="margin-top: 10px;">Dimana yaa enaknyaa?</label>
                 <select id="ideaSubtype" required>
                     </select>
                 <input type="text" id="newSubtypeInput" name="newSubtype" placeholder="Nama Subtipe Baru" style="display: none;" required>
 
-                <label for="ideaTitle" style="margin-top: 10px;">Nama Ide Trip / Tempat Baru (Opsional)</label>
+                <label for="ideaTitle" style="margin-top: 10px;">Kasih tau dong...</label>
                 <input type="text" id="ideaTitle" placeholder="Misal: Jalan-jalan ke Taman Kota">
 
                 <label for="ideaImageInput" style="margin-top: 10px;">Foto/Gambar (Opsional)</label>
@@ -96,15 +96,15 @@
     
     <div id="imageModal" class="modal hidden">
         <div class="modal-content image-zoom-content">
-            <button class="close-btn">&times;</button>
+            <button class="close-btn" id="closeImageModal">&times;</button>
             <img id="modalImage" src="" alt="Zoomed Image">
         </div>
     </div>
-    
+        
     <div id="historyListModal" class="modal hidden">
         <div class="modal-content">
             <h2>Riwayat Trip</h2>
-            <button class="close-btn" id="closeHistoryListModal">&times;</button>
+            <button class="close-btn" id="closeHistoryListBtn">&times;</button> 
             
             <div class="filter-history-date">
                 <div class="filter-group">
@@ -121,7 +121,7 @@
             </div>
             <div class="history-list-area">
                 <div id="historyList">
-                    </div>
+                </div>
             </div>
         </div>
     </div>

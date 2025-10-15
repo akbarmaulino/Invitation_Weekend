@@ -24,6 +24,7 @@ const countDisplay = document.getElementById('countDisplay'); // DIV wrapper
 const imageModal = document.getElementById('imageModal');
 const modalImage = document.getElementById('modalImage');
 const closeBtn = document.querySelector('.close-btn');
+const closeImageModalBtn = document.getElementById('closeImageModal'); // Menggunakan ID yang spesifik
 
 // Input KUSTOM dan FOTO
 const newCategoryInput = document.getElementById('newCategoryInput');
@@ -309,6 +310,14 @@ if (closeBtn) {
     closeBtn.onclick = function() {
         imageModal.style.display = "none";
     }
+}
+
+// TUTUP MODAL IMAGE ZOOM
+if (closeImageModalBtn && imageModal) {
+    closeImageModalBtn.addEventListener('click', () => {
+        imageModal.classList.add('hidden');
+        imageModal.style.display = 'none'; 
+    });
 }
 
 window.onclick = function(event) {

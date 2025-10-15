@@ -327,7 +327,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inisialisasi semua referensi UI
     viewHistoryBtn = document.getElementById('viewHistoryBtn'); 
     historyListModal = document.getElementById('historyListModal'); 
-    closeHistoryListModal = document.getElementById('closeHistoryListModal'); 
+    // START PERUBAHAN KRITIS: Menggunakan ID baru dari tombol penutup Modal Riwayat Trip
+    closeHistoryListModal = document.getElementById('closeHistoryListBtn'); 
+    // END PERUBAHAN KRITIS
     historyList = document.getElementById('historyList'); 
     historyDetailModal = document.getElementById('historyDetailModal'); 
     cancelReview = document.getElementById('cancelReview'); 
