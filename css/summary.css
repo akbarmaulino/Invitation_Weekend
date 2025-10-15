@@ -75,7 +75,7 @@ h3 {
   font-weight: bold;
   transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-
+  padding: 14px 12px; 
   /* PENTING FIX: Menggunakan flex-basis 0 dan flex-grow 1 */
   flex-grow: 1; /* Tumbuh untuk mengisi ruang yang tersedia */
   flex-basis: 0; /* Memberi titik awal yang sama untuk perhitungan lebar */
@@ -85,7 +85,7 @@ h3 {
 .btn.primary {
   background-color: var(--color-secondary);
   color: rgba(0, 0, 0, 0.7);
-  box-shadow: 0 4px 6px rgba(3, 37, 76, 0.3);
+  /* box-shadow: 0 4px 6px rgba(3, 37, 76, 0.3); */
 }
 
 .btn.secondary {
@@ -99,6 +99,11 @@ h3 {
 }
 
 .btn.primary:hover {
+  background-color: #7282a5;
+  box-shadow: 0 6px 10px rgba(3, 37, 76, 0.4);
+}
+
+.btn.secondary:hover {
   background-color: #7282a5;
   box-shadow: 0 6px 10px rgba(3, 37, 76, 0.4);
 }

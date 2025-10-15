@@ -132,7 +132,8 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
 }
 
 .btn {
-    padding: 10px 15px;
+    /* KRITIS: Tingkatkan padding vertikal dari 10px menjadi 14px */
+    padding: 14px 18px; 
     border: none;
     border-radius: 8px; /* Lebih halus */
     cursor: pointer;
@@ -210,6 +211,23 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
     /* Membuat placeholder lebih lembut */
     color: var(--color-muted);
     font-style: italic;
+}
+
+#generateBtn {
+    /* 1. Paksa tombol memiliki lebar 100% dari container .secret-message-area */
+    width: 100%; 
+    /* 2. Tambahkan margin atas agar ada pemisah dari textarea di atasnya */
+    margin-top: var(--space-lg); 
+    /* 3. Gunakan box-sizing agar padding tidak menambah lebar 100% */
+    box-sizing: border-box; 
+    
+    /* 4. KRITIS: Atur tinggi tombol menjadi nilai tetap (misalnya 48px) */
+    height: 48px; 
+    
+    /* 5. Sesuaikan padding agar teks di tengah */
+    padding: 0 var(--space-lg); /* Padding vertikal diatur menjadi 0 karena sudah ada height */
+    
+    /* Style default dari .btn.primary sudah diaplikasikan, tidak perlu diulang */
 }
 
 
