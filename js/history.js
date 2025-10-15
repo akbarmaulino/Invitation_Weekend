@@ -70,7 +70,7 @@ function renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews) {
     return `
         <div class="idea-detail-item">
             <div class="idea-header">
-                <div class="idea-icon">${idea.icon || '📍'}</div>
+                <div class="idea-icon">==========================================</div>
                 <div>
                     <h4>${idea.name}</h4>
                     <p class="idea-subtitle">${idea.category} / ${idea.subtype}</p>

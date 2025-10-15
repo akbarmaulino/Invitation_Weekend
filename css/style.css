@@ -703,10 +703,32 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
     }
     
     .option-item {
-        flex-direction: row; 
-        gap: 10px;
-        min-height: 70px;
+        background-color: #fff;
+        /* Ganti: Border yang lebih kuat agar terlihat jelas */
+        border: 1px solid #E0EBF7; /* Warna border yang lebih terlihat dari secondary */
+        border-radius: 10px; 
+        padding: 10px;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        min-height: 80px;
+        /* KRITIS: Perkuat Box Shadow agar kartu 'terangkat' */
+        box-shadow: 0 4px 8px var(--color-shadow-light); /* Shadow yang jelas */
     }
+
+    .option-item:hover {
+        border-color: var(--color-primary-light);
+        /* Shadow yang lebih kuat saat di-hover */
+        box-shadow: 0 6px 15px var(--color-shadow-medium);
+    }
+
+    .option-item.selected {
+    border-color: var(--color-primary); 
+    /* NEW: Ring luar biru cerah untuk menunjukkan pilihan */
+    box-shadow: 0 0 0 3px var(--color-primary-light); 
+    background-color: #F5FAFF; /* Sedikit latar belakang biru muda */
+}
     
     .option-item-content img {
         width: 50px;
@@ -720,6 +742,9 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
     }
     
     .options-wrap {
-        grid-template-columns: 1fr; /* Satu kolom di mobile */
+        display: grid; 
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+        gap: 15px; /* KRITIS: Tambah gap antar kartu agar pemisah jelas */
+        padding: 10px 0; 
     }
 }
