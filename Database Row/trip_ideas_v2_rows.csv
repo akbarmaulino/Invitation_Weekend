@@ -1,0 +1,35 @@
+id,created_at,idea_name,type_key,day_of_week,photo_url
+82d1db2e-b9ff-44c6-ac5b-6cb9d0031ce7,2025-10-11 01:01:29.524304+00,Wisata Kuningan / Landmark lokal,jalan-kuningan,,images/kuningan.jpg
+01840b61-7e4f-4542-aace-765df29b6a0b,2025-10-11 08:40:53.867933+00,Kota Slawi,jalan-slawi,Sabtu,https://rdoywpzkfddvrxrwmvsc.supabase.co/storage/v1/object/public/trip-ideas-images/anon/1760172052142_slawi.jpg
+f11736e4-a6ec-41e5-89c5-ec893b8768ff,2025-10-11 01:01:29.524304+00,Alun-Alun Tegal,jalan-tegal,,images/tegal.jpg
+98a3e5dd-b68a-42a7-8223-be9ab2827280,2025-10-11 01:01:29.524304+00,Empal Gentong H. Apud,makan-empalgentong,,images/empal.jpg
+d5e2007c-b518-4bf9-b329-dd11df627c37,2025-10-11 01:01:29.524304+00,Burger King / Lokal Burger Cirebon,makan-fastfood,,images/bk.jpg
+cdf4b977-9904-4db1-9e97-0c54be31d596,2025-10-11 01:01:29.524304+00,KFC,makan-fastfood,,images/kfc.jpg
+669aecfb-a15c-43b2-b9ff-31b3f21a0a05,2025-10-11 01:01:29.524304+00,McD,makan-fastfood,,images/mcd.jpg
+cf11c73b-7435-4094-8de7-ebf025d45ad3,2025-10-14 13:15:59.625586+00,makan,makan-nasgor,,https://rdoywpzkfddvrxrwmvsc.supabase.co/storage/v1/object/public/trip-ideas-images/anon/1760447757860_algif.jpg
+e696c1f4-86e4-49a4-bdf9-c408638e0fcb,2025-10-14 15:38:55.257699+00,Kota Slawi,makan-nasgor,,https://rdoywpzkfddvrxrwmvsc.supabase.co/storage/v1/object/public/trip-ideas-images/anon/1760456332965_haji%20moel.jpg
+c7faa8cb-7124-4831-819a-edb8b295452b,2025-10-11 01:01:29.524304+00,Nasi Goreng Krucuk,makan-nasgor,,images/nasi goreng krucuk.jpg
+045030ea-5f9a-404b-9380-5cd330b873af,2025-10-11 01:01:29.524304+00,Nasi Goreng Arang,makan-nasgor,,images/nasi goreng arang.jpg
+c49f5ca7-eb78-44e7-8dc8-5e3943c650ab,2025-10-14 15:17:04.718926+00,makan,makan-nasgor,,https://rdoywpzkfddvrxrwmvsc.supabase.co/storage/v1/object/public/trip-ideas-images/anon/1760455023673_1.jpg
+f236d6d1-c640-4794-86d8-e1fa88393f13,2025-10-11 01:01:29.524304+00,Nasi Jamblang Ibu Nur,makan-nasijamblang,,images/nasi jambang.jpg
+8900fa71-1f90-4108-8266-a840391cc9c7,2025-10-11 01:01:29.524304+00,Hj Moel Seafood,makan-seafood,,images/haji moel.jpg
+7d5a125a-c9d6-4acb-9ddf-6edadb99de76,2025-10-11 01:01:29.524304+00,Tepian Rasa,makan-seafood,,images/tepian rasa.jpg
+3a16cb88-f60c-4630-adcb-93a6ab001976,2025-10-11 01:01:29.524304+00,Bandar Djakarta,makan-seafood,,images/bandar jakarta.jpg
+4f206e0c-9f59-4a19-9bfe-16ff7d10f49f,2025-10-11 01:01:29.524304+00,Terajeh,makan-steak,,images/terajeh.jpg
+6b3d215a-b3d0-4893-aa63-1068b4c298b7,2025-10-11 01:01:29.524304+00,Shukaku,makan-steak,,images/shukaku.jpg
+5adbf028-cf70-47c9-a2df-4797e3023291,2025-10-11 01:01:29.524304+00,Al-Ghiff Steak,makan-steak,,images/algif.jpg
+5e6fe95a-cdeb-4053-9684-96b6460c9f00,2025-10-11 01:01:29.524304+00,Sushi Tei,makan-sushi,,images/suhsi tei logo.jpg
+5aeefaa1-498f-4e01-89d1-236803cb94f2,2025-10-11 01:01:29.524304+00,Ichiban Sushi,makan-sushi,,images/ichiban.jpg
+58b2e8b7-21d6-41a1-a020-2d6dca16a762,2025-10-11 01:01:29.524304+00,Sushi Time,makan-sushi,,images/Sushi Time.jpg
+bea3d837-f79f-44b7-bb48-582093d14210,2025-10-11 01:01:29.524304+00,Tom Sushi,makan-sushi,,images/TOM SUSHI.jpg
+97958666-3a22-41a6-83f7-af2b846f89f9,2025-10-11 01:01:29.524304+00,Tron : Ares,nongkrong-bioskop,,images/tron.jpg
+1972f28c-c7cd-4832-8bd5-d2db37f42802,2025-10-11 01:01:29.524304+00,Jembatan Shiratal Mustaqim,nongkrong-bioskop,,images/jembatan shi.jpg
+bd771483-a7c8-4abc-be87-bcea6ada0780,2025-10-11 01:01:29.524304+00,Rangga dan Cinta,nongkrong-bioskop,,images/rangga dan cinta.jpg
+178e4ba0-f1c1-4b2e-b1f9-5db3e706e74c,2025-10-11 01:01:29.524304+00,Kang Solah,nongkrong-bioskop,,images/kang soleh.jpg
+8df9fdf8-89af-44a6-b50a-5cddddf33068,2025-10-11 01:01:29.524304+00,Tukar Takdir,nongkrong-bioskop,,images/tukartak.jpg
+38ad3f69-322c-425b-89c8-d71eaad18099,2025-10-11 01:01:29.524304+00,Gameshoot Cirebon,nongkrong-gamingcoffee,,images/gameshoot.jpg
+6e188a9c-58ba-4efc-91a6-38e7149d0b6b,2025-10-11 01:01:29.524304+00,Tomoro,nongkrong-kopi,,images/tomoro.png
+713da2e2-a056-4bf5-9f73-41b8d8e84ca4,2025-10-11 01:01:29.524304+00,Kopi Kenangan,nongkrong-kopi,,images/kopken.jpg
+aa7a1c13-b0ec-4af9-bf46-00eb7c8a1e9e,2025-10-11 01:01:29.524304+00,Starbucks,nongkrong-kopi,,images/sb.png
+5064cb74-4bb1-4ad8-8b01-a7b34eb9ea79,2025-10-11 01:01:29.524304+00,Janji Jiwa,nongkrong-kopi,,images/jajiw.jpg
+a103a969-ab86-45a4-a8fb-2328704b653f,2025-10-11 01:01:29.524304+00,Fore,nongkrong-kopi,,images/fore.jpg

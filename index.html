@@ -103,18 +103,25 @@
     
     <div id="historyListModal" class="modal hidden">
         <div class="modal-content">
+            <h2>Riwayat Trip</h2>
             <button class="close-btn" id="closeHistoryListModal">&times;</button>
-            <h3>Riwayat Trip Kita 📖</h3>
             
-            <div class="history-list-area">
-                <p>Klik trip untuk melihat detail dan memberi review!</p>
-                <div id="historyList" class="history-list">
-                    <p>Memuat riwayat...</p>
+            <div class="filter-history-date">
+                <div class="filter-group">
+                    <label for="filterStartDate">Dari Tanggal</label>
+                    <input type="date" id="filterStartDate">
                 </div>
+                
+                <div class="filter-group">
+                    <label for="filterEndDate">Sampai Tanggal</label>
+                    <input type="date" id="filterEndDate">
+                </div>
+                
+                <button class="btn secondary small" id="applyHistoryFilterBtn">Terapkan Filter</button>
             </div>
-
-            <div class="modal-actions" style="margin-top: 20px;">
-                <button class="btn secondary" id="cancelHistoryList">Tutup</button>
+            <div class="history-list-area">
+                <div id="historyList">
+                    </div>
             </div>
         </div>
     </div>

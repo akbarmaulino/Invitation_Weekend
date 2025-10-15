@@ -1,4 +1,4 @@
-// js/history.js (REVISI FINAL: Memastikan Inisialisasi & Tampilan Modal Instan)
+// js/history.js (REVISI FINAL: Filter Tanggal Aktif)
 
 import { supabase } from './supabaseClient.js'; 
 let currentUser = { id: 'anon' }; 
@@ -9,7 +9,10 @@ let viewHistoryBtn, historyListModal, historyList, historyDetailModal,
     ideaReviewModal, reviewIdeaName, ideaReviewForm, reviewIdeaId, reviewTripId, 
     ideaReviewText, ideaReviewPhotoInput, ideaReviewPhotoPreview, ideaReviewStatus, 
     submitIdeaReviewBtn, cancelIdeaReview, ideaReviewRatingDiv,
-    closeHistoryListModal, backToHistoryList; // <-- Tambah backToHistoryList
+    closeHistoryListModal, backToHistoryList,
+    // START: VARIABEL BARU UNTUK FILTER TANGGAL
+    filterStartDate, filterEndDate, applyHistoryFilterBtn; // <--- BARU DITAMBAHKAN
+    // END: VARIABEL BARU
 
 let currentRating = 0;
 let currentTrip = null; 
@@ -103,19 +106,32 @@ function renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews) {
 
 
 // =========================================================
-// 2. DATA FETCHING (Hanya memuat data, tanpa mengatur display)
+// 2. DATA FETCHING (DENGAN FILTER TANGGAL)
 // =========================================================
 
-async function loadHistory() {
+async function loadHistory(startDate = null, endDate = null) { // <--- TAMBAH PARAMETER FILTER
     if (!historyList) return;
     historyList.innerHTML = '<p>Memuat riwayat trip...</p>';
     
-    // 1. Ambil semua trip history
-    const { data: trips, error: tripError } = await supabase
+    let query = supabase
         .from('trip_history')
         .select('*')
         .eq('user_id', currentUser.id || 'anon')
         .order('trip_date', { ascending: false });
+
+    // START: LOGIKA FILTER TANGGAL BARU
+    if (startDate) {
+        // Filter trip yang TANGGALNYA LEBIH BESAR atau SAMA DENGAN start date
+        query = query.gte('trip_date', startDate); 
+    }
+    if (endDate) {
+        // Filter trip yang TANGGALNYA LEBIH KECIL atau SAMA DENGAN end date
+        query = query.lte('trip_date', endDate);
+    }
+    // END: LOGIKA FILTER TANGGAL BARU
+    
+    // 1. Ambil semua trip history
+    const { data: trips, error: tripError } = await query; // <-- Eksekusi query dengan filter
 
     if (tripError) {
         console.error('Error fetching trip history:', tripError);
@@ -139,8 +155,18 @@ async function loadHistory() {
 function renderHistoryList(trips) {
     if (!historyList) return;
     historyList.innerHTML = '';
+    
+    // Tampilkan pesan jika filter menghasilkan 0 data
     if (!trips || trips.length === 0) {
-        historyList.innerHTML = '<p>Belum ada riwayat trip tersimpan.</p>';
+        // Cek apakah filter diterapkan
+        const isFiltered = (filterStartDate && filterStartDate.value) || (filterEndDate && filterEndDate.value);
+        
+        let message = 'Belum ada riwayat trip tersimpan.';
+        if (isFiltered) {
+            message = 'Tidak ada riwayat trip dalam rentang tanggal yang dipilih.';
+        }
+        
+        historyList.innerHTML = `<p>${message}</p>`;
         return;
     }
 
@@ -320,15 +346,40 @@ document.addEventListener('DOMContentLoaded', () => {
     submitIdeaReviewBtn = document.getElementById('submitIdeaReviewBtn');
     cancelIdeaReview = document.getElementById('cancelIdeaReview');
     ideaReviewRatingDiv = document.getElementById('ideaReviewRatingDiv');
-    backToHistoryList = document.getElementById('backToHistoryList'); // <-- Ambil referensi tombol baru
-
+    backToHistoryList = document.getElementById('backToHistoryList'); 
     
+    // START: INISIALISASI UI FILTER BARU
+    filterStartDate = document.getElementById('filterStartDate');
+    filterEndDate = document.getElementById('filterEndDate');
+    applyHistoryFilterBtn = document.getElementById('applyHistoryFilterBtn');
+    // END: INISIALISASI UI FILTER BARU
+    
+    
+    // Handler untuk kembali ke daftar trip (digunakan di beberapa tempat)
+    const backToHistoryListHandler = () => {
+        // Reset filter
+        if (filterStartDate) filterStartDate.value = '';
+        if (filterEndDate) filterEndDate.value = '';
+
+        if (historyDetailModal) {
+            historyDetailModal.classList.add('hidden');
+            historyDetailModal.style.display = 'none';
+        }
+        
+        loadHistory(); 
+        if (historyListModal) {
+            historyListModal.classList.remove('hidden'); 
+            historyListModal.style.display = 'block';
+        }
+    };
+
+
     // 1. Tampil Modal Riwayat List
     if (viewHistoryBtn && historyListModal) { 
         viewHistoryBtn.addEventListener('click', () => {
             historyListModal.style.display = 'block'; 
             historyListModal.classList.remove('hidden');
-            loadHistory(); 
+            loadHistory(); // Memuat tanpa filter saat pertama kali dibuka
         });
     }
 
@@ -349,23 +400,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 3. Tutup Modal Detail/Review (Tombol X atau Kembali ke Daftar Trip)
-    const detailModalCloseHandler = () => {
-        historyDetailModal.classList.add('hidden');
-        historyDetailModal.style.display = 'none'; 
-        loadHistory(); 
-        historyListModal.classList.remove('hidden'); 
-        historyListModal.style.display = 'block'; 
-    };
 
+    // 3. Tutup Modal Detail/Review (Tombol Batal atau Kembali ke Daftar Trip)
     if (cancelReview) {
-        cancelReview.addEventListener('click', detailModalCloseHandler);
+        cancelReview.addEventListener('click', backToHistoryListHandler);
     }
     
-    // KRITIS: Menambahkan event listener untuk tombol 'Kembali ke Daftar Trip'
     if (backToHistoryList) {
-        backToHistoryList.addEventListener('click', detailModalCloseHandler);
+        backToHistoryList.addEventListener('click', backToHistoryListHandler);
     }
+
 
     // 4. Tutup Modal Review Per Ide (Kembali ke Detail Trip)
     if (cancelIdeaReview && ideaReviewModal && historyDetailModal) {
@@ -376,15 +420,28 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentTrip) {
                 showTripDetails(currentTrip.id);
             } else {
-                historyDetailModal.classList.add('hidden');
-                historyDetailModal.style.display = 'none';
-                historyListModal.classList.remove('hidden');
-                historyListModal.style.display = 'block';
+                backToHistoryListHandler();
             }
         });
     }
 
-    // 5. GLOBAL LISTENER: Tutup modal saat klik di luar konten modal (backdrop)
+    // KRITIS: 5. Listener untuk Terapkan Filter Tanggal
+    if (applyHistoryFilterBtn) {
+        applyHistoryFilterBtn.addEventListener('click', () => {
+            const start = filterStartDate.value;
+            const end = filterEndDate.value;
+
+            if (!start && end) {
+                alert('Jika Anda mengisi "Sampai Tanggal", Anda harus mengisi "Dari Tanggal" juga.');
+                return;
+            }
+            
+            // Panggil loadHistory dengan filter yang dipilih
+            loadHistory(start, end);
+        });
+    }
+
+    // 6. GLOBAL LISTENER: Tutup modal saat klik di luar konten modal (backdrop)
     window.addEventListener('click', (event) => {
         // ... (Logika backdrop tetap sama) ...
         if (historyListModal && event.target === historyListModal) {
@@ -392,7 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
             historyListModal.style.display = 'none';
         }
         if (historyDetailModal && event.target === historyDetailModal) {
-            detailModalCloseHandler();
+            backToHistoryListHandler(); // Kembali ke daftar trip
         }
         if (ideaReviewModal && event.target === ideaReviewModal) {
             ideaReviewModal.classList.add('hidden');
@@ -403,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 6. Submit Review 
+    // 7. Submit Review 
     if (ideaReviewForm) {
         ideaReviewForm.addEventListener('submit', async (e) => {
             e.preventDefault();
