@@ -1,0 +1,1 @@
+INSERT INTO "public"."idea_categories" ("id", "category", "subtype", "icon", "type_key", "photo_url") VALUES ('26570936-4b09-4497-acae-11e575119590', 'Makan', 'Soto Ayam', '🆕', 'makan-soto-ayam', 'https://rdoywpzkfddvrxrwmvsc.supabase.co/storage/v1/object/public/trip-ideas-images/anon/1760507670453_Soto%20Ayam.jpg');

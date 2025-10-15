@@ -43,6 +43,9 @@ const closeDetailModal = document.getElementById('closeDetailModal');
 // NEW: INPUT TANGGAL TRIP
 const tripDateInput = document.getElementById('tripDateInput'); 
 
+// === DITAMBAHKAN UNTUK PENCEGAHAN DOUBLE SUBMIT ===
+// Referensi tombol submit form ide (Asumsi memiliki type="submit" di dalam ideaForm)
+const submitIdeaBtn = document.querySelector('#ideaForm button[type="submit"]');
 
 // Cache data
 let categoriesCache = [];
@@ -137,6 +140,26 @@ async function fetchData() {
         icon: idea.idea_categories.icon,
         photo_url_category: idea.idea_categories.photo_url,
     }));
+    
+    // START FIX KRITIS: DE-DUPLIKASI DATA DARI ideasCache
+    // Ini menangani kasus jika ada ide ganda di trip_ideas_v2 dengan nama yang sama.
+    const uniqueIdeasMap = new Map();
+    ideasCache.forEach(idea => {
+        // Gunakan kombinasi type_key dan idea_name sebagai kunci unik
+        if (idea.idea_name) {
+            const key = `${idea.type_key}_${idea.idea_name.toLowerCase().trim()}`;
+            // Karena data diurutkan berdasarkan created_at DESC, 
+            // kita ambil yang pertama (paling baru) jika ada duplikasi
+            if (!uniqueIdeasMap.has(key)) {
+                uniqueIdeasMap.set(key, idea);
+            }
+        } else {
+            // Jika ada entri tanpa nama (seharusnya tidak terjadi di trip_ideas_v2)
+            uniqueIdeasMap.set(idea.id || Date.now(), idea);
+        }
+    });
+    ideasCache = Array.from(uniqueIdeasMap.values());
+    // END FIX KRITIS
     
     // 3. Ambil Semua Review 
     const { data: reviews, error: reviewError } = await supabase
@@ -312,6 +335,7 @@ if (closeBtn) {
     }
 }
 
+// === FIX MODAL GAMBAR ===
 // TUTUP MODAL IMAGE ZOOM
 if (closeImageModalBtn && imageModal) {
     closeImageModalBtn.addEventListener('click', () => {
@@ -461,12 +485,12 @@ function renderIdeaDetailModal(ideaId) {
 }
 
 // =================================================================
-// 2. RENDERING IDEAS (DITAMBAH TOMBOL DETAIL)
+// 2. RENDERING IDEAS (FIX LOGIKA DUPLIKASI ANTAR LEVEL)
 // =================================================================
 
 function renderCategoriesForDay(selectedDate){
     
-    activityArea.innerHTML = '';
+    activityArea.innerHTML = ''; // Sudah ada di sini
     
     const groupedCategories = categoriesCache.reduce((acc, current) => {
         const key = current.category;
@@ -499,9 +523,15 @@ function renderCategoriesForDay(selectedDate){
         catGroup.subtypes.forEach(subtype => {
             const ideasList = ideasBySubtype[subtype.type_key] || [];
             
-            const hasContent = ideasList.length > 0 || subtype.photo_url;
-
-            if (hasContent) {
+            // Variabel untuk menentukan apakah detail harus ditampilkan
+            const hasIdeas = ideasList.length > 0;
+            const hasLevel2Photo = !!subtype.photo_url;
+            
+            // KRITIS: HANYA RENDER details JIKA: 
+            // 1. Ada Ide Level 3 (Ide/Tempat spesifik), ATAU 
+            // 2. Ada Foto Level 2 TAPI TIDAK ADA Ide Level 3 (untuk kartu Sub-tipe generik).
+            if (hasIdeas || (hasLevel2Photo && !hasIdeas)) {
+                
                 const details = document.createElement('details');
                 details.className = 'subtype-details';
                 details.setAttribute('open', ''); 
@@ -514,8 +544,8 @@ function renderCategoriesForDay(selectedDate){
                 optionsWrap.className = 'options-wrap';
                 optionsWrap.dataset.typeKey = subtype.type_key;
                 
-                // Opsi Level 2 (jika ada foto di tabel idea_categories)
-                if (subtype.photo_url) {
+                // Opsi Level 2 (Sub-tipe) HANYA dirender jika TIDAK ADA Ide Level 3 (untuk mencegah duplikasi)
+                if (hasLevel2Photo && !hasIdeas) { 
                     const itemId = `cat-${subtype.type_key}`; 
                     const isSelected = selectedIdeaIds.has(itemId); 
                     
@@ -534,26 +564,28 @@ function renderCategoriesForDay(selectedDate){
                 }
 
                 // Render Level 3 (Ideas/Places)
-                ideasList.forEach(item => {
-                    const itemId = item.id;
-                    const isSelected = selectedIdeaIds.has(itemId);
-                    
-                    const ratingHtml = createRatingDisplay(item.id);
+                if (hasIdeas) { // Pastikan hanya render Level 3 jika ada datanya
+                    ideasList.forEach(item => {
+                        const itemId = item.id;
+                        const isSelected = selectedIdeaIds.has(itemId);
+                        
+                        const ratingHtml = createRatingDisplay(item.id);
 
-                    optionsWrap.innerHTML += `
-                        <div class="option-item ${isSelected ? 'selected' : ''}" data-ideaid="${itemId}">
-                            <button class="view-detail-btn" data-ideaid="${itemId}" title="Lihat Detail & Review">👁️</button>
-                            <div class="option-item-content">
-                                <img src="${getPublicImageUrl(item.photo_url)}" alt="${item.idea_name}">
-                                <div class="idea-text-info">
-                                    <span style="display:block; font-weight:bold;">${item.idea_name}</span>
-                                    <small style="display:block; color: var(--color-muted); opacity:0.9">(${subtype.subtype})</small>
-                                    ${ratingHtml} 
+                        optionsWrap.innerHTML += `
+                            <div class="option-item ${isSelected ? 'selected' : ''}" data-ideaid="${itemId}">
+                                <button class="view-detail-btn" data-ideaid="${itemId}" title="Lihat Detail & Review">👁️</button>
+                                <div class="option-item-content">
+                                    <img src="${getPublicImageUrl(item.photo_url)}" alt="${item.idea_name}">
+                                    <div class="idea-text-info">
+                                        <span style="display:block; font-weight:bold;">${item.idea_name}</span>
+                                        <small style="display:block; color: var(--color-muted); opacity:0.9">(${subtype.subtype})</small>
+                                        ${ratingHtml} 
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    `;
-                });
+                        `;
+                    });
+                }
                 
                 details.appendChild(optionsWrap);
                 subtypesWrap.appendChild(details);
@@ -571,7 +603,7 @@ function renderCategoriesForDay(selectedDate){
 }
 
 // =================================================================
-// 3. EVENT LISTENERS (Modifikasi KRITIS)
+// 3. EVENT LISTENERS
 // =================================================================
 
 function saveProgress() {
@@ -722,24 +754,51 @@ if (tripDateInput) {
 
 ideaForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    // === START: PENCEGAHAN DOUBLE SUBMIT ===
+    if (submitIdeaBtn) {
+        submitIdeaBtn.disabled = true;
+        submitIdeaBtn.textContent = 'Menyimpan... ⏳'; 
+    }
+    // === END: PENCEGAHAN DOUBLE SUBMIT ===
+    
     const cat = ideaCategory.value;
     const subtypeVal = ideaSubtype.value;
     const title = ideaTitle.value.trim();
     const file = ideaImageInput.files[0]; 
     
     let finalTypeKey = subtypeVal;
-    let imageUrl = file ? await uploadImage(file) : null;
+    let imageUrl = null;
+    // let imageUrl = file ? await uploadImage(file) : null;
     let isNewCombo = false;
-
+    
+    // --- Error handling (Pastikan tombol di-enable lagi jika gagal) ---
+    const handleFailure = (msg) => {
+        alert(msg);
+        if (submitIdeaBtn) {
+            submitIdeaBtn.disabled = false;
+            submitIdeaBtn.textContent = 'Simpan Ide'; 
+        }
+    }
+    if (file && title) { // Kondisi ini mengharuskan ada file DAN title (Nama Ide)
+    imageUrl = await uploadImage(file);
+    if (!imageUrl) {
+        handleFailure('Gagal mengupload foto Level 3.');
+        return;
+    }
+}
     if (!title && cat !== 'custom' && subtypeVal !== 'custom-new' && !file) {
-         alert('Nama Ide kosong, dan tidak ada Kategori/Sub-tipe baru atau foto untuk Sub-tipe yang sudah ada.');
+         handleFailure('Nama Ide kosong, dan tidak ada Kategori/Sub-tipe baru atau foto untuk Sub-tipe yang sudah ada.');
          return;
     }
     
     let finalCategoryName;
     if (cat === 'custom') {
         finalCategoryName = newCategoryInput.value.trim();
-        if (!finalCategoryName) { alert('Nama kategori baru tidak boleh kosong.'); return; }
+        if (!finalCategoryName) { 
+            handleFailure('Nama kategori baru tidak boleh kosong.');
+            return; 
+        }
     } else {
         finalCategoryName = ideaCategory.options[ideaCategory.selectedIndex].text;
     }
@@ -747,7 +806,10 @@ ideaForm.addEventListener('submit', async (e) => {
     let finalSubtypeName;
     if (subtypeVal === 'custom-new') {
         finalSubtypeName = newSubtypeInput.value.trim();
-        if (!finalSubtypeName) { alert('Nama sub-tipe baru tidak boleh kosong.'); return; }
+        if (!finalSubtypeName) { 
+            handleFailure('Nama sub-tipe baru tidak boleh kosong.');
+            return; 
+        }
     } else {
         finalSubtypeName = ideaSubtype.options[ideaSubtype.selectedIndex].text;
     }
@@ -766,12 +828,12 @@ ideaForm.addEventListener('submit', async (e) => {
                     subtype: finalSubtypeName, 
                     icon: '🆕', 
                     type_key: finalTypeKey,
-                    photo_url: imageUrl,
+                    photo_url: null,
                 });
 
             if (catInsertError) {
                  console.error('Gagal insert kategori kustom (idea_categories):', catInsertError);
-                 alert(`Gagal menyimpan kategori baru. Error Supabase: ${catInsertError.message}. Cek Console!`);
+                 handleFailure(`Gagal menyimpan kategori baru. Error Supabase: ${catInsertError.message}. Cek Console!`);
                  return;
             }
             await fetchData(); 
@@ -786,7 +848,7 @@ ideaForm.addEventListener('submit', async (e) => {
             
         if (catUpdateError) {
             console.error('Gagal update foto level 2:', catUpdateError);
-            alert('Gagal memperbarui foto sub-tipe.');
+            handleFailure('Gagal memperbarui foto sub-tipe.');
             return;
         }
         await fetchData(); 
@@ -808,11 +870,15 @@ ideaForm.addEventListener('submit', async (e) => {
             if (error) throw error;
         } catch (err) {
             console.error('Gagal insert ide Level 3:', err);
-            alert(`Gagal menyimpan ide Level 3. Error Supabase: ${err.message}.`);
+            handleFailure(`Gagal menyimpan ide Level 3. Error Supabase: ${err.message}.`);
             return;
         }
+        
+        // PENTING: Jika ide Level 3 baru dibuat, selalu fetch data terbaru
+        await fetchData();
     }
     
+    // --- SUKSES ---
     alert('Idemu tersimpan! 🎉');
     modal.classList.add('hidden');
     ideaForm.reset();
@@ -820,8 +886,15 @@ ideaForm.addEventListener('submit', async (e) => {
     if (newCategoryInput) { newCategoryInput.style.display = 'none'; newCategoryInput.value = ''; }
     if (newSubtypeInput) { newSubtypeInput.style.display = 'none'; newSubtypeInput.value = ''; }
     
-    await fetchData();
+    // KRITIS: Panggil renderCategoriesForDay HANYA sekali setelah fetchData()
     renderCategoriesForDay(tripDateInput.value);
+    
+    // === PENGEMBALIAN STATUS TOMBOL ===
+    if (submitIdeaBtn) {
+        submitIdeaBtn.disabled = false;
+        submitIdeaBtn.textContent = 'Simpan Ide'; 
+    }
+    // === END PENGEMBALIAN STATUS TOMBOL ===
 });
 
 // GENERATE TICKET (Menggunakan Set Ide yang Terpilih)
