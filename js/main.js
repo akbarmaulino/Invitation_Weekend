@@ -768,8 +768,7 @@ ideaForm.addEventListener('submit', async (e) => {
     const file = ideaImageInput.files[0]; 
     
     let finalTypeKey = subtypeVal;
-    let imageUrl = null;
-    // let imageUrl = file ? await uploadImage(file) : null;
+    let imageUrl = file ? await uploadImage(file) : null;
     let isNewCombo = false;
     
     // --- Error handling (Pastikan tombol di-enable lagi jika gagal) ---
@@ -780,13 +779,7 @@ ideaForm.addEventListener('submit', async (e) => {
             submitIdeaBtn.textContent = 'Simpan Ide'; 
         }
     }
-    if (file && title) { // Kondisi ini mengharuskan ada file DAN title (Nama Ide)
-    imageUrl = await uploadImage(file);
-    if (!imageUrl) {
-        handleFailure('Gagal mengupload foto Level 3.');
-        return;
-    }
-}
+
     if (!title && cat !== 'custom' && subtypeVal !== 'custom-new' && !file) {
          handleFailure('Nama Ide kosong, dan tidak ada Kategori/Sub-tipe baru atau foto untuk Sub-tipe yang sudah ada.');
          return;
@@ -828,7 +821,7 @@ ideaForm.addEventListener('submit', async (e) => {
                     subtype: finalSubtypeName, 
                     icon: '🆕', 
                     type_key: finalTypeKey,
-                    photo_url: null,
+                    photo_url: imageUrl,
                 });
 
             if (catInsertError) {

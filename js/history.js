@@ -22,25 +22,93 @@ let allReviewsCache = [];
 // =========================================================
 // 1. UTILITY & RENDER
 // =========================================================
+async function uploadImages(files){
+    if (!files || files.length === 0) return [];
+    const uid = currentUser.id || 'anon';
+    const uploadedUrls = [];
+    
+    for (const file of files) {
+        // Tambah subfolder 'review' dan gunakan timestamp untuk keunikan
+        const path = `${uid}/review/${Date.now()}_${file.name}`; 
+        
+        const { error } = await supabase.storage
+          .from('trip-ideas-images') 
+          .upload(path, file);
 
+        if (error) {
+            console.error(`Supabase Storage upload error for ${file.name}`, error);
+            continue; 
+        }
+        
+        const { data: publicUrlData } = supabase.storage
+          .from('trip-ideas-images')
+          .getPublicUrl(path);
+
+        uploadedUrls.push(publicUrlData.publicUrl);
+    }
+
+    return uploadedUrls; // Mengembalikan ARRAY of public URLs
+}
+
+// function getPublicImageUrl(photoUrl) {
+//     let urlToProcess = photoUrl;
+    
+//     // KRITIS: Jika input adalah array, ambil elemen pertama untuk preview
+//     if (Array.isArray(photoUrl) && photoUrl.length > 0) {
+//         urlToProcess = photoUrl[0];
+//     } else if (Array.isArray(photoUrl) && photoUrl.length === 0) {
+//         return 'images/placeholder.jpg';
+//     } else if (!photoUrl) {
+//         return 'images/placeholder.jpg';
+//     }
+    
+//     if (typeof urlToProcess !== 'string' || urlToProcess === '') {
+//         return 'images/placeholder.jpg';
+//     }
+
+//     if (urlToProcess.startsWith('http')) return urlToProcess;
+//     try {
+//         const { data } = supabase.storage
+//             .from('trip-ideas-images') 
+//             .getPublicUrl(urlToProcess);
+//         return data.publicUrl || urlToProcess; 
+//     } catch (e) {
+//         console.error("Error getting public URL:", e);
+//         return urlToProcess;
+//     }
+// }
 function formatTanggalIndonesia(date) {
     return new Date(date).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 function getPublicImageUrl(photoUrl) {
-    if (!photoUrl) return 'images/placeholder.jpg';
-    if (photoUrl.startsWith('http')) return photoUrl;
+    let urlToProcess = photoUrl;
+    
+    // KRITIS: Jika input adalah array, ambil elemen pertama untuk preview
+    if (Array.isArray(photoUrl) && photoUrl.length > 0) {
+        urlToProcess = photoUrl[0];
+    } else if (Array.isArray(photoUrl) && photoUrl.length === 0) {
+        return 'images/placeholder.jpg';
+    } else if (!photoUrl) {
+        return 'images/placeholder.jpg';
+    }
+    
+    if (typeof urlToProcess !== 'string' || urlToProcess === '') {
+        return 'images/placeholder.jpg';
+    }
+
+    if (urlToProcess.startsWith('http')) return urlToProcess;
     try {
-        // Asumsi nama bucket Supabase Storage adalah 'trip-ideas-images'
         const { data } = supabase.storage
             .from('trip-ideas-images') 
-            .getPublicUrl(photoUrl);
-        return data.publicUrl || photoUrl; 
+            .getPublicUrl(urlToProcess);
+        return data.publicUrl || urlToProcess; 
     } catch (e) {
         console.error("Error getting public URL:", e);
-        return photoUrl;
+        return urlToProcess;
     }
 }
+
 
 function calculateAverageRating(allReviewsForIdea) {
     if (!allReviewsForIdea || allReviewsForIdea.length === 0) {
@@ -471,7 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const tripId = reviewTripId.value;
             const reviewText = ideaReviewText.value.trim();
             const rating = currentRating;
-            const imageFile = ideaReviewPhotoInput.files[0];
+            const fileList = ideaReviewPhotoInput.files; // KRITIS: Ambil SEMUA FileList
 
             if (rating === 0) {
                 if (ideaReviewStatus) ideaReviewStatus.textContent = 'Beri minimal 1 bintang!';
@@ -481,59 +549,70 @@ document.addEventListener('DOMContentLoaded', () => {
             if (ideaReviewStatus) ideaReviewStatus.textContent = 'Memproses...';
             if (submitIdeaReviewBtn) submitIdeaReviewBtn.disabled = true;
 
-            let photoUrl = null;
+            // --- 1. PROSES PENGAMBILAN & UPLOAD FOTO ---
             
+            // Cari review yang sudah ada untuk mendapatkan URL foto lama
             const existingReview = allReviewsCache.find(r => r.idea_id == ideaId && r.trip_id == tripId);
-            const oldPhotoUrl = existingReview?.photo_url;
+            const oldPhotoUrl = existingReview?.photo_url; 
             
-            // --- Proses Upload Foto ---
-            if (imageFile) {
-                const fileExtension = imageFile.name.split('.').pop();
-                const path = `${currentUser.id}/review-${tripId}-${ideaId}-${Date.now()}.${fileExtension}`;
+            let uploadedUrls = [];
+            
+            if (fileList.length > 0) {
+                // Panggil fungsi uploadImages (yang menangani multiple file)
+                uploadedUrls = await uploadImages(fileList); 
                 
-                const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from('trip-ideas-images') 
-                    .upload(path, imageFile, {
-                        cacheControl: '3600',
-                        upsert: true
-                    });
-
-                if (uploadError) {
-                    console.error('Supabase photo upload error', uploadError);
-                    if (ideaReviewStatus) ideaReviewStatus.textContent = `Gagal upload foto: ${uploadError.message}`;
+                if (uploadedUrls.length === 0) {
+                    ideaReviewStatus.textContent = 'Gagal mengupload foto. Coba lagi.';
                     if (submitIdeaReviewBtn) submitIdeaReviewBtn.disabled = false;
                     return;
                 }
-                photoUrl = uploadData.path; 
                 
-                if (oldPhotoUrl && oldPhotoUrl !== photoUrl) {
+                // LOGIKA PENGHAPUSAN FOTO LAMA:
+                // Kita berasumsi setiap upload baru menggantikan semua foto lama.
+                let pathsToRemove = [];
+                if (Array.isArray(oldPhotoUrl)) {
+                    // Jika sebelumnya Array, kita hanya bisa menghapus jika kita tahu path file Supabase
+                    // Karena ini adalah Array dari URL publik, kita lewati penghapusan path lama untuk sementara, 
+                    // karena ini memerlukan fungsi helper untuk ekstraksi path yang kompleks.
+                } else if (typeof oldPhotoUrl === 'string' && oldPhotoUrl.length > 0) {
+                    // Jika skema lama adalah String tunggal (path Supabase), hapus.
+                    pathsToRemove.push(oldPhotoUrl);
+                }
+                
+                if (pathsToRemove.length > 0) {
                      const { error: removeError } = await supabase.storage
                         .from('trip-ideas-images')
-                        .remove([oldPhotoUrl]);
+                        .remove(pathsToRemove); 
                     if (removeError) {
-                         console.warn('Gagal menghapus foto lama:', removeError);
+                        console.warn('Gagal menghapus foto lama:', removeError);
                     }
                 }
-
+                
             } else {
-                photoUrl = oldPhotoUrl || null; 
+                // Jika pengguna tidak memilih file baru, pertahankan URL foto lama
+                if (existingReview?.photo_url) {
+                    uploadedUrls = existingReview.photo_url;
+                }
             }
 
 
-            // --- Proses Simpan Review (UPSERT) ---
+            // --- 2. PROSES SIMPAN REVIEW (UPSERT) ---
+            const reviewData = {
+                idea_id: ideaId,
+                trip_id: tripId,
+                user_id: currentUser.id || 'anon',
+                review_text: reviewText || null,
+                rating: rating || 0,
+                // KRITIS: Simpan ARRAY of URL jika ada, atau kembalikan ke String lama/null
+                photo_url: Array.isArray(uploadedUrls) && uploadedUrls.length > 0 ? uploadedUrls : (typeof uploadedUrls === 'string' ? uploadedUrls : null),
+                created_at: new Date().toISOString() // Pertahankan created_at Anda
+            };
+
             const { error } = await supabase
                 .from('idea_reviews')
-                .upsert({ 
-                    idea_id: ideaId, 
-                    trip_id: tripId, 
-                    user_id: currentUser.id,
-                    rating: rating,
-                    review_text: reviewText,
-                    photo_url: photoUrl,
-                    created_at: new Date().toISOString()
-                }, { 
+                .upsert([reviewData], { 
                     onConflict: 'idea_id, trip_id',
-                    ignoreDuplicates: false
+                    ignoreDuplicates: false 
                 });
 
             if (error) {
@@ -561,20 +640,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // Event listener untuk preview foto di modal review
+    // Di dalam fungsi setupEventListeners()
+// GANTI SELURUH BLOK INI:
     if (ideaReviewPhotoInput) {
         ideaReviewPhotoInput.addEventListener('change', (e) => {
             if (!ideaReviewPhotoPreview) return;
             ideaReviewPhotoPreview.innerHTML = '';
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    ideaReviewPhotoPreview.innerHTML = `<img src="${event.target.result}" alt="Review Photo Preview" style="max-width: 100px; height: auto; border-radius: 4px;">`;
-                };
-                reader.readAsDataURL(file);
+            
+            const files = e.target.files; // KRITIS: Ambil SEMUA file
+            if (files.length > 0) {
+                // Tampilkan semua pratinjau
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const reader = new FileReader();
+                    
+                    reader.onload = (event) => {
+                        const img = document.createElement('img');
+                        img.src = event.target.result;
+                        img.alt = `Review Photo Preview ${i+1}`;
+                        img.style.maxWidth = '100px'; 
+                        img.style.height = 'auto'; 
+                        img.style.borderRadius = '4px';
+                        img.style.marginRight = '10px'; // Jarak antar foto
+                        img.style.marginBottom = '10px';
+                        img.style.display = 'inline-block'; // Agar bisa bersebelahan
+                        ideaReviewPhotoPreview.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                }
             }
         });
-    }
+    }   
+// LANJUTKAN KE BLOK SUBMIT
 
 });
