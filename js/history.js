@@ -1,4 +1,4 @@
-// js/history.js (REVISI FINAL: Filter Tanggal Aktif)
+// js/history.js (REVISI FINAL: Filter Tanggal Aktif + Tampilkan Multiple Foto Review)
 
 import { supabase } from './supabaseClient.js'; 
 let currentUser = { id: 'anon' }; 
@@ -11,7 +11,7 @@ let viewHistoryBtn, historyListModal, historyList, historyDetailModal,
     submitIdeaReviewBtn, cancelIdeaReview, ideaReviewRatingDiv,
     closeHistoryListModal, backToHistoryList,
     // START: VARIABEL BARU UNTUK FILTER TANGGAL
-    filterStartDate, filterEndDate, applyHistoryFilterBtn; // <--- BARU DITAMBAHKAN
+    filterStartDate, filterEndDate, applyHistoryFilterBtn; 
     // END: VARIABEL BARU
 
 let currentRating = 0;
@@ -50,54 +50,30 @@ async function uploadImages(files){
     return uploadedUrls; // Mengembalikan ARRAY of public URLs
 }
 
-// function getPublicImageUrl(photoUrl) {
-//     let urlToProcess = photoUrl;
-    
-//     // KRITIS: Jika input adalah array, ambil elemen pertama untuk preview
-//     if (Array.isArray(photoUrl) && photoUrl.length > 0) {
-//         urlToProcess = photoUrl[0];
-//     } else if (Array.isArray(photoUrl) && photoUrl.length === 0) {
-//         return 'images/placeholder.jpg';
-//     } else if (!photoUrl) {
-//         return 'images/placeholder.jpg';
-//     }
-    
-//     if (typeof urlToProcess !== 'string' || urlToProcess === '') {
-//         return 'images/placeholder.jpg';
-//     }
-
-//     if (urlToProcess.startsWith('http')) return urlToProcess;
-//     try {
-//         const { data } = supabase.storage
-//             .from('trip-ideas-images') 
-//             .getPublicUrl(urlToProcess);
-//         return data.publicUrl || urlToProcess; 
-//     } catch (e) {
-//         console.error("Error getting public URL:", e);
-//         return urlToProcess;
-//     }
-// }
 function formatTanggalIndonesia(date) {
     return new Date(date).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+// FUNGSI GANTI: getPublicImageUrl (Digunakan untuk mendapatkan URL dari path Supabase, tapi sekarang berhati-hati saat memproses Array)
+// KRITIS: Fungsi ini sekarang hanya akan mengolah *satu* URL yang diberikan, dan tidak otomatis mengambil elemen pertama Array. 
+// Rendering Array harus ditangani oleh pemanggil fungsi (misalnya: renderPhotoUrls).
 function getPublicImageUrl(photoUrl) {
     let urlToProcess = photoUrl;
     
-    // KRITIS: Jika input adalah array, ambil elemen pertama untuk preview
-    if (Array.isArray(photoUrl) && photoUrl.length > 0) {
-        urlToProcess = photoUrl[0];
-    } else if (Array.isArray(photoUrl) && photoUrl.length === 0) {
-        return 'images/placeholder.jpg';
-    } else if (!photoUrl) {
+    // Handle Null, Undefined, atau nilai falsy lainnya
+    if (!urlToProcess) {
         return 'images/placeholder.jpg';
     }
-    
+
+    // KRITIS: Pastikan urlToProcess benar-benar string sebelum memanggil startsWith
     if (typeof urlToProcess !== 'string' || urlToProcess === '') {
         return 'images/placeholder.jpg';
     }
 
-    if (urlToProcess.startsWith('http')) return urlToProcess;
+    // Proses URL
+    if (urlToProcess.startsWith('http')) return urlToProcess; 
+    
+    // Logic untuk Supabase path
     try {
         const { data } = supabase.storage
             .from('trip-ideas-images') 
@@ -109,6 +85,33 @@ function getPublicImageUrl(photoUrl) {
     }
 }
 
+// FUNGSI BARU: Untuk me-render banyak URL foto
+function renderPhotoUrls(photoUrls, className = 'review-photo') {
+    let urls = photoUrls;
+    
+    // Jika hanya string tunggal (skema lama), ubah menjadi array
+    if (typeof urls === 'string' && urls.length > 0) {
+        urls = [urls];
+    } else if (!Array.isArray(urls)) {
+        return '';
+    }
+    
+    if (urls.length === 0) {
+        return '';
+    }
+
+    let html = '<div class="review-photos-container">';
+    urls.forEach(url => {
+        // Panggil getPublicImageUrl untuk memastikan URL publik yang valid
+        const publicUrl = getPublicImageUrl(url);
+        // Abaikan placeholder jika ini adalah array
+        if (publicUrl !== 'images/placeholder.jpg') {
+            html += `<img src="${publicUrl}" alt="Foto Review" class="${className}">`;
+        }
+    });
+    html += '</div>';
+    return html;
+}
 
 function calculateAverageRating(allReviewsForIdea) {
     if (!allReviewsForIdea || allReviewsForIdea.length === 0) {
@@ -138,6 +141,9 @@ function renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews) {
     const { average, count } = calculateAverageRating(allIdeaReviews);
     const globalRatingHtml = renderStars(average);
 
+    // KRITIS: Gunakan fungsi renderPhotoUrls BARU
+    const reviewPhotoHtml = isReviewedInThisTrip ? renderPhotoUrls(currentTripReview.photo_url) : '';
+
     return `
         <div class="idea-detail-item">
             <div class="idea-header">
@@ -165,7 +171,7 @@ function renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews) {
             ${isReviewedInThisTrip ? `
                 <div class="review-content">
                     <p><strong>Review Anda di Trip Ini:</strong> ${currentTripReview.review_text || '-'}</p>
-                    ${currentTripReview.photo_url ? `<img src="${getPublicImageUrl(currentTripReview.photo_url)}" alt="Foto Review" class="review-photo">` : ''}
+                    ${reviewPhotoHtml} 
                 </div>
             ` : ''}
         </div>
@@ -177,7 +183,7 @@ function renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews) {
 // 2. DATA FETCHING (DENGAN FILTER TANGGAL)
 // =========================================================
 
-async function loadHistory(startDate = null, endDate = null) { // <--- TAMBAH PARAMETER FILTER
+async function loadHistory(startDate = null, endDate = null) { 
     if (!historyList) return;
     historyList.innerHTML = '<p>Memuat riwayat trip...</p>';
     
@@ -350,9 +356,37 @@ function showReviewModal(tripId, ideaId, ideaName, existingReview = null) {
         if (ideaReviewText) ideaReviewText.value = existingReview.review_text || '';
         currentRating = existingReview.rating || 0;
         
-        if (existingReview.photo_url && ideaReviewPhotoPreview) {
-            ideaReviewPhotoPreview.innerHTML = `<img src="${getPublicImageUrl(existingReview.photo_url)}" alt="Review Photo Preview" style="max-width: 100px; height: auto; border-radius: 4px;">`;
+        // KRITIS: Tampilkan pratinjau foto review yang sudah ada (handle array)
+        if (ideaReviewPhotoPreview) {
+            let photoUrls = existingReview.photo_url;
+
+            // Jika hanya string tunggal, ubah menjadi array
+            if (typeof photoUrls === 'string' && photoUrls.length > 0) {
+                photoUrls = [photoUrls];
+            } else if (!Array.isArray(photoUrls)) {
+                photoUrls = [];
+            }
+            
+            if (photoUrls.length > 0) {
+                photoUrls.forEach((url, index) => {
+                    const publicUrl = getPublicImageUrl(url);
+                    // Pastikan bukan placeholder
+                    if (publicUrl !== 'images/placeholder.jpg') {
+                        const img = document.createElement('img');
+                        img.src = publicUrl;
+                        img.alt = `Review Photo Preview ${index+1}`;
+                        img.style.maxWidth = '100px'; 
+                        img.style.height = 'auto'; 
+                        img.style.borderRadius = '4px';
+                        img.style.marginRight = '10px';
+                        img.style.marginBottom = '10px';
+                        img.style.display = 'inline-block';
+                        ideaReviewPhotoPreview.appendChild(img);
+                    }
+                });
+            }
         }
+        
         if (submitIdeaReviewBtn) submitIdeaReviewBtn.textContent = 'Ubah Review ✨';
     } else {
         if (submitIdeaReviewBtn) submitIdeaReviewBtn.textContent = 'Kirim Review ✨';
@@ -569,12 +603,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // LOGIKA PENGHAPUSAN FOTO LAMA:
                 // Kita berasumsi setiap upload baru menggantikan semua foto lama.
+                // KRITIS: Hati-hati dengan penghapusan. Supabase getPublicUrl mengembalikan URL penuh, 
+                // sementara fungsi remove membutuhkan path storage.
+                
+                // Saat ini, kita mempertahankan LOGIKA Anda: 
+                // 1. Jika skema lama adalah STRING tunggal (path Supabase), hapus.
+                // 2. Jika skema lama adalah ARRAY (URL publik), lewatkan penghapusan karena path Supabase tidak tersedia.
+                // **PENTING**: Jika Anda ingin menghapus foto lama yang merupakan ARRAY URL publik, Anda perlu mengimplementasikan
+                // fungsi untuk mengekstrak path storage dari URL publik tersebut, tapi untuk saat ini, kita ikuti logika yang ada.
                 let pathsToRemove = [];
-                if (Array.isArray(oldPhotoUrl)) {
-                    // Jika sebelumnya Array, kita hanya bisa menghapus jika kita tahu path file Supabase
-                    // Karena ini adalah Array dari URL publik, kita lewati penghapusan path lama untuk sementara, 
-                    // karena ini memerlukan fungsi helper untuk ekstraksi path yang kompleks.
-                } else if (typeof oldPhotoUrl === 'string' && oldPhotoUrl.length > 0) {
+                if (typeof oldPhotoUrl === 'string' && oldPhotoUrl.length > 0 && !oldPhotoUrl.startsWith('http')) {
                     // Jika skema lama adalah String tunggal (path Supabase), hapus.
                     pathsToRemove.push(oldPhotoUrl);
                 }
@@ -641,7 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // Di dalam fungsi setupEventListeners()
-// GANTI SELURUH BLOK INI:
+// KRITIS: GANTI BLOK INI (Sesuai dengan kode Anda yang sudah benar untuk pratinjau multi-foto)
     if (ideaReviewPhotoInput) {
         ideaReviewPhotoInput.addEventListener('change', (e) => {
             if (!ideaReviewPhotoPreview) return;

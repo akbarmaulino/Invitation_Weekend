@@ -812,3 +812,19 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
     }
 
 }
+
+/* Di file CSS Anda (misalnya review.css) */
+.review-photo-gallery-wrapper {
+    display: flex; /* Memungkinkan foto bersebelahan */
+    gap: 5px; 
+    flex-wrap: wrap; /* Jika terlalu banyak foto, pindah ke baris baru */
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.review-photo-gallery-wrapper .review-photo {
+    width: 80px; /* Ukuran foto di galeri */
+    height: 80px;
+    object-fit: cover; /* Agar foto terlihat penuh tanpa distorsi */
+    border-radius: 4px;
+}

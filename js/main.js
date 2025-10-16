@@ -191,28 +191,43 @@ async function fetchData() {
     }
 }
 
-function getPublicImageUrl(photoUrl) {
-    if (!photoUrl) return 'images/placeholder.jpg';
-    
-    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
-        return photoUrl; 
-    }
 
-    if (photoUrl.startsWith('images/')) {
-        return photoUrl;
-    }
+
+// main.js - GANTI TOTAL FUNGSI INI
+// function getPublicImageUrl(photoUrl) {
+//     let urlToProcess = photoUrl;
     
-    try {
-        const { data } = supabase.storage
-            .from('trip-ideas-images') 
-            .getPublicUrl(photoUrl);
-        
-        return data.publicUrl;
-    } catch (e) {
-        console.error('FAILED to convert path to public URL:', photoUrl, e);
-        return photoUrl; 
-    }
-}
+//    if (Array.isArray(photoUrl)) {
+//         if (photoUrl.length === 0) {
+//             return 'images/placeholder.jpg';
+//         }
+//         urlToProcess = photoUrl[0]; // Ambil elemen pertama (String)
+//     }
+
+//     // 2. Handle Null, Undefined, atau nilai falsy lainnya
+//     if (!urlToProcess) {
+//         return 'images/placeholder.jpg';
+//     }
+
+//     // 3. KRITIS: Pastikan urlToProcess benar-benar string sebelum memanggil startsWith
+//     if (typeof urlToProcess !== 'string' || urlToProcess === '') {
+//         return 'images/placeholder.jpg';
+//     }
+
+//     // 4. Proses URL
+//     if (urlToProcess.startsWith('http')) return urlToProcess; 
+    
+//     // Logic untuk Supabase path
+//     try {
+//         const { data } = supabase.storage
+//             .from('trip-ideas-images') 
+//             .getPublicUrl(urlToProcess);
+//         return data.publicUrl || urlToProcess; 
+//     } catch (e) {
+//         console.error("Error getting public URL:", e);
+//         return urlToProcess;
+//     }
+// }
 
 
 async function uploadImage(file){
@@ -408,6 +423,62 @@ function createRatingDisplay(ideaId) {
     `;
 }
 
+// main.js (TEMPELKAN DI BAWAH IMPORTS, SEBELUM FUNGSI UTAMA LAINNYA)
+
+// --- Fungsi Utility dari history.js agar bisa dipakai di main.js ---
+
+function getPublicImageUrl(photoUrl) {
+    let urlToProcess = photoUrl;
+    // KRITIS: Anda harus memastikan 'supabase' client didefinisikan 
+    // di main.js agar fungsi ini bekerja, yang sudah Anda lakukan dengan import.
+    
+    if (!urlToProcess || typeof urlToProcess !== 'string' || urlToProcess === '') {
+        return 'images/placeholder.jpg';
+    }
+    if (urlToProcess.startsWith('http')) return urlToProcess; 
+    
+    try {
+        // Asumsi 'supabase' sudah tersedia via import di main.js
+        const { data } = supabase.storage 
+            .from('trip-ideas-images') 
+            .getPublicUrl(urlToProcess);
+        return data.publicUrl || urlToProcess; 
+    } catch (e) {
+        console.error("Error getting public URL:", e);
+        return urlToProcess;
+    }
+}
+
+function renderPhotoUrls(photoUrls, className = 'review-photo') {
+    let urls = photoUrls;
+    
+    // Jika hanya string tunggal (skema lama), ubah menjadi array
+    if (typeof urls === 'string' && urls.length > 0) {
+        urls = [urls];
+    } else if (!Array.isArray(urls)) {
+        return '';
+    }
+    
+    if (urls.length === 0) {
+        return '';
+    }
+
+    let html = '<div class="review-photos-container">';
+    urls.forEach(url => {
+        // Panggil getPublicImageUrl untuk memastikan URL publik yang valid
+        const publicUrl = getPublicImageUrl(url);
+        // Abaikan placeholder jika ini adalah array
+        if (publicUrl !== 'images/placeholder.jpg') {
+            html += `<img src="${publicUrl}" alt="Foto Review" class="${className}">`;
+        }
+    });
+    html += '</div>';
+    return html;
+}
+
+// --- Akhir Fungsi Utility ---
+
+// ... Lanjutkan dengan fungsi dan event listener lainnya di main.js
 // FUNGSI INI AKAN DIPANGGIL OLEH TOMBOL DETAIL
 function renderIdeaDetailModal(ideaId) {
     // Logic untuk Ide Level 2 (cat-...) tidak memiliki modal detail
@@ -453,22 +524,27 @@ function renderIdeaDetailModal(ideaId) {
     // 3. Update Review List
     detailReviewList.innerHTML = '';
     if (reviews.length > 0) {
-        reviews.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); 
+        reviews.sort((a, b) => new Date(b.created_at) - new Date(a.created.at)); 
 
         reviews.forEach(review => {
             const reviewItem = document.createElement('div');
             reviewItem.className = 'review-item';
 
             const reviewStars = '⭐'.repeat(review.rating || 0);
-            const reviewPhotoHtml = review.photo_url ? 
-                `<div class="review-photo-preview"><img src="${getPublicImageUrl(review.photo_url)}" alt="Review Photo"></div>` : 
-                '';
-
+            
+            // 👇 KRITIS: GANTI BLOK INI! 👇
+            // Panggil fungsi yang sudah terbukti benar untuk me-render multiple foto
+            const reviewPhotoHtml = renderPhotoUrls(review.photo_url, 'review-photo-main');
+            
             reviewItem.innerHTML = `
                 <div class="review-rating">${reviewStars}</div>
                 <p class="review-text">${review.review_text || '(Tidak ada komentar)'}</p>
                 ${reviewPhotoHtml}
             `;
+            // KRITIS: Hapus class "review-photo-preview" yang lama jika sudah tidak dipakai di CSS
+            // Jika Anda ingin mempertahankan container div, Anda bisa sesuaikan `reviewPhotoHtml`
+            // tapi dengan fungsi `renderPhotoUrls` yang menghasilkan `<div class="review-photos-container">...</div>`, ini sudah cukup.
+
             detailReviewList.appendChild(reviewItem);
         });
         noReviewsMessage.style.display = 'none';

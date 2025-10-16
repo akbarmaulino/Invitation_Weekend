@@ -131,3 +131,53 @@
 #ideaReviewRatingDiv .star.active.clickable:hover {
     color: darkorange; /* Warna saat bintang aktif di-hover */
 }
+
+/*==================================================
+  REVIEW.CSS (Perbaikan untuk Multiple Photo Display)
+==================================================*/
+
+/* Container untuk menampung banyak foto review. 
+  Menggunakan flexbox agar foto bisa bersebelahan.
+*/
+.review-photos-container {
+    display: flex;
+    flex-wrap: wrap; /* Pastikan foto turun baris jika layarnya kecil */
+    gap: 10px; /* Jarak antar foto */
+    margin-top: 10px;
+}
+
+/* Style untuk foto review di halaman Detail Trip.
+  Ini adalah class 'review-photo' yang dipanggil di renderPhotoUrls.
+*/
+.review-photo {
+    width: 100px; /* Tetapkan lebar yang jelas */
+    height: 100px; /* Tetapkan tinggi yang jelas */
+    object-fit: cover; /* KRITIS: Pastikan gambar memenuhi kotak tanpa terdistorsi */
+    border-radius: 4px;
+    border: 1px solid var(--color-muted);
+}
+
+/* Pastikan tidak ada aturan lain yang menimpa di .review-content */
+.review-content {
+    margin-top: 10px;
+    padding: 10px;
+    border-top: 1px solid var(--color-secondary);
+}
+
+/* review.css (Pastikan kode ini ada) */
+.review-photos-container {
+    display: flex;
+    flex-wrap: wrap; 
+    gap: 8px; 
+    margin-top: 10px;
+}
+
+/* Style untuk foto yang dirender di detail modal utama */
+.review-photo-main {
+    width: 80px; 
+    height: 80px; 
+    object-fit: cover; 
+    border-radius: 4px;
+    border: 1px solid var(--color-muted);
+}
+
