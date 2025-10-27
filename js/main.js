@@ -486,9 +486,18 @@ function renderIdeaDetailModal(ideaId) {
 
     const idea = ideasCache.find(i => i.id === ideaId);
     if (!idea) return;
+    
+    // 1. DEKLARASI HANYA SEKALI DENGAN 'let'
+    let reviews = allReviews.filter(r => r.idea_id === ideaId);
+    const ratingData = ideaRatings[ideaId]; // Biarkan ini const jika tidak diubah
 
-    const reviews = allReviews.filter(r => r.idea_id === ideaId);
-    const ratingData = ideaRatings[ideaId];
+    // 🎯 FILTER KRITIS: Hapus entri null/undefined sebelum pengurutan
+    // Baris ini tidak lagi mendeklarasikan, hanya meng-assign ulang ke variabel 'reviews' yang sudah ada
+    reviews = reviews.filter(r => r && r.created_at); 
+    // --- Baris duplikat yang bermasalah di sini sudah dihapus:
+    // const reviews = allReviews.filter(r => r.idea_id === ideaId);
+    // const ratingData = ideaRatings[ideaId];
+    // ---
 
     // 1. Update Header
     detailIdeaName.textContent = idea.idea_name;
@@ -512,28 +521,39 @@ function renderIdeaDetailModal(ideaId) {
             <span class="avg-rating">${starsHtml} ${avg.toFixed(1)}</span>
             <span>dari ${reviewCount} Review</span>
         `;
-        noReviewsMessage.style.display = 'none';
+        // noReviewsMessage.style.display akan diatur di bagian 3
     } else {
         detailRatingSummary.innerHTML = `
             <span class="avg-rating">N/A</span>
             <span>Belum ada review</span>
         `;
-        noReviewsMessage.style.display = 'block';
+        // noReviewsMessage.style.display akan diatur di bagian 3
     }
 
     // 3. Update Review List
-    detailReviewList.innerHTML = '';
-    if (reviews.length > 0) {
-        reviews.sort((a, b) => new Date(b.created_at) - new Date(a.created.at)); 
+    detailReviewList.innerHTML = ''; // Kosongkan list review
 
+    if (reviews.length > 0) {
+        // LAKUKAN PENGURUTAN HANYA SATU KALI DI SINI
+        reviews.sort((a, b) => {
+            // Amankan dari undefined (jika filter di atas gagal)
+            if (!a || !b) return 0; 
+            
+            // Gunakan created_at untuk pengurutan
+            const dateA = new Date(a.created_at);
+            const dateB = new Date(b.created_at);
+
+            // Sort Descending (Terbaru dikurangi Terlama)
+            return dateB.getTime() - dateA.getTime(); 
+        });
+
+        // LOOP (forEach) DILAKUKAN SETELAH PENGURUTAN SELESAI
         reviews.forEach(review => {
             const reviewItem = document.createElement('div');
             reviewItem.className = 'review-item';
 
             const reviewStars = '⭐'.repeat(review.rating || 0);
             
-            // 👇 KRITIS: GANTI BLOK INI! 👇
-            // Panggil fungsi yang sudah terbukti benar untuk me-render multiple foto
             const reviewPhotoHtml = renderPhotoUrls(review.photo_url, 'review-photo-main');
             
             reviewItem.innerHTML = `
@@ -541,18 +561,21 @@ function renderIdeaDetailModal(ideaId) {
                 <p class="review-text">${review.review_text || '(Tidak ada komentar)'}</p>
                 ${reviewPhotoHtml}
             `;
-            // KRITIS: Hapus class "review-photo-preview" yang lama jika sudah tidak dipakai di CSS
-            // Jika Anda ingin mempertahankan container div, Anda bisa sesuaikan `reviewPhotoHtml`
-            // tapi dengan fungsi `renderPhotoUrls` yang menghasilkan `<div class="review-photos-container">...</div>`, ini sudah cukup.
 
             detailReviewList.appendChild(reviewItem);
         });
-        noReviewsMessage.style.display = 'none';
+        
+        // Sembunyikan pesan 'tidak ada review' (karena review ada)
+        if (noReviewsMessage) {
+            noReviewsMessage.style.display = 'none';
+        }
+
     } else {
-        const noReviewEl = document.createElement('p');
-        noReviewEl.className = 'info-message';
-        noReviewEl.textContent = 'Belum ada ulasan untuk ide ini.';
-        detailReviewList.appendChild(noReviewEl);
+        // Tampilkan pesan 'tidak ada review' jika reviews.length adalah 0
+        if (noReviewsMessage) {
+            noReviewsMessage.style.display = 'block';
+        }
+        // detailReviewList.innerHTML sudah dikosongkan di atas
     }
 
     // 4. Tampilkan Modal

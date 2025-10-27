@@ -666,12 +666,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const { data: reviews, error: reviewError } = await supabase.from('idea_reviews').select('*');
             if (!reviewError) allReviewsCache = reviews;
 
+            // 🎯 BARIS KRITIS YANG DITAMBAHKAN 🎯
+            if (submitIdeaReviewBtn) submitIdeaReviewBtn.disabled = false; 
+
             setTimeout(() => {
                 if (ideaReviewModal) {
                     ideaReviewModal.classList.add('hidden');
                     ideaReviewModal.style.display = 'none';
                 }
                 
+                // Memanggil showTripDetails untuk me-refresh detail trip dan tombol review
                 showTripDetails(tripId);
             }, 1000);
         });
