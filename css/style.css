@@ -828,3 +828,136 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
     object-fit: cover; /* Agar foto terlihat penuh tanpa distorsi */
     border-radius: 4px;
 }
+
+/* ==================================================
+   COLLAPSIBLE CATEGORY STYLES (TAMBAHAN)
+   ================================================== */
+
+/* Style untuk Category Details (Level 1 - Makan, Hiburan, etc) */
+.category-details {
+    margin-bottom: 0;
+}
+
+.category-details summary.category-summary {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: var(--color-primary);
+    cursor: pointer;
+    padding: 12px 0;
+    list-style: none;
+    position: relative;
+    padding-left: 30px;
+    border-bottom: 2px solid var(--color-secondary);
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+/* Arrow indicator untuk kategori */
+.category-details summary.category-summary::before {
+    content: '▶';
+    color: var(--color-primary);
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%) rotate(0deg);
+    transition: transform 0.3s ease;
+    font-size: 0.9em;
+}
+
+/* Arrow rotasi saat dibuka */
+.category-details[open] summary.category-summary::before {
+    transform: translateY(-50%) rotate(90deg);
+}
+
+/* Hover effect untuk category summary */
+.category-details summary.category-summary:hover {
+    color: var(--color-primary-light);
+    background-color: rgba(196, 232, 255, 0.2);
+    padding-left: 35px;
+}
+
+/* Hilangkan border bawah saat kategori ditutup */
+.category-details:not([open]) summary.category-summary {
+    border-bottom: 1px solid var(--color-secondary);
+    margin-bottom: 15px;
+}
+
+/* Container untuk subtypes */
+.subtypes-wrap {
+    padding-top: 10px;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Style untuk Subtype Details (Level 2 - Steak, Burger, etc) */
+.subtype-details summary {
+    font-size: 1em;
+    font-weight: bold;
+    color: var(--color-primary);
+    cursor: pointer;
+    padding: 8px 0; 
+    list-style: none;
+    position: relative;
+    padding-left: 20px;
+    border-bottom: 1px dashed #c0d3e7;
+    margin-left: 10px; /* Indent untuk sub-kategori */
+}
+
+.subtype-details[open] summary {
+    border-bottom: none;
+}
+
+.subtype-details summary::before {
+    content: '▶ ';
+    color: var(--color-text-light);
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%) rotate(0deg);
+    transition: transform 0.2s;
+    font-size: 0.8em;
+}
+
+.subtype-details[open] summary::before {
+    transform: translateY(-50%) rotate(90deg);
+}
+
+.subtype-details summary:hover {
+    color: var(--color-primary-light);
+}
+
+/* Perbaikan padding untuk options-wrap */
+.options-wrap {
+    padding: 10px 0 10px 20px; /* Tambah indent kiri */
+}
+
+/* ==================================================
+   RESPONSIVE ADJUSTMENTS
+   ================================================== */
+
+@media (max-width: 768px) {
+    .category-details summary.category-summary {
+        font-size: 1.1em;
+        padding: 10px 0 10px 25px;
+    }
+    
+    .subtype-details summary {
+        font-size: 0.95em;
+        margin-left: 5px;
+        padding-left: 18px;
+    }
+    
+    .options-wrap {
+        padding-left: 10px;
+    }
+}

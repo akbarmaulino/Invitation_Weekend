@@ -587,9 +587,17 @@ function renderIdeaDetailModal(ideaId) {
 // 2. RENDERING IDEAS (FIX LOGIKA DUPLIKASI ANTAR LEVEL)
 // =================================================================
 
+// js/main.js (PATCH: Membuat Kategori Utama Collapsible)
+
+// ... (Import dan variabel lainnya tetap sama) ...
+
+// =================================================================
+// 2. RENDERING IDEAS (FIX: Kategori Utama juga Collapsible)
+// =================================================================
+
 function renderCategoriesForDay(selectedDate){
     
-    activityArea.innerHTML = ''; // Sudah ada di sini
+    activityArea.innerHTML = ''; 
     
     const groupedCategories = categoriesCache.reduce((acc, current) => {
         const key = current.category;
@@ -616,19 +624,25 @@ function renderCategoriesForDay(selectedDate){
         card.className = 'category-card';
         
         const icon = catGroup.subtypes[0]?.icon || '📍';
-        card.innerHTML = `<h3>${icon} ${catGroup.category}</h3><div class="subtypes-wrap"></div>`;
+        
+        // ✅ PERUBAHAN KRITIS: Ganti H3 dengan DETAILS untuk Kategori Utama
+        card.innerHTML = `
+            <details class="category-details" open>
+                <summary class="category-summary">
+                    ${icon} ${catGroup.category}
+                </summary>
+                <div class="subtypes-wrap"></div>
+            </details>
+        `;
+        
         const subtypesWrap = card.querySelector('.subtypes-wrap');
 
         catGroup.subtypes.forEach(subtype => {
             const ideasList = ideasBySubtype[subtype.type_key] || [];
             
-            // Variabel untuk menentukan apakah detail harus ditampilkan
             const hasIdeas = ideasList.length > 0;
             const hasLevel2Photo = !!subtype.photo_url;
             
-            // KRITIS: HANYA RENDER details JIKA: 
-            // 1. Ada Ide Level 3 (Ide/Tempat spesifik), ATAU 
-            // 2. Ada Foto Level 2 TAPI TIDAK ADA Ide Level 3 (untuk kartu Sub-tipe generik).
             if (hasIdeas || (hasLevel2Photo && !hasIdeas)) {
                 
                 const details = document.createElement('details');
@@ -643,7 +657,6 @@ function renderCategoriesForDay(selectedDate){
                 optionsWrap.className = 'options-wrap';
                 optionsWrap.dataset.typeKey = subtype.type_key;
                 
-                // Opsi Level 2 (Sub-tipe) HANYA dirender jika TIDAK ADA Ide Level 3 (untuk mencegah duplikasi)
                 if (hasLevel2Photo && !hasIdeas) { 
                     const itemId = `cat-${subtype.type_key}`; 
                     const isSelected = selectedIdeaIds.has(itemId); 
@@ -662,8 +675,7 @@ function renderCategoriesForDay(selectedDate){
                     `;
                 }
 
-                // Render Level 3 (Ideas/Places)
-                if (hasIdeas) { // Pastikan hanya render Level 3 jika ada datanya
+                if (hasIdeas) {
                     ideasList.forEach(item => {
                         const itemId = item.id;
                         const isSelected = selectedIdeaIds.has(itemId);
@@ -698,8 +710,31 @@ function renderCategoriesForDay(selectedDate){
 
     setupImageClickHandlers(); 
     setupDetailsCollapse();
+    setupCategoryCollapse(); // ✅ FUNGSI BARU untuk handle collapse kategori
     populateIdeaCategorySelect();
 }
+
+// ✅ FUNGSI BARU: Setup Collapse untuk Kategori Utama
+function setupCategoryCollapse() {
+    document.querySelectorAll('.category-details').forEach(details => {
+        details.removeEventListener('toggle', handleCategoryToggle); 
+        details.addEventListener('toggle', handleCategoryToggle);
+    });
+}
+
+function handleCategoryToggle(event) {
+    const details = event.target;
+    
+    // Jika kategori dibuka, tutup semua sub-tipe di dalamnya
+    if (!details.open) {
+        const subtypeDetails = details.querySelectorAll('.subtype-details');
+        subtypeDetails.forEach(subDetail => {
+            subDetail.open = false;
+        });
+    }
+}
+
+// ... (Sisa kode tetap sama) ...
 
 // =================================================================
 // 3. EVENT LISTENERS
