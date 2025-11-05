@@ -269,40 +269,47 @@ async function fetchData() {
     if (catError) { console.error('Supabase fetch categories error', catError); }
     categoriesCache = categories || [];
 
-    // 2. Ambil Ide
+    // 2. Ambil Ide (✅ KRITIS: Tambahkan kolom detail info di SELECT)
     const { data: ideas, error: ideaError } = await supabase
         .from('trip_ideas_v2') 
-        .select('*, idea_categories (category, subtype, icon, photo_url)') 
+        .select(`
+            *,
+            idea_categories (
+                category, 
+                subtype, 
+                icon, 
+                photo_url
+            )
+        `)
         .order('created_at', { ascending: false });
-    if (ideaError) { console.error('Supabase fetch ideas error', ideaError); }
+        
+    if (ideaError) { 
+        console.error('Supabase fetch ideas error', ideaError); 
+    }
     
+    // ✅ PENTING: Mapping data dengan SEMUA kolom termasuk detail info
     ideasCache = (ideas || []).map(idea => ({
-        ...idea,
+        ...idea, // Spread semua kolom dari database (termasuk address, maps_url, dll)
         category_name: idea.idea_categories.category,
         subtype_name: idea.idea_categories.subtype,
         icon: idea.idea_categories.icon,
         photo_url_category: idea.idea_categories.photo_url,
     }));
     
-    // START FIX KRITIS: DE-DUPLIKASI DATA DARI ideasCache
-    // Ini menangani kasus jika ada ide ganda di trip_ideas_v2 dengan nama yang sama.
+    // START FIX: De-duplikasi
     const uniqueIdeasMap = new Map();
     ideasCache.forEach(idea => {
-        // Gunakan kombinasi type_key dan idea_name sebagai kunci unik
         if (idea.idea_name) {
             const key = `${idea.type_key}_${idea.idea_name.toLowerCase().trim()}`;
-            // Karena data diurutkan berdasarkan created_at DESC, 
-            // kita ambil yang pertama (paling baru) jika ada duplikasi
             if (!uniqueIdeasMap.has(key)) {
                 uniqueIdeasMap.set(key, idea);
             }
         } else {
-            // Jika ada entri tanpa nama (seharusnya tidak terjadi di trip_ideas_v2)
             uniqueIdeasMap.set(idea.id || Date.now(), idea);
         }
     });
     ideasCache = Array.from(uniqueIdeasMap.values());
-    // END FIX KRITIS
+    // END FIX
     
     // 3. Ambil Semua Review 
     const { data: reviews, error: reviewError } = await supabase
@@ -312,6 +319,7 @@ async function fetchData() {
     
     allReviews = reviews || []; 
     
+    // Calculate ratings
     const ratingsMap = {};
     (allReviews).forEach(review => {
         const id = review.idea_id;
@@ -332,8 +340,15 @@ async function fetchData() {
             count: count
         };
     }
+    
+    // ✅ DEBUG: Log untuk memastikan data ter-load dengan benar
+    console.log('✅ Data loaded. Sample idea:', ideasCache[0]);
+    console.log('✅ Detail info fields:', {
+        address: ideasCache[0]?.address,
+        maps_url: ideasCache[0]?.maps_url,
+        phone: ideasCache[0]?.phone
+    });
 }
-
 
 
 // main.js - GANTI TOTAL FUNGSI INI
@@ -900,12 +915,6 @@ function formatUrl(url) {
     } catch (e) {
         return url;
     }
-}
-
-// ✅ FUNGSI BARU: Edit Idea Info (akan dibuat terpisah nanti)
-function editIdeaInfo(ideaId) {
-    alert('Fitur Edit Info akan segera hadir! 🚀\n\nUntuk sementara, Anda bisa menambahkan info saat membuat ide baru.');
-    // TODO: Implementasi edit modal
 }
 
 // =================================================================
