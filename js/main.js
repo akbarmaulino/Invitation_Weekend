@@ -4,6 +4,15 @@ import { supabase } from './supabaseClient.js';
 
 let currentUser = { id: 'anon' }; 
 
+
+// ✅ TAMBAHKAN REFERENSI UI UNTUK FIELD BARU (di bagian deklarasi variabel)
+const ideaAddress = document.getElementById('ideaAddress');
+const ideaMapsUrl = document.getElementById('ideaMapsUrl');
+const ideaPhone = document.getElementById('ideaPhone');
+const ideaOpeningHours = document.getElementById('ideaOpeningHours');
+const ideaPriceRange = document.getElementById('ideaPriceRange');
+const ideaWebsite = document.getElementById('ideaWebsite');
+const ideaNotes = document.getElementById('ideaNotes');
 // UI refs (Hanya yang terkait fungsi utama)
 const activityArea = document.getElementById('activityArea');
 const generateBtn = document.getElementById('generateBtn');
@@ -40,6 +49,20 @@ const detailReviewList = document.getElementById('detailReviewList');
 const noReviewsMessage = document.getElementById('noReviewsMessage');
 const closeDetailModal = document.getElementById('closeDetailModal');
 
+const editInfoModal = document.getElementById('editInfoModal');
+const editInfoForm = document.getElementById('editInfoForm');
+const editInfoIdeaId = document.getElementById('editInfoIdeaId');
+const editInfoIdeaName = document.getElementById('editInfoIdeaName');
+const editInfoAddress = document.getElementById('editInfoAddress');
+const editInfoMapsUrl = document.getElementById('editInfoMapsUrl');
+const editInfoPhone = document.getElementById('editInfoPhone');
+const editInfoOpeningHours = document.getElementById('editInfoOpeningHours');
+const editInfoPriceRange = document.getElementById('editInfoPriceRange');
+const editInfoWebsite = document.getElementById('editInfoWebsite');
+const editInfoNotes = document.getElementById('editInfoNotes');
+const closeEditInfoModal = document.getElementById('closeEditInfoModal');
+const cancelEditInfo = document.getElementById('cancelEditInfo');
+
 // NEW: INPUT TANGGAL TRIP
 const tripDateInput = document.getElementById('tripDateInput'); 
 
@@ -56,6 +79,126 @@ let allReviews = [];
 // KRITIS: STATE UNTUK MELACAK IDE YANG DIPILIH
 let selectedIdeaIds = new Set();
 
+
+window.editIdeaInfo = function(ideaId) {
+    const idea = ideasCache.find(i => i.id === ideaId);
+    if (!idea) {
+        alert('Ide tidak ditemukan!');
+        return;
+    }
+    
+    // Populate form dengan data yang sudah ada
+    if (editInfoIdeaId) editInfoIdeaId.value = ideaId;
+    if (editInfoIdeaName) editInfoIdeaName.textContent = idea.idea_name;
+    if (editInfoAddress) editInfoAddress.value = idea.address || '';
+    if (editInfoMapsUrl) editInfoMapsUrl.value = idea.maps_url || '';
+    if (editInfoPhone) editInfoPhone.value = idea.phone || '';
+    if (editInfoOpeningHours) editInfoOpeningHours.value = idea.opening_hours || '';
+    if (editInfoPriceRange) editInfoPriceRange.value = idea.price_range || '';
+    if (editInfoWebsite) editInfoWebsite.value = idea.website || '';
+    if (editInfoNotes) editInfoNotes.value = idea.notes || '';
+    
+    // Tutup modal detail, buka modal edit
+    if (ideaDetailModal) {
+        ideaDetailModal.classList.add('hidden');
+    }
+    
+    if (editInfoModal) {
+        editInfoModal.classList.remove('hidden');
+        editInfoModal.style.display = 'block';
+    }
+};
+
+if (editInfoForm) {
+    editInfoForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const ideaId = editInfoIdeaId.value;
+        const submitBtn = editInfoForm.querySelector('button[type="submit"]');
+        
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Menyimpan... ⏳';
+        }
+        
+        // Ambil data dari form
+        const updatedInfo = {
+            address: editInfoAddress.value.trim() || null,
+            maps_url: editInfoMapsUrl.value.trim() || null,
+            phone: editInfoPhone.value.trim() || null,
+            opening_hours: editInfoOpeningHours.value.trim() || null,
+            price_range: editInfoPriceRange.value.trim() || null,
+            website: editInfoWebsite.value.trim() || null,
+            notes: editInfoNotes.value.trim() || null,
+        };
+        
+        try {
+            // Update data di Supabase
+            const { error } = await supabase
+                .from('trip_ideas_v2')
+                .update(updatedInfo)
+                .eq('id', ideaId);
+            
+            if (error) throw error;
+            
+            // Update cache lokal
+            const ideaIndex = ideasCache.findIndex(i => i.id === ideaId);
+            if (ideaIndex !== -1) {
+                ideasCache[ideaIndex] = {
+                    ...ideasCache[ideaIndex],
+                    ...updatedInfo
+                };
+            }
+            
+            alert('Informasi berhasil diperbarui! 🎉');
+            
+            // Tutup modal edit
+            if (editInfoModal) {
+                editInfoModal.classList.add('hidden');
+                editInfoModal.style.display = 'none';
+            }
+            
+            // Refresh tampilan detail
+            renderIdeaDetailModal(ideaId);
+            
+        } catch (error) {
+            console.error('Error updating info:', error);
+            alert('Gagal menyimpan perubahan: ' + error.message);
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '💾 Simpan Perubahan';
+            }
+        }
+    });
+}
+
+if (cancelEditInfo && editInfoModal) {
+    cancelEditInfo.addEventListener('click', () => {
+        editInfoModal.classList.add('hidden');
+        editInfoModal.style.display = 'none';
+        
+        // Kembali ke modal detail
+        const ideaId = editInfoIdeaId.value;
+        if (ideaId) {
+            renderIdeaDetailModal(ideaId);
+        }
+    });
+}
+
+if (editInfoModal) {
+    window.addEventListener('click', (event) => {
+        if (event.target === editInfoModal) {
+            editInfoModal.classList.add('hidden');
+            editInfoModal.style.display = 'none';
+            
+            const ideaId = editInfoIdeaId.value;
+            if (ideaId) {
+                renderIdeaDetailModal(ideaId);
+            }
+        }
+    });
+}
 
 // =================================================================
 // 1. UTILITY & DATA FETCHING
@@ -481,30 +624,25 @@ function renderPhotoUrls(photoUrls, className = 'review-photo') {
 // ... Lanjutkan dengan fungsi dan event listener lainnya di main.js
 // FUNGSI INI AKAN DIPANGGIL OLEH TOMBOL DETAIL
 function renderIdeaDetailModal(ideaId) {
-    // Logic untuk Ide Level 2 (cat-...) tidak memiliki modal detail
     if (ideaId.startsWith('cat-')) return; 
 
     const idea = ideasCache.find(i => i.id === ideaId);
     if (!idea) return;
     
-    // 1. DEKLARASI HANYA SEKALI DENGAN 'let'
     let reviews = allReviews.filter(r => r.idea_id === ideaId);
-    const ratingData = ideaRatings[ideaId]; // Biarkan ini const jika tidak diubah
+    const ratingData = ideaRatings[ideaId];
 
-    // 🎯 FILTER KRITIS: Hapus entri null/undefined sebelum pengurutan
-    // Baris ini tidak lagi mendeklarasikan, hanya meng-assign ulang ke variabel 'reviews' yang sudah ada
     reviews = reviews.filter(r => r && r.created_at); 
-    // --- Baris duplikat yang bermasalah di sini sudah dihapus:
-    // const reviews = allReviews.filter(r => r.idea_id === ideaId);
-    // const ratingData = ideaRatings[ideaId];
-    // ---
-
+    
     // 1. Update Header
     detailIdeaName.textContent = idea.idea_name;
     detailIdeaImage.src = getPublicImageUrl(idea.photo_url);
     detailIdeaImage.onerror = () => detailIdeaImage.src = 'images/placeholder.jpg'; 
 
-    // 2. Update Rating Summary
+    // ✅ 2. RENDER MAPS & INFO SECTION (BARU)
+    renderMapsAndInfo(idea);
+
+    // 3. Update Rating Summary
     let avg = 0;
     let reviewCount = 0;
 
@@ -521,39 +659,29 @@ function renderIdeaDetailModal(ideaId) {
             <span class="avg-rating">${starsHtml} ${avg.toFixed(1)}</span>
             <span>dari ${reviewCount} Review</span>
         `;
-        // noReviewsMessage.style.display akan diatur di bagian 3
     } else {
         detailRatingSummary.innerHTML = `
             <span class="avg-rating">N/A</span>
             <span>Belum ada review</span>
         `;
-        // noReviewsMessage.style.display akan diatur di bagian 3
     }
 
-    // 3. Update Review List
-    detailReviewList.innerHTML = ''; // Kosongkan list review
+    // 4. Update Review List
+    detailReviewList.innerHTML = '';
 
     if (reviews.length > 0) {
-        // LAKUKAN PENGURUTAN HANYA SATU KALI DI SINI
         reviews.sort((a, b) => {
-            // Amankan dari undefined (jika filter di atas gagal)
             if (!a || !b) return 0; 
-            
-            // Gunakan created_at untuk pengurutan
             const dateA = new Date(a.created_at);
             const dateB = new Date(b.created_at);
-
-            // Sort Descending (Terbaru dikurangi Terlama)
             return dateB.getTime() - dateA.getTime(); 
         });
 
-        // LOOP (forEach) DILAKUKAN SETELAH PENGURUTAN SELESAI
         reviews.forEach(review => {
             const reviewItem = document.createElement('div');
             reviewItem.className = 'review-item';
 
             const reviewStars = '⭐'.repeat(review.rating || 0);
-            
             const reviewPhotoHtml = renderPhotoUrls(review.photo_url, 'review-photo-main');
             
             reviewItem.innerHTML = `
@@ -565,22 +693,219 @@ function renderIdeaDetailModal(ideaId) {
             detailReviewList.appendChild(reviewItem);
         });
         
-        // Sembunyikan pesan 'tidak ada review' (karena review ada)
         if (noReviewsMessage) {
             noReviewsMessage.style.display = 'none';
         }
 
     } else {
-        // Tampilkan pesan 'tidak ada review' jika reviews.length adalah 0
         if (noReviewsMessage) {
             noReviewsMessage.style.display = 'block';
         }
-        // detailReviewList.innerHTML sudah dikosongkan di atas
     }
 
-    // 4. Tampilkan Modal
+    // 5. Tampilkan Modal
     ideaDetailModal.classList.remove('hidden');
     setupImageClickHandlers(); 
+}
+
+// ✅ FUNGSI BARU: Render Maps & Info Section
+function renderMapsAndInfo(idea) {
+    let mapsInfoContainer = document.getElementById('detailMapsInfo');
+    
+    if (!mapsInfoContainer) {
+        mapsInfoContainer = document.createElement('div');
+        mapsInfoContainer.id = 'detailMapsInfo';
+        mapsInfoContainer.className = 'detail-maps-info';
+        detailIdeaImage.parentNode.insertBefore(mapsInfoContainer, detailIdeaImage.nextSibling);
+    }
+    
+    let html = '';
+    
+    // ========== GOOGLE MAPS SECTION ==========
+    const hasLocation = idea.address || idea.maps_url;
+    
+    if (hasLocation) {
+        let mapsEmbedUrl = '';
+        
+        if (idea.maps_url) {
+            mapsEmbedUrl = convertToEmbedUrl(idea.maps_url);
+        } else if (idea.address) {
+            const encodedAddress = encodeURIComponent(idea.address);
+            mapsEmbedUrl = `https://www.google.com/maps/embed/v1/place?key=YOUR_GOOGLE_MAPS_API_KEY&q=${encodedAddress}`;
+        }
+        
+        html += `
+            <div class="maps-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h4 style="margin: 0;">📍 Lokasi</h4>
+                    <button class="btn secondary small" onclick="editIdeaInfo('${idea.id}')" style="padding: 6px 12px; font-size: 0.85em;">
+                        ✏️ Edit Info
+                    </button>
+                </div>
+                ${idea.address ? `
+                    <div class="address-display">
+                        <p>📍 ${idea.address}</p>
+                    </div>
+                ` : ''}
+                ${mapsEmbedUrl ? `
+                    <div class="maps-container">
+                        <iframe
+                            width="100%"
+                            height="250"
+                            frameborder="0"
+                            style="border:0; border-radius: 8px;"
+                            src="${mapsEmbedUrl}"
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                ` : ''}
+                ${idea.maps_url ? `
+                    <a href="${idea.maps_url}" target="_blank" class="btn-open-maps">
+                        🗺️ Buka di Google Maps
+                    </a>
+                ` : ''}
+            </div>
+        `;
+    }
+    
+    // ========== INFO DETAIL SECTION ==========
+    const hasInfo = idea.phone || idea.opening_hours || idea.price_range || idea.website || idea.notes;
+    
+    if (hasInfo) {
+        html += `
+            <div class="info-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h4 style="margin: 0;">ℹ️ Informasi Detail</h4>
+                    ${!hasLocation ? `
+                        <button class="btn secondary small" onclick="editIdeaInfo('${idea.id}')" style="padding: 6px 12px; font-size: 0.85em;">
+                            ✏️ Edit Info
+                        </button>
+                    ` : ''}
+                </div>
+                <div class="info-grid">
+        `;
+        
+        if (idea.phone) {
+            html += `
+                <div class="info-item">
+                    <span class="info-label">📞 Telepon:</span>
+                    <span class="info-value">
+                        <a href="tel:${idea.phone}">${idea.phone}</a>
+                    </span>
+                </div>
+            `;
+        }
+        
+        if (idea.opening_hours) {
+            html += `
+                <div class="info-item">
+                    <span class="info-label">🕐 Jam Buka:</span>
+                    <span class="info-value">${idea.opening_hours}</span>
+                </div>
+            `;
+        }
+        
+        if (idea.price_range) {
+            html += `
+                <div class="info-item">
+                    <span class="info-label">💰 Kisaran Harga:</span>
+                    <span class="info-value">${idea.price_range}</span>
+                </div>
+            `;
+        }
+        
+        if (idea.website) {
+            html += `
+                <div class="info-item">
+                    <span class="info-label">🌐 Website:</span>
+                    <span class="info-value">
+                        <a href="${idea.website}" target="_blank">${formatUrl(idea.website)}</a>
+                    </span>
+                </div>
+            `;
+        }
+        
+        if (idea.notes) {
+            html += `
+                <div class="info-item full-width">
+                    <span class="info-label">📝 Catatan:</span>
+                    <span class="info-value">${idea.notes}</span>
+                </div>
+            `;
+        }
+        
+        html += `</div></div>`;
+    }
+    
+    // Jika tidak ada info sama sekali
+    if (!hasLocation && !hasInfo) {
+        html = `
+            <div class="no-info-message">
+                <p>💡 <strong>Info lokasi dan detail belum ditambahkan.</strong></p>
+                <button class="btn secondary" onclick="editIdeaInfo('${idea.id}')" style="margin-top: 10px;">
+                    ✏️ Tambah Info Sekarang
+                </button>
+            </div>
+        `;
+    }
+    
+    mapsInfoContainer.innerHTML = html;
+}
+
+
+
+// ✅ HELPER: Convert Google Maps URL ke Embed URL
+function convertToEmbedUrl(mapsUrl) {
+    // CATATAN: Untuk production, Anda HARUS mendapatkan Google Maps API Key
+    // dan mengganti 'YOUR_GOOGLE_MAPS_API_KEY' dengan API key Anda
+    
+    // Deteksi berbagai format Google Maps URL
+    
+    // Format 1: https://maps.app.goo.gl/xxx (short link)
+    if (mapsUrl.includes('maps.app.goo.gl') || mapsUrl.includes('goo.gl/maps')) {
+        // Untuk short link, gunakan place search dengan nama tempat
+        return ''; // Return kosong, akan fallback ke address
+    }
+    
+    // Format 2: https://www.google.com/maps/place/...
+    const placeMatch = mapsUrl.match(/place\/([^\/]+)/);
+    if (placeMatch) {
+        const placeName = decodeURIComponent(placeMatch[1].replace(/\+/g, ' '));
+        return `https://www.google.com/maps/embed/v1/place?key=YOUR_GOOGLE_MAPS_API_KEY&q=${encodeURIComponent(placeName)}`;
+    }
+    
+    // Format 3: Coordinates @lat,lng
+    const coordMatch = mapsUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (coordMatch) {
+        const lat = coordMatch[1];
+        const lng = coordMatch[2];
+        return `https://www.google.com/maps/embed/v1/view?key=YOUR_GOOGLE_MAPS_API_KEY&center=${lat},${lng}&zoom=15`;
+    }
+    
+    // Format 4: Place ID
+    const placeIdMatch = mapsUrl.match(/place_id=([^&]+)/);
+    if (placeIdMatch) {
+        return `https://www.google.com/maps/embed/v1/place?key=YOUR_GOOGLE_MAPS_API_KEY&q=place_id:${placeIdMatch[1]}`;
+    }
+    
+    // Fallback: Return original URL (tidak akan berfungsi untuk embed, tapi bisa untuk link)
+    return '';
+}
+
+// ✅ HELPER: Format URL untuk display
+function formatUrl(url) {
+    try {
+        const urlObj = new URL(url);
+        return urlObj.hostname.replace('www.', '');
+    } catch (e) {
+        return url;
+    }
+}
+
+// ✅ FUNGSI BARU: Edit Idea Info (akan dibuat terpisah nanti)
+function editIdeaInfo(ideaId) {
+    alert('Fitur Edit Info akan segera hadir! 🚀\n\nUntuk sementara, Anda bisa menambahkan info saat membuat ide baru.');
+    // TODO: Implementasi edit modal
 }
 
 // =================================================================
@@ -1115,23 +1440,31 @@ if (tripDateInput) {
 ideaForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    // === START: PENCEGAHAN DOUBLE SUBMIT ===
     if (submitIdeaBtn) {
         submitIdeaBtn.disabled = true;
         submitIdeaBtn.textContent = 'Menyimpan... ⏳'; 
     }
-    // === END: PENCEGAHAN DOUBLE SUBMIT ===
     
     const cat = ideaCategory.value;
     const subtypeVal = ideaSubtype.value;
     const title = ideaTitle.value.trim();
     const file = ideaImageInput.files[0]; 
     
+    // ✅ AMBIL DATA DETAIL INFO BARU
+    const detailInfo = {
+        address: ideaAddress?.value.trim() || null,
+        maps_url: ideaMapsUrl?.value.trim() || null,
+        phone: ideaPhone?.value.trim() || null,
+        opening_hours: ideaOpeningHours?.value.trim() || null,
+        price_range: ideaPriceRange?.value.trim() || null,
+        website: ideaWebsite?.value.trim() || null,
+        notes: ideaNotes?.value.trim() || null,
+    };
+    
     let finalTypeKey = subtypeVal;
     let imageUrl = file ? await uploadImage(file) : null;
     let isNewCombo = false;
     
-    // --- Error handling (Pastikan tombol di-enable lagi jika gagal) ---
     const handleFailure = (msg) => {
         alert(msg);
         if (submitIdeaBtn) {
@@ -1208,11 +1541,20 @@ ideaForm.addEventListener('submit', async (e) => {
     }
 
     if (title) {
+        // ✅ TAMBAHKAN DETAIL INFO KE PAYLOAD
         const doc = {
             idea_name: title,
             type_key: finalTypeKey, 
             day_of_week: "", 
-            photo_url: imageUrl, 
+            photo_url: imageUrl,
+            // Detail Info Fields
+            address: detailInfo.address,
+            maps_url: detailInfo.maps_url,
+            phone: detailInfo.phone,
+            opening_hours: detailInfo.opening_hours,
+            price_range: detailInfo.price_range,
+            website: detailInfo.website,
+            notes: detailInfo.notes,
         };
         
         try {
@@ -1227,11 +1569,9 @@ ideaForm.addEventListener('submit', async (e) => {
             return;
         }
         
-        // PENTING: Jika ide Level 3 baru dibuat, selalu fetch data terbaru
         await fetchData();
     }
     
-    // --- SUKSES ---
     alert('Idemu tersimpan! 🎉');
     modal.classList.add('hidden');
     ideaForm.reset();
@@ -1239,17 +1579,13 @@ ideaForm.addEventListener('submit', async (e) => {
     if (newCategoryInput) { newCategoryInput.style.display = 'none'; newCategoryInput.value = ''; }
     if (newSubtypeInput) { newSubtypeInput.style.display = 'none'; newSubtypeInput.value = ''; }
     
-    // KRITIS: Panggil renderCategoriesForDay HANYA sekali setelah fetchData()
     renderCategoriesForDay(tripDateInput.value);
     
-    // === PENGEMBALIAN STATUS TOMBOL ===
     if (submitIdeaBtn) {
         submitIdeaBtn.disabled = false;
         submitIdeaBtn.textContent = 'Simpan Ide'; 
     }
-    // === END PENGEMBALIAN STATUS TOMBOL ===
 });
-
 // GENERATE TICKET (Menggunakan Set Ide yang Terpilih)
 generateBtn.addEventListener('click', () => {
     const selectedDate = tripDateInput.value;

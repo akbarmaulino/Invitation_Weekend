@@ -1229,6 +1229,229 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
 }
 
 /* ==================================================
+   MAPS & INFO DETAIL SECTION
+   ================================================== */
+
+.detail-maps-info {
+    margin: 20px 0;
+}
+
+/* ========== MAPS SECTION ========== */
+.maps-section {
+    background-color: var(--color-background-light);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid var(--color-secondary);
+}
+
+.maps-section h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--color-primary);
+    font-size: 1.1em;
+}
+
+.maps-container {
+    margin-bottom: 15px; /* ✅ Jarak antara maps dan button */
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.maps-container iframe {
+    display: block;
+    width: 100%;
+}
+
+.maps-placeholder {
+    background-color: white;
+    border: 2px dashed var(--color-secondary);
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+    color: var(--color-muted);
+}
+
+.maps-placeholder p {
+    margin: 0;
+    font-size: 1em;
+}
+
+.btn-open-maps {
+    display: inline-block;
+    background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+    color: white;
+    text-decoration: none;
+    padding: 12px 20px; /* ✅ Sedikit lebih besar untuk kenyamanan tap */
+    border-radius: 8px;
+    font-weight: bold;
+    text-align: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(66, 133, 244, 0.3);
+    width: 100%; /* ✅ Full width agar lebih mudah di-klik */
+    box-sizing: border-box;
+}
+
+.btn-open-maps:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
+}
+
+/* ========== INFO SECTION ========== */
+.info-section {
+    background-color: var(--color-background-light);
+    border-radius: 12px;
+    padding: 15px;
+    border: 1px solid var(--color-secondary);
+}
+
+.info-section h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--color-primary);
+    font-size: 1.1em;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.info-item {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 10px;
+    padding: 10px;
+    background-color: white;
+    border-radius: 8px;
+    border: 1px solid var(--color-secondary);
+    transition: all 0.2s ease;
+}
+
+.info-item:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 6px rgba(3, 37, 76, 0.1);
+}
+
+.info-item.full-width {
+    grid-template-columns: 140px 1fr;
+}
+
+.info-label {
+    font-weight: bold;
+    color: var(--color-primary);
+    font-size: 0.9em;
+}
+
+.info-value {
+    color: var(--color-text-light);
+    word-break: break-word;
+}
+
+.info-value a {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.info-value a:hover {
+    color: var(--color-primary-light);
+    text-decoration: underline;
+}
+/* ✅ FIX: Address Display dengan spacing yang proper */
+.address-display {
+    background-color: white;
+    border: 1px solid var(--color-secondary);
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-bottom: 15px; /* ✅ SPACING KRITIS: Jarak antara alamat dan maps/button */
+}
+.address-display p {
+    margin: 0;
+    color: var(--color-text-light);
+    font-size: 0.95em;
+    line-height: 1.5;
+}
+
+
+/* ========== NO INFO MESSAGE ========== */
+.no-info-message {
+    background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%);
+    border: 2px dashed #fbc02d;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    margin: 20px 0;
+}
+
+.no-info-message p {
+    margin: 0 0 15px 0;
+    color: #f57f17;
+    font-size: 1em;
+}
+
+.no-info-message .btn {
+    background-color: #fbc02d;
+    color: #3e2723;
+    border: none;
+}
+
+.no-info-message .btn:hover {
+    background-color: #f9a825;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+    .info-item {
+        grid-template-columns: 1fr;
+        gap: 5px;
+    }
+    
+    .info-item.full-width {
+        grid-template-columns: 1fr;
+    }
+    
+    .info-label {
+        border-bottom: 1px solid var(--color-secondary);
+        padding-bottom: 5px;
+    }
+    
+    .btn-open-maps {
+        display: block;
+        width: 100%;
+    }
+    
+    .maps-section,
+    .info-section {
+        padding: 12px;
+    }
+}
+
+/* ========== MODAL ADJUSTMENTS ========== */
+#ideaDetailModal .modal-content {
+    max-width: 700px; /* Lebih lebar untuk accommodate maps */
+}
+
+/* Animasi smooth untuk section baru */
+.detail-maps-info {
+    animation: fadeInUp 0.4s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==================================================
    RESPONSIVE ADJUSTMENTS
    ================================================== */
 

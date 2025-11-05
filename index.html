@@ -65,6 +65,39 @@
 
                 <label for="ideaImageInput" style="margin-top: 10px;">Foto/Gambar (Opsional)</label>
                 <input type="file" id="ideaImageInput" accept="image/*">
+                
+
+                <details class="form-detail-section" style="margin-top: 15px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: var(--color-primary); padding: 10px 0;">
+                        ➕ Tambah Info Detail (Opsional)
+                    </summary>
+                    
+                    <div style="padding: 10px 0;">
+                        <label for="ideaAddress">📍 Alamat Lengkap</label>
+                        <input type="text" id="ideaAddress" placeholder="Jl. Contoh No. 123, Jakarta">
+                        
+                        <label for="ideaMapsUrl" style="margin-top: 10px;">🗺️ Link Google Maps</label>
+                        <input type="url" id="ideaMapsUrl" placeholder="https://maps.app.goo.gl/xxx">
+                        <small style="color: var(--color-muted); display: block; margin-top: 5px;">
+                            💡 Copy link dari Google Maps app
+                        </small>
+                        
+                        <label for="ideaPhone" style="margin-top: 10px;">📞 No. Telepon</label>
+                        <input type="tel" id="ideaPhone" placeholder="021-12345678">
+                        
+                        <label for="ideaOpeningHours" style="margin-top: 10px;">🕐 Jam Buka</label>
+                        <input type="text" id="ideaOpeningHours" placeholder="10:00 - 22:00 (Setiap Hari)">
+                        
+                        <label for="ideaPriceRange" style="margin-top: 10px;">💰 Kisaran Harga</label>
+                        <input type="text" id="ideaPriceRange" placeholder="Rp 50.000 - 150.000">
+                        
+                        <label for="ideaWebsite" style="margin-top: 10px;">🌐 Website/Instagram</label>
+                        <input type="url" id="ideaWebsite" placeholder="https://instagram.com/namatempat">
+                        
+                        <label for="ideaNotes" style="margin-top: 10px;">📝 Catatan</label>
+                        <textarea id="ideaNotes" placeholder="Tips: Datang sore untuk sunset view yang bagus!" style="min-height: 60px;"></textarea>
+                    </div>
+                </details>
 
                 <div class="modal-actions">
                     <button type="submit" class="btn primary">Simpan Ide 💾</button>
@@ -174,6 +207,46 @@
         </div>
     </div>
     
+    <!-- Modal Edit Info -->
+    <div id="editInfoModal" class="modal hidden">
+        <div class="modal-content">
+            <button class="close-btn" id="closeEditInfoModal">&times;</button>
+            <h3>✏️ Edit Informasi: <span id="editInfoIdeaName">Nama Tempat</span></h3>
+            
+            <form id="editInfoForm">
+                <input type="hidden" id="editInfoIdeaId">
+                
+                <label for="editInfoAddress">📍 Alamat Lengkap</label>
+                <input type="text" id="editInfoAddress" placeholder="Jl. Contoh No. 123, Jakarta">
+                
+                <label for="editInfoMapsUrl" style="margin-top: 10px;">🗺️ Link Google Maps</label>
+                <input type="url" id="editInfoMapsUrl" placeholder="https://maps.app.goo.gl/xxx">
+                <small style="color: var(--color-muted); display: block; margin-top: 5px;">
+                    💡 Copy link dari Google Maps app
+                </small>
+                
+                <label for="editInfoPhone" style="margin-top: 10px;">📞 No. Telepon</label>
+                <input type="tel" id="editInfoPhone" placeholder="021-12345678">
+                
+                <label for="editInfoOpeningHours" style="margin-top: 10px;">🕐 Jam Buka</label>
+                <input type="text" id="editInfoOpeningHours" placeholder="10:00 - 22:00 (Setiap Hari)">
+                
+                <label for="editInfoPriceRange" style="margin-top: 10px;">💰 Kisaran Harga</label>
+                <input type="text" id="editInfoPriceRange" placeholder="Rp 50.000 - 150.000">
+                
+                <label for="editInfoWebsite" style="margin-top: 10px;">🌐 Website/Instagram</label>
+                <input type="url" id="editInfoWebsite" placeholder="https://instagram.com/namatempat">
+                
+                <label for="editInfoNotes" style="margin-top: 10px;">📝 Catatan</label>
+                <textarea id="editInfoNotes" placeholder="Tips: Datang sore untuk sunset view yang bagus!" style="min-height: 60px;"></textarea>
+                
+                <div class="modal-actions">
+                    <button type="submit" class="btn primary">💾 Simpan Perubahan</button>
+                    <button type="button" id="cancelEditInfo" class="btn secondary">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script type="module" src="js/main.js"></script>
     <script type="module" src="js/history.js"></script>
