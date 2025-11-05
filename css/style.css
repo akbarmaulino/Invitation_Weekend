@@ -942,6 +942,293 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
 }
 
 /* ==================================================
+   SELECTED ACTIVITIES PANEL
+   ================================================== */
+
+.selected-activities-panel {
+    background: linear-gradient(135deg, #f0f7ff 0%, #e1f3ff 100%);
+    border: 2px solid var(--color-primary);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 4px 12px rgba(3, 37, 76, 0.15);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--color-secondary);
+}
+
+.panel-header h4 {
+    margin: 0;
+    color: var(--color-primary);
+    font-size: 1.1em;
+}
+
+.btn-clear-all {
+    background-color: var(--color-error);
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: bold;
+    transition: all 0.2s ease;
+}
+
+.btn-clear-all:hover {
+    background-color: #ff5252;
+    transform: scale(1.05);
+}
+
+.selected-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Scrollbar styling */
+.selected-items-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.selected-items-list::-webkit-scrollbar-track {
+    background: var(--color-background-light);
+    border-radius: 3px;
+}
+
+.selected-items-list::-webkit-scrollbar-thumb {
+    background: var(--color-primary);
+    border-radius: 3px;
+}
+
+.selected-item {
+    background-color: white;
+    border: 1px solid var(--color-secondary);
+    border-radius: 8px;
+    padding: 12px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.selected-item:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 8px rgba(3, 37, 76, 0.1);
+    transform: translateX(5px);
+}
+
+.selected-item-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.selected-item-name {
+    font-weight: bold;
+    color: var(--color-primary);
+    font-size: 1em;
+}
+
+.selected-item-category {
+    font-size: 0.85em;
+    color: var(--color-muted);
+}
+
+.selected-item-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-locate,
+.btn-remove {
+    background-color: transparent;
+    border: 1px solid var(--color-secondary);
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.1em;
+    transition: all 0.2s ease;
+}
+
+.btn-locate:hover {
+    background-color: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+    transform: scale(1.1);
+}
+
+.btn-remove {
+    color: var(--color-error);
+    border-color: var(--color-error);
+}
+
+.btn-remove:hover {
+    background-color: var(--color-error);
+    color: white;
+    transform: scale(1.1);
+}
+
+/* ==================================================
+   SELECTION BADGES (Counter di Kategori/Sub-tipe)
+   ================================================== */
+
+.selection-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #03254c 0%, #1a4d7a 100%);
+    color: white;
+    font-size: 0.75em;
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    min-width: 20px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(3, 37, 76, 0.3);
+    animation: badgePop 0.3s ease-out;
+}
+
+.selection-badge.small {
+    font-size: 0.7em;
+    padding: 2px 6px;
+}
+
+@keyframes badgePop {
+    0% {
+        transform: scale(0);
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* ==================================================
+   CHECKMARK (✓) pada Item Terpilih
+   ================================================== */
+
+.checkmark {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: linear-gradient(135deg, #03254c 0%, #1a4d7a 100%);
+    color: white;
+    font-size: 1.2em;
+    font-weight: bold;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(3, 37, 76, 0.4);
+    z-index: 10;
+    animation: checkmarkPop 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes checkmarkPop {
+    0% {
+        transform: scale(0) rotate(-180deg);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+/* ==================================================
+   HIGHLIGHT FLASH (Saat klik "Lihat Lokasi")
+   ================================================== */
+
+.highlight-flash {
+    animation: flashHighlight 1s ease-in-out 2;
+    position: relative;
+}
+
+@keyframes flashHighlight {
+    0%, 100% {
+        background-color: transparent;
+        box-shadow: 0 1px 3px var(--color-shadow-light);
+    }
+    50% {
+        background-color: #fff9c4;
+        box-shadow: 0 0 20px rgba(255, 235, 59, 0.6);
+    }
+}
+
+/* ==================================================
+   RESPONSIVE ADJUSTMENTS
+   ================================================== */
+
+@media (max-width: 768px) {
+    .selected-activities-panel {
+        padding: 15px;
+        margin: 15px 0;
+    }
+    
+    .panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .btn-clear-all {
+        width: 100%;
+        padding: 10px;
+    }
+    
+    .selected-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .selected-item-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    .checkmark {
+        width: 24px;
+        height: 24px;
+        font-size: 1em;
+    }
+}
+
+/* ==================================================
+   OPTION ITEM POSITIONING (untuk checkmark)
+   ================================================== */
+
+.option-item {
+    position: relative; /* Penting untuk positioning checkmark */
+}
+
+/* ==================================================
    RESPONSIVE ADJUSTMENTS
    ================================================== */
 

@@ -620,16 +620,19 @@ function renderCategoriesForDay(selectedDate){
     }
 
     Object.values(groupedCategories).forEach(catGroup => {
+        // ✅ HITUNG BERAPA ITEM TERPILIH DI KATEGORI INI
+        const selectedCountInCategory = countSelectedInCategory(catGroup);
+        const categoryBadge = selectedCountInCategory > 0 ? `<span class="selection-badge">${selectedCountInCategory}</span>` : '';
+        
         const card = document.createElement('div');
         card.className = 'category-card';
         
         const icon = catGroup.subtypes[0]?.icon || '📍';
         
-        // ✅ PERUBAHAN KRITIS: Ganti H3 dengan DETAILS untuk Kategori Utama
         card.innerHTML = `
             <details class="category-details" open>
                 <summary class="category-summary">
-                    ${icon} ${catGroup.category}
+                    ${icon} ${catGroup.category} ${categoryBadge}
                 </summary>
                 <div class="subtypes-wrap"></div>
             </details>
@@ -643,6 +646,10 @@ function renderCategoriesForDay(selectedDate){
             const hasIdeas = ideasList.length > 0;
             const hasLevel2Photo = !!subtype.photo_url;
             
+            // ✅ HITUNG BERAPA ITEM TERPILIH DI SUB-TYPE INI
+            const selectedCountInSubtype = countSelectedInSubtype(subtype.type_key, ideasList);
+            const subtypeBadge = selectedCountInSubtype > 0 ? `<span class="selection-badge small">${selectedCountInSubtype}</span>` : '';
+            
             if (hasIdeas || (hasLevel2Photo && !hasIdeas)) {
                 
                 const details = document.createElement('details');
@@ -650,7 +657,7 @@ function renderCategoriesForDay(selectedDate){
                 details.setAttribute('open', ''); 
                 
                 const summary = document.createElement('summary');
-                summary.textContent = subtype.subtype;
+                summary.innerHTML = `${subtype.subtype} ${subtypeBadge}`;
                 details.appendChild(summary);
 
                 const optionsWrap = document.createElement('div');
@@ -663,6 +670,7 @@ function renderCategoriesForDay(selectedDate){
                     
                     optionsWrap.innerHTML += `
                         <div class="option-item ${isSelected ? 'selected' : ''}" data-ideaid="${itemId}">
+                            ${isSelected ? '<span class="checkmark">✓</span>' : ''}
                             <button class="view-detail-btn" data-ideaid="${itemId}" title="Lihat Detail & Review" style="display:none;">👁️</button>
                             <div class="option-item-content">
                                 <img src="${getPublicImageUrl(subtype.photo_url)}" alt="${subtype.subtype}">
@@ -684,6 +692,7 @@ function renderCategoriesForDay(selectedDate){
 
                         optionsWrap.innerHTML += `
                             <div class="option-item ${isSelected ? 'selected' : ''}" data-ideaid="${itemId}">
+                                ${isSelected ? '<span class="checkmark">✓</span>' : ''}
                                 <button class="view-detail-btn" data-ideaid="${itemId}" title="Lihat Detail & Review">👁️</button>
                                 <div class="option-item-content">
                                     <img src="${getPublicImageUrl(item.photo_url)}" alt="${item.idea_name}">
@@ -710,10 +719,221 @@ function renderCategoriesForDay(selectedDate){
 
     setupImageClickHandlers(); 
     setupDetailsCollapse();
-    setupCategoryCollapse(); // ✅ FUNGSI BARU untuk handle collapse kategori
+    setupCategoryCollapse();
     populateIdeaCategorySelect();
+    
+    // ✅ RENDER QUICK VIEW PANEL
+    renderSelectedActivitiesPanel();
 }
 
+function countSelectedInCategory(catGroup) {
+    let count = 0;
+    catGroup.subtypes.forEach(subtype => {
+        // Cek Level 2 (sub-type)
+        const level2Id = `cat-${subtype.type_key}`;
+        if (selectedIdeaIds.has(level2Id)) count++;
+        
+        // Cek Level 3 (ideas)
+        const ideasInSubtype = ideasCache.filter(i => i.type_key === subtype.type_key);
+        ideasInSubtype.forEach(idea => {
+            if (selectedIdeaIds.has(idea.id)) count++;
+        });
+    });
+    return count;
+}
+
+// ✅ FUNGSI BARU: Hitung item terpilih di sub-type
+function countSelectedInSubtype(typeKey, ideasList) {
+    let count = 0;
+    
+    // Cek Level 2
+    const level2Id = `cat-${typeKey}`;
+    if (selectedIdeaIds.has(level2Id)) count++;
+    
+    // Cek Level 3
+    ideasList.forEach(idea => {
+        if (selectedIdeaIds.has(idea.id)) count++;
+    });
+    
+    return count;
+}
+
+// ✅ FUNGSI BARU: Render Quick View Panel
+function renderSelectedActivitiesPanel() {
+    // Cari atau buat container panel
+    let panel = document.getElementById('selectedActivitiesPanel');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'selectedActivitiesPanel';
+        panel.className = 'selected-activities-panel';
+        
+        // Insert setelah controls, sebelum activityArea
+        const controls = document.querySelector('.controls');
+        controls.parentNode.insertBefore(panel, controls.nextSibling);
+    }
+    
+    // Jika tidak ada yang dipilih, sembunyikan panel
+    if (selectedIdeaIds.size === 0) {
+        panel.style.display = 'none';
+        return;
+    }
+    
+    panel.style.display = 'block';
+    
+    // Build list aktivitas terpilih
+    let listHtml = '';
+    selectedIdeaIds.forEach(ideaId => {
+        const itemData = getIdeaDataById(ideaId);
+        if (!itemData) return;
+        
+        listHtml += `
+            <div class="selected-item" data-ideaid="${ideaId}">
+                <div class="selected-item-info">
+                    <span class="selected-item-name">${itemData.name}</span>
+                    <span class="selected-item-category">${itemData.category} / ${itemData.subtype}</span>
+                </div>
+                <div class="selected-item-actions">
+                    <button class="btn-locate" data-ideaid="${ideaId}" title="Lihat Lokasi">📍</button>
+                    <button class="btn-remove" data-ideaid="${ideaId}" title="Hapus">✕</button>
+                </div>
+            </div>
+        `;
+    });
+    
+    panel.innerHTML = `
+        <div class="panel-header">
+            <h4>✓ ${selectedIdeaIds.size} Aktivitas Terpilih</h4>
+            <button id="clearAllSelections" class="btn-clear-all" title="Hapus Semua">🗑️ Clear Semua</button>
+        </div>
+        <div class="selected-items-list">
+            ${listHtml}
+        </div>
+    `;
+    
+    // Setup event listeners untuk tombol di panel
+    setupPanelEventListeners();
+}
+
+// ✅ FUNGSI BARU: Get data ide by ID
+function getIdeaDataById(ideaId) {
+    // Cek Level 3 (ideas)
+    const idea = ideasCache.find(i => i.id === ideaId);
+    if (idea) {
+        return {
+            name: idea.idea_name,
+            category: idea.category_name,
+            subtype: idea.subtype_name,
+            typeKey: idea.type_key
+        };
+    }
+    
+    // Cek Level 2 (category)
+    if (ideaId.startsWith('cat-')) {
+        const typeKey = ideaId.replace('cat-', '');
+        const cat = categoriesCache.find(c => c.type_key === typeKey);
+        if (cat) {
+            return {
+                name: cat.subtype,
+                category: cat.category,
+                subtype: cat.subtype,
+                typeKey: cat.type_key
+            };
+        }
+    }
+    
+    return null;
+}
+
+// ✅ FUNGSI BARU: Setup event listeners untuk panel
+function setupPanelEventListeners() {
+    // Tombol "Lihat Lokasi"
+    document.querySelectorAll('.btn-locate').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const ideaId = e.currentTarget.dataset.ideaid;
+            scrollToAndHighlightIdea(ideaId);
+        });
+    });
+    
+    // Tombol "Hapus" individual
+    document.querySelectorAll('.btn-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const ideaId = e.currentTarget.dataset.ideaid;
+            
+            // Hapus dari Set
+            selectedIdeaIds.delete(ideaId);
+            
+            // Update visual di card
+            const optionItem = document.querySelector(`.option-item[data-ideaid="${ideaId}"]`);
+            if (optionItem) {
+                optionItem.classList.remove('selected');
+                const checkmark = optionItem.querySelector('.checkmark');
+                if (checkmark) checkmark.remove();
+            }
+            
+            saveProgress();
+            renderCategoriesForDay(tripDateInput.value); // Re-render untuk update badge
+        });
+    });
+    
+    // Tombol "Clear Semua"
+    const clearAllBtn = document.getElementById('clearAllSelections');
+    if (clearAllBtn) {
+        clearAllBtn.addEventListener('click', () => {
+            if (confirm('Hapus semua aktivitas yang dipilih?')) {
+                selectedIdeaIds.clear();
+                
+                // Update semua visual
+                document.querySelectorAll('.option-item.selected').forEach(item => {
+                    item.classList.remove('selected');
+                    const checkmark = item.querySelector('.checkmark');
+                    if (checkmark) checkmark.remove();
+                });
+                
+                saveProgress();
+                renderCategoriesForDay(tripDateInput.value);
+            }
+        });
+    }
+}
+
+// ✅ FUNGSI BARU: Scroll ke dan highlight ide
+function scrollToAndHighlightIdea(ideaId) {
+    const itemData = getIdeaDataById(ideaId);
+    if (!itemData) return;
+    
+    // 1. Buka kategori dan sub-type yang relevan
+    const categoryCards = document.querySelectorAll('.category-card');
+    categoryCards.forEach(card => {
+        const categoryDetails = card.querySelector('.category-details');
+        const categoryName = categoryDetails.querySelector('summary').textContent.trim().split(' ').slice(1).join(' ').replace(/\d+/g, '').trim();
+        
+        if (categoryName === itemData.category) {
+            categoryDetails.open = true;
+            
+            // Buka sub-type
+            const subtypeDetails = card.querySelectorAll('.subtype-details');
+            subtypeDetails.forEach(subDetail => {
+                const subtypeName = subDetail.querySelector('summary').textContent.trim().split(' ').slice(0, -1).join(' ').trim();
+                if (subtypeName === itemData.subtype) {
+                    subDetail.open = true;
+                }
+            });
+        }
+    });
+    
+    // 2. Scroll ke item
+    const targetItem = document.querySelector(`.option-item[data-ideaid="${ideaId}"]`);
+    if (targetItem) {
+        targetItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // 3. Highlight sementara
+        targetItem.classList.add('highlight-flash');
+        setTimeout(() => {
+            targetItem.classList.remove('highlight-flash');
+        }, 2000);
+    }
+}
 // ✅ FUNGSI BARU: Setup Collapse untuk Kategori Utama
 function setupCategoryCollapse() {
     document.querySelectorAll('.category-details').forEach(details => {
@@ -741,11 +961,9 @@ function handleCategoryToggle(event) {
 // =================================================================
 
 function saveProgress() {
-    // Konversi Set menjadi Array untuk disimpan di localStorage
     const selectionsArray = Array.from(selectedIdeaIds).map(ideaId => {
         const idea = ideasCache.find(i => i.id === ideaId);
         
-        // Handle Level 2 item jika tidak ditemukan di ideasCache
         if (!idea && ideaId.startsWith('cat-')) {
             const typeKey = ideaId.replace('cat-', '');
             const cat = categoriesCache.find(c => c.type_key === typeKey);
@@ -768,49 +986,57 @@ function saveProgress() {
         return null;
     }).filter(item => item !== null);
 
-    // Simpan array seleksi, bukan Set
     localStorage.setItem('tripSelections', JSON.stringify(selectionsArray));
     localStorage.setItem('secretMessage', secretMessage.value);
     localStorage.setItem('tripDate', tripDateInput.value); 
     
-    // Update count display
     if (activityCount) {
         activityCount.textContent = selectedIdeaIds.size;
     }
+    
+    // ✅ UPDATE PANEL SETIAP KALI ADA PERUBAHAN
+    renderSelectedActivitiesPanel();
 }
 
-// KRITIS: EVENT DELEGATION BARU
+// =================================================================
+// UPDATE: Event Delegation untuk tambah checkmark
+// =================================================================
+
 activityArea.addEventListener('click', (e) => {
     const optionItem = e.target.closest('.option-item');
     if (!optionItem) return;
 
-    // Cek apakah yang diklik adalah tombol detail (Mata)
     const isDetailButton = e.target.closest('.view-detail-btn');
 
     if (isDetailButton) {
         const ideaId = isDetailButton.dataset.ideaid;
-        // Pemicu Modal Detail
         renderIdeaDetailModal(ideaId);
-        // Penting: RETURN agar status seleksi TIDAK diubah
         return; 
     }
-    
-    // Jika BUKAN tombol detail, maka ini adalah klik untuk Toggle Seleksi
     
     const ideaId = optionItem.dataset.ideaid;
     if (!ideaId) return;
 
     if (selectedIdeaIds.has(ideaId)) {
-        // Deselect: Hapus dari Set dan hapus kelas 'selected'
         selectedIdeaIds.delete(ideaId);
         optionItem.classList.remove('selected');
+        
+        // ✅ HAPUS CHECKMARK
+        const checkmark = optionItem.querySelector('.checkmark');
+        if (checkmark) checkmark.remove();
     } else {
-        // Select: Tambahkan ke Set dan tambahkan kelas 'selected'
         selectedIdeaIds.add(ideaId);
         optionItem.classList.add('selected');
+        
+        // ✅ TAMBAH CHECKMARK
+        if (!optionItem.querySelector('.checkmark')) {
+            const checkmark = document.createElement('span');
+            checkmark.className = 'checkmark';
+            checkmark.textContent = '✓';
+            optionItem.insertBefore(checkmark, optionItem.firstChild);
+        }
     }
     
-    // Simpan progress
     saveProgress();
 });
 
