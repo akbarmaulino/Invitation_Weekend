@@ -49,24 +49,34 @@
     <div id="modal" class="modal hidden">
         <div class="modal-content">
             <h3>Tambahkan Ide Trip Baru</h3>
-            <form id="ideaForm">
+            <form id="ideaForm">    
+                <!-- ✅ NEW: CITY DROPDOWN (Paling atas) -->
+                <label for="ideaCity">📍 Pilih Kota (Opsional)</label>
+                <select id="ideaCity">
+                    <option value="">-- Pilih Kota --</option>
+                    <!-- Options akan diisi via JavaScript dari database -->
+                </select>
+                <small style="color: var(--color-muted); display: block; margin-top: 5px; margin-bottom: 15px;">
+                    💡 Kosongkan jika tempat ini tidak terkait kota tertentu
+                </small>
+
                 <label for="ideaCategory">Mau Kemana Kitaaa?</label>
                 <select id="ideaCategory" required>
-                    </select>
+                </select>
                 <input type="text" id="newCategoryInput" name="newCategory" placeholder="Nama Kategori Baru" style="display: none;" required>
 
                 <label for="ideaSubtype" style="margin-top: 10px;">Dimana yaa enaknyaa?</label>
                 <select id="ideaSubtype" required>
-                    </select>
+                </select>
                 <input type="text" id="newSubtypeInput" name="newSubtype" placeholder="Nama Subtipe Baru" style="display: none;" required>
 
                 <label for="ideaTitle" style="margin-top: 10px;">Kasih tau dong...</label>
-                <input type="text" id="ideaTitle" placeholder="Misal: Jalan-jalan ke Taman Kota">
+                <input type="text" id="ideaTitle" placeholder="Misal: KFC, Starbucks, dll">
 
                 <label for="ideaImageInput" style="margin-top: 10px;">Foto/Gambar (Opsional)</label>
                 <input type="file" id="ideaImageInput" accept="image/*">
-                
 
+                <!-- DETAIL INFO SECTION (Existing, tidak berubah) -->
                 <details class="form-detail-section" style="margin-top: 15px;">
                     <summary style="cursor: pointer; font-weight: bold; color: var(--color-primary); padding: 10px 0;">
                         ➕ Tambah Info Detail (Opsional)

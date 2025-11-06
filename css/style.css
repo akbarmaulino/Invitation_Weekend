@@ -1526,7 +1526,197 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
 .location-accordion-content .btn-open-maps {
     margin-bottom: 15px;
 }
+/* ==================================================
+   CITY GROUPING STYLES (Level 0 - Highest)
+   ================================================== */
 
+/* City Card Container */
+.city-card {
+    background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);
+    border: 2px solid var(--color-primary);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 6px 20px rgba(3, 37, 76, 0.15);
+    transition: all 0.3s ease;
+}
+
+.city-card:hover {
+    box-shadow: 0 8px 25px rgba(3, 37, 76, 0.2);
+    transform: translateY(-2px);
+}
+
+/* City Header (Collapsible) */
+.city-details {
+    margin-bottom: 0;
+}
+
+.city-details summary {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: var(--color-primary);
+    cursor: pointer;
+    padding: 15px 0 15px 40px;
+    list-style: none;
+    position: relative;
+    user-select: none;
+    border-bottom: 3px solid var(--color-secondary);
+    transition: all 0.2s ease;
+}
+
+.city-details summary:hover {
+    color: var(--color-primary-light);
+    padding-left: 45px;
+}
+
+/* City Icon/Flag */
+.city-details summary::before {
+    content: '📍';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2em;
+    transition: transform 0.3s ease;
+}
+
+/* Arrow Indicator for City */
+.city-details summary::after {
+    content: '▼';
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%) rotate(-90deg);
+    transition: transform 0.3s ease;
+    font-size: 0.8em;
+    color: var(--color-primary);
+}
+
+.city-details[open] summary::after {
+    transform: translateY(-50%) rotate(0deg);
+}
+
+/* City Content */
+.city-content {
+    padding-top: 20px;
+    animation: citySlideDown 0.4s ease-out;
+}
+
+@keyframes citySlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Category Cards inside City (Level 1) */
+.city-content .category-card {
+    background-color: var(--color-background-medium);
+    border: 1px solid var(--color-secondary);
+    margin-bottom: 20px;
+}
+
+/* Adjust Category Header inside City */
+.city-content .category-details summary.category-summary {
+    font-size: 1.15em;
+    padding-left: 25px;
+}
+
+/* ==================================================
+   CITY BADGE (Optional: Show in cards)
+   ================================================== */
+
+.city-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #03254c 0%, #1a4d7a 100%);
+    color: white;
+    font-size: 0.7em;
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 10px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+/* ==================================================
+   NO CITY GROUP (Fallback untuk data lama)
+   ================================================== */
+
+.no-city-group {
+    background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%);
+    border: 2px dashed #fbc02d;
+}
+
+.no-city-group .city-details summary {
+    color: #f57f17;
+}
+
+.no-city-group .city-details summary::before {
+    content: '⚠️';
+}
+
+/* ==================================================
+   RESPONSIVE ADJUSTMENTS
+   ================================================== */
+
+@media (max-width: 768px) {
+    .city-card {
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .city-details summary {
+        font-size: 1.3em;
+        padding: 12px 0 12px 35px;
+    }
+    
+    .city-details summary::after {
+        right: 10px;
+    }
+    
+    .city-content {
+        padding-top: 15px;
+    }
+}
+
+/* ==================================================
+   HIERARCHY VISUAL GUIDE (Indentation)
+   ================================================== */
+
+/* Level 0: City (No indent) */
+.city-card {
+    margin-left: 0;
+}
+
+/* Level 1: Category (Small indent) */
+.city-content .category-card {
+    margin-left: 10px;
+}
+
+/* Level 2: Subtype (Medium indent) */
+.city-content .subtype-details {
+    margin-left: 20px;
+}
+
+/* Level 3: Options (Large indent) */
+.city-content .options-wrap {
+    margin-left: 30px;
+}
+
+/* Visual connection lines (optional enhancement) */
+.city-content .category-card::before {
+    content: '';
+    position: absolute;
+    left: -10px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--color-secondary), transparent);
+}
 /* ==================================================
    RESPONSIVE
    ================================================== */
@@ -1739,3 +1929,4 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
         padding-left: 10px;
     }
 }
+

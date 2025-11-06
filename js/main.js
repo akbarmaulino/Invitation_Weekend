@@ -10,6 +10,8 @@ const locationsListContainer = document.getElementById('locationsListContainer')
 const locationItemTemplate = document.getElementById('locationItemTemplate');
 const addLocationBtn = document.getElementById('addLocationBtn');
 const saveAllLocations = document.getElementById('saveAllLocations');
+const ideaCity = document.getElementById('ideaCity');
+let citiesCache = []; 
 
 let currentLocationsData = []; // Array untuk track semua lokasi
 // ✅ TAMBAHKAN REFERENSI UI UNTUK FIELD BARU (di bagian deklarasi variabel)
@@ -438,14 +440,25 @@ function getSelectedDays(){
 }
 
 async function fetchData() {
-    // 1. Ambil Kategori
+    // 1. Ambil Cities (Master Data)
+    const { data: cities, error: citiesError } = await supabase
+        .from('cities')
+        .select('*')
+        .order('display_order', { ascending: true });
+    
+    if (citiesError) { 
+        console.error('Supabase fetch cities error', citiesError); 
+    }
+    citiesCache = cities || [];
+    
+    // 2. Ambil Kategori
     const { data: categories, error: catError } = await supabase
         .from('idea_categories')
         .select('*');
     if (catError) { console.error('Supabase fetch categories error', catError); }
     categoriesCache = categories || [];
 
-    // 2. Ambil Ide (✅ KRITIS: Tambahkan kolom detail info di SELECT)
+    // 3. Ambil Ide (dengan city_id)
     const { data: ideas, error: ideaError } = await supabase
         .from('trip_ideas_v2') 
         .select(`
@@ -463,16 +476,15 @@ async function fetchData() {
         console.error('Supabase fetch ideas error', ideaError); 
     }
     
-    // ✅ PENTING: Mapping data dengan SEMUA kolom termasuk detail info
     ideasCache = (ideas || []).map(idea => ({
-        ...idea, // Spread semua kolom dari database (termasuk address, maps_url, dll)
+        ...idea,
         category_name: idea.idea_categories.category,
         subtype_name: idea.idea_categories.subtype,
         icon: idea.idea_categories.icon,
         photo_url_category: idea.idea_categories.photo_url,
     }));
     
-    // START FIX: De-duplikasi
+    // De-duplikasi
     const uniqueIdeasMap = new Map();
     ideasCache.forEach(idea => {
         if (idea.idea_name) {
@@ -485,9 +497,8 @@ async function fetchData() {
         }
     });
     ideasCache = Array.from(uniqueIdeasMap.values());
-    // END FIX
     
-    // 3. Ambil Semua Review 
+    // 4. Ambil Reviews
     const { data: reviews, error: reviewError } = await supabase
         .from('idea_reviews')
         .select('*'); 
@@ -517,12 +528,29 @@ async function fetchData() {
         };
     }
     
-    // ✅ DEBUG: Log untuk memastikan data ter-load dengan benar
-    console.log('✅ Data loaded. Sample idea:', ideasCache[0]);
-    console.log('✅ Detail info fields:', {
-        address: ideasCache[0]?.address,
-        maps_url: ideasCache[0]?.maps_url,
-        phone: ideasCache[0]?.phone
+    // Debug log
+    console.log('✅ Data loaded:', {
+        cities: citiesCache.length,
+        categories: categoriesCache.length,
+        ideas: ideasCache.length,
+        reviews: allReviews.length
+    });
+    
+    // Populate city dropdown
+    populateCityDropdown();
+}
+
+function populateCityDropdown() {
+    if (!ideaCity) return;
+    
+    // Clear existing options (keep the first "-- Pilih Kota --")
+    ideaCity.innerHTML = '<option value="">-- Pilih Kota --</option>';
+    
+    citiesCache.forEach(city => {
+        const option = document.createElement('option');
+        option.value = city.id;
+        option.textContent = city.name;
+        ideaCity.appendChild(option);
     });
 }
 
@@ -629,29 +657,29 @@ function populateIdeaCategorySelect(){
     toggleNewCategoryInput(ideaCategory.value);
 }
 
-function populateIdeaSubtypeSelect(selectedCategory){
-    ideaSubtype.innerHTML = '';
-    if (selectedCategory === 'custom') {
-        const opt = document.createElement('option');
-        opt.value = 'custom-new';
-        opt.textContent = 'Tambahkan Sub-tipe Baru...';
-        ideaSubtype.appendChild(opt);
-        toggleNewSubtypeInput(ideaSubtype.value); 
-        return;
-    }
-    const subtypes = categoriesCache.filter(c => c.category === selectedCategory);
-    subtypes.forEach(sub => {
-        const opt = document.createElement('option');
-        opt.value = sub.type_key; 
-        opt.textContent = sub.subtype;
-        ideaSubtype.appendChild(opt);
-    });
-    const custom = document.createElement('option');
-    custom.value = 'custom-new';
-    custom.textContent = 'Tambahkan Sub-tipe Baru...';
-    ideaSubtype.appendChild(custom);
-    toggleNewSubtypeInput(ideaSubtype.value);
-}
+// function populateIdeaSubtypeSelect(selectedCategory){
+//     ideaSubtype.innerHTML = '';
+//     if (selectedCategory === 'custom') {
+//         const opt = document.createElement('option');
+//         opt.value = 'custom-new';
+//         opt.textContent = 'Tambahkan Sub-tipe Baru...';
+//         ideaSubtype.appendChild(opt);
+//         toggleNewSubtypeInput(ideaSubtype.value); 
+//         return;
+//     }
+//     const subtypes = categoriesCache.filter(c => c.category === selectedCategory);
+//     subtypes.forEach(sub => {
+//         const opt = document.createElement('option');
+//         opt.value = sub.type_key; 
+//         opt.textContent = sub.subtype;
+//         ideaSubtype.appendChild(opt);
+//     });
+//     const custom = document.createElement('option');
+//     custom.value = 'custom-new';
+//     custom.textContent = 'Tambahkan Sub-tipe Baru...';
+//     ideaSubtype.appendChild(custom);
+//     toggleNewSubtypeInput(ideaSubtype.value);
+// }
 
 
 function setupImageClickHandlers() {
@@ -1148,10 +1176,15 @@ function formatUrl(url) {
 // 2. RENDERING IDEAS (FIX: Kategori Utama juga Collapsible)
 // =================================================================
 
-function renderCategoriesForDay(selectedDate){
+function renderCategoriesForDay(selectedDate) {
+    activityArea.innerHTML = '';
     
-    activityArea.innerHTML = ''; 
+    if (!selectedDate && ideasCache.length > 0) {
+        activityArea.innerHTML = '<p class="info-message">☝️ **Pilih tanggal trip Anda di atas** untuk melihat opsi aktivitas yang tersedia!</p>';
+        return;
+    }
     
+    // Group data
     const groupedCategories = categoriesCache.reduce((acc, current) => {
         const key = current.category;
         if (!acc[key]) { acc[key] = { category: key, subtypes: [] }; }
@@ -1166,128 +1199,176 @@ function renderCategoriesForDay(selectedDate){
         if (isDayMatch) { (acc[key] = acc[key] || []).push(current); }
         return acc;
     }, {});
-
-    if (!selectedDate && ideasCache.length > 0) {
-        activityArea.innerHTML = '<p class="info-message">☝️ **Pilih tanggal trip Anda di atas** untuk melihat opsi aktivitas yang tersedia!</p>';
-        return;
-    }
-
-    Object.values(groupedCategories).forEach(catGroup => {
-        // ✅ HITUNG BERAPA ITEM TERPILIH DI KATEGORI INI
-        const selectedCountInCategory = countSelectedInCategory(catGroup);
-        const categoryBadge = selectedCountInCategory > 0 ? `<span class="selection-badge">${selectedCountInCategory}</span>` : '';
+    
+    // ✅ GROUP BY CITY (NEW LOGIC)
+    const ideasByCity = ideasCache.reduce((acc, idea) => {
+        const cityKey = idea.city_id || 'no-city';
+        if (!acc[cityKey]) {
+            acc[cityKey] = [];
+        }
+        acc[cityKey].push(idea);
+        return acc;
+    }, {});
+    
+    // ✅ RENDER CITY GROUPS
+    const sortedCities = [
+        ...citiesCache,
+        { id: 'no-city', name: 'Tanpa Kota', display_order: 9999 }
+    ];
+    
+    sortedCities.forEach(city => {
+        const ideasInCity = ideasByCity[city.id] || [];
         
-        const card = document.createElement('div');
-        card.className = 'category-card';
+        if (ideasInCity.length === 0) return; // Skip kota tanpa ide
         
-        const icon = catGroup.subtypes[0]?.icon || '📍';
+        const cityCard = document.createElement('div');
+        cityCard.className = `city-card ${city.id === 'no-city' ? 'no-city-group' : ''}`;
         
-        card.innerHTML = `
-            <details class="category-details" open>
-                <summary class="category-summary">
-                    ${icon} ${catGroup.category} ${categoryBadge}
-                </summary>
-                <div class="subtypes-wrap"></div>
+        cityCard.innerHTML = `
+            <details class="city-details" open>
+                <summary>${city.name}</summary>
+                <div class="city-content"></div>
             </details>
         `;
         
-        const subtypesWrap = card.querySelector('.subtypes-wrap');
+        const cityContent = cityCard.querySelector('.city-content');
+        
+        // Render categories dalam city ini
+        Object.values(groupedCategories).forEach(catGroup => {
+            const card = document.createElement('div');
+            card.className = 'category-card';
+            
+            const icon = catGroup.subtypes[0]?.icon || '📍';
+            
+            // Hitung berapa item terpilih di kategori ini (dalam city ini)
+            const selectedCountInCategory = countSelectedInCategoryForCity(catGroup, city.id);
+            const categoryBadge = selectedCountInCategory > 0 ? `<span class="selection-badge">${selectedCountInCategory}</span>` : '';
+            
+            card.innerHTML = `
+                <details class="category-details" open>
+                    <summary class="category-summary">
+                        ${icon} ${catGroup.category} ${categoryBadge}
+                    </summary>
+                    <div class="subtypes-wrap"></div>
+                </details>
+            `;
+            
+            const subtypesWrap = card.querySelector('.subtypes-wrap');
+            let hasContentInCity = false;
 
-        catGroup.subtypes.forEach(subtype => {
-            const ideasList = ideasBySubtype[subtype.type_key] || [];
-            
-            const hasIdeas = ideasList.length > 0;
-            const hasLevel2Photo = !!subtype.photo_url;
-            
-            // ✅ HITUNG BERAPA ITEM TERPILIH DI SUB-TYPE INI
-            const selectedCountInSubtype = countSelectedInSubtype(subtype.type_key, ideasList);
-            const subtypeBadge = selectedCountInSubtype > 0 ? `<span class="selection-badge small">${selectedCountInSubtype}</span>` : '';
-            
-            if (hasIdeas || (hasLevel2Photo && !hasIdeas)) {
+            catGroup.subtypes.forEach(subtype => {
+                const ideasList = (ideasBySubtype[subtype.type_key] || [])
+                    .filter(idea => (idea.city_id || 'no-city') === city.id);
                 
-                const details = document.createElement('details');
-                details.className = 'subtype-details';
-                details.setAttribute('open', ''); 
+                const hasIdeas = ideasList.length > 0;
+                const hasLevel2Photo = !!subtype.photo_url;
                 
-                const summary = document.createElement('summary');
-                summary.innerHTML = `${subtype.subtype} ${subtypeBadge}`;
-                details.appendChild(summary);
-
-                const optionsWrap = document.createElement('div');
-                optionsWrap.className = 'options-wrap';
-                optionsWrap.dataset.typeKey = subtype.type_key;
+                const selectedCountInSubtype = countSelectedInSubtypeForCity(subtype.type_key, ideasList);
+                const subtypeBadge = selectedCountInSubtype > 0 ? `<span class="selection-badge small">${selectedCountInSubtype}</span>` : '';
                 
-                if (hasLevel2Photo && !hasIdeas) { 
-                    const itemId = `cat-${subtype.type_key}`; 
-                    const isSelected = selectedIdeaIds.has(itemId); 
+                if (hasIdeas || (hasLevel2Photo && !hasIdeas)) {
+                    hasContentInCity = true;
                     
-                    optionsWrap.innerHTML += `
-                        <div class="option-item ${isSelected ? 'selected' : ''}" data-ideaid="${itemId}">
-                            ${isSelected ? '<span class="checkmark">✓</span>' : ''}
-                            <button class="view-detail-btn" data-ideaid="${itemId}" title="Lihat Detail & Review" style="display:none;">👁️</button>
-                            <div class="option-item-content">
-                                <img src="${getPublicImageUrl(subtype.photo_url)}" alt="${subtype.subtype}">
-                                <div class="idea-text-info">
-                                    <span style="display:block; font-weight:bold;">${subtype.subtype}</span>
-                                    <small style="display:block; color: var(--color-muted); opacity:0.9">(Pilih Sub-tipe)</small>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
+                    const details = document.createElement('details');
+                    details.className = 'subtype-details';
+                    details.setAttribute('open', '');
+                    
+                    const summary = document.createElement('summary');
+                    summary.innerHTML = `${subtype.subtype} ${subtypeBadge}`;
+                    details.appendChild(summary);
 
-                if (hasIdeas) {
-                    ideasList.forEach(item => {
-                        const itemId = item.id;
+                    const optionsWrap = document.createElement('div');
+                    optionsWrap.className = 'options-wrap';
+                    optionsWrap.dataset.typeKey = subtype.type_key;
+                    
+                    if (hasLevel2Photo && !hasIdeas) {
+                        const itemId = `cat-${subtype.type_key}`;
                         const isSelected = selectedIdeaIds.has(itemId);
                         
-                        const ratingHtml = createRatingDisplay(item.id);
-
                         optionsWrap.innerHTML += `
                             <div class="option-item ${isSelected ? 'selected' : ''}" data-ideaid="${itemId}">
                                 ${isSelected ? '<span class="checkmark">✓</span>' : ''}
-                                <button class="view-detail-btn" data-ideaid="${itemId}" title="Lihat Detail & Review">👁️</button>
+                                <button class="view-detail-btn" data-ideaid="${itemId}" title="Lihat Detail & Review" style="display:none;">👁️</button>
                                 <div class="option-item-content">
-                                    <img src="${getPublicImageUrl(item.photo_url)}" alt="${item.idea_name}">
+                                    <img src="${getPublicImageUrl(subtype.photo_url)}" alt="${subtype.subtype}">
                                     <div class="idea-text-info">
-                                        <span style="display:block; font-weight:bold;">${item.idea_name}</span>
-                                        <small style="display:block; color: var(--color-muted); opacity:0.9">(${subtype.subtype})</small>
-                                        ${ratingHtml} 
+                                        <span style="display:block; font-weight:bold;">${subtype.subtype}</span>
+                                        <small style="display:block; color: var(--color-muted); opacity:0.9">(Pilih Sub-tipe)</small>
                                     </div>
                                 </div>
                             </div>
                         `;
-                    });
+                    }
+
+                    if (hasIdeas) {
+                        ideasList.forEach(item => {
+                            const itemId = item.id;
+                            const isSelected = selectedIdeaIds.has(itemId);
+                            const ratingHtml = createRatingDisplay(item.id);
+
+                            optionsWrap.innerHTML += `
+                                <div class="option-item ${isSelected ? 'selected' : ''}" data-ideaid="${itemId}">
+                                    ${isSelected ? '<span class="checkmark">✓</span>' : ''}
+                                    <button class="view-detail-btn" data-ideaid="${itemId}" title="Lihat Detail & Review">👁️</button>
+                                    <div class="option-item-content">
+                                        <img src="${getPublicImageUrl(item.photo_url)}" alt="${item.idea_name}">
+                                        <div class="idea-text-info">
+                                            <span style="display:block; font-weight:bold;">${item.idea_name}</span>
+                                            <small style="display:block; color: var(--color-muted); opacity:0.9">(${subtype.subtype})</small>
+                                            ${ratingHtml}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    details.appendChild(optionsWrap);
+                    subtypesWrap.appendChild(details);
                 }
-                
-                details.appendChild(optionsWrap);
-                subtypesWrap.appendChild(details);
+            });
+
+            if (hasContentInCity) {
+                cityContent.appendChild(card);
             }
         });
-
-        if (subtypesWrap.children.length > 0) {
-            activityArea.appendChild(card);
+        
+        if (cityContent.children.length > 0) {
+            activityArea.appendChild(cityCard);
         }
     });
 
-    setupImageClickHandlers(); 
+    setupImageClickHandlers();
     setupDetailsCollapse();
     setupCategoryCollapse();
     populateIdeaCategorySelect();
-    
-    // ✅ RENDER QUICK VIEW PANEL
     renderSelectedActivitiesPanel();
 }
 
-function countSelectedInCategory(catGroup) {
+function countSelectedInSubtypeForCity(typeKey, ideasList) {
+    let count = 0;
+    const level2Id = `cat-${typeKey}`;
+    if (selectedIdeaIds.has(level2Id)) count++;
+    
+    ideasList.forEach(idea => {
+        if (selectedIdeaIds.has(idea.id)) count++;
+    });
+    
+    return count;
+}
+
+
+
+function countSelectedInCategoryForCity(catGroup, cityId) {
     let count = 0;
     catGroup.subtypes.forEach(subtype => {
-        // Cek Level 2 (sub-type)
         const level2Id = `cat-${subtype.type_key}`;
         if (selectedIdeaIds.has(level2Id)) count++;
         
-        // Cek Level 3 (ideas)
-        const ideasInSubtype = ideasCache.filter(i => i.type_key === subtype.type_key);
+        const ideasInSubtype = ideasCache.filter(i => 
+            i.type_key === subtype.type_key && 
+            (i.city_id || 'no-city') === cityId
+        );
         ideasInSubtype.forEach(idea => {
             if (selectedIdeaIds.has(idea.id)) count++;
         });
@@ -1624,6 +1705,91 @@ function loadInitialState() {
     saveProgress();
 }
 
+function populateIdeaSubtypeSelect(selectedCategory, filterCity = null) {
+    ideaSubtype.innerHTML = '';
+    
+    if (selectedCategory === 'custom') {
+        const opt = document.createElement('option');
+        opt.value = 'custom-new';
+        opt.textContent = 'Tambahkan Sub-tipe Baru...';
+        ideaSubtype.appendChild(opt);
+        toggleNewSubtypeInput(ideaSubtype.value);
+        return;
+    }
+    
+    // Filter subtypes berdasarkan category DAN city (jika dipilih)
+    const subtypes = categoriesCache.filter(c => {
+        // Filter by category
+        if (c.category !== selectedCategory) return false;
+        
+        // ✅ KRITIS: Filter by city jika user sudah pilih kota
+        if (filterCity) {
+            // Asumsi: subtype mengandung nama kota atau ada di cities table
+            // Option 1: Jika subtype format: "Fast Food - Jakarta"
+            const containsCity = c.subtype.toLowerCase().includes(filterCity.toLowerCase());
+            
+            // Option 2: Jika subtype adalah nama kota langsung
+            const isExactCity = c.subtype.toLowerCase() === filterCity.toLowerCase();
+            
+            // Option 3: Cek dari city_id di categoriesCache (jika ada)
+            const matchesCityId = c.city_id === filterCity;
+            
+            // Return true jika salah satu kondisi terpenuhi
+            return containsCity || isExactCity || matchesCityId;
+        }
+        
+        return true;  // Jika tidak ada filter city, tampilkan semua
+    });
+    
+    // ✅ FALLBACK: Jika tidak ada subtype yang match, tampilkan semua
+    const finalSubtypes = subtypes.length > 0 ? subtypes : 
+        categoriesCache.filter(c => c.category === selectedCategory);
+    
+    finalSubtypes.forEach(sub => {
+        const opt = document.createElement('option');
+        opt.value = sub.type_key;
+        opt.textContent = sub.subtype;
+        ideaSubtype.appendChild(opt);
+    });
+    
+    // Add custom option
+    const custom = document.createElement('option');
+    custom.value = 'custom-new';
+    custom.textContent = 'Tambahkan Sub-tipe Baru...';
+    ideaSubtype.appendChild(custom);
+    
+    toggleNewSubtypeInput(ideaSubtype.value);
+}
+
+if (ideaCity) {
+    ideaCity.addEventListener('change', (e) => {
+        const selectedCity = e.target.value;  // 'jakarta', 'bandung', atau ''
+        const selectedCategory = ideaCategory.value;
+        
+        if (selectedCategory) {
+            // Re-populate subtype dengan filter city
+            const cityName = selectedCity ? 
+                citiesCache.find(c => c.id === selectedCity)?.name : 
+                null;
+            
+            populateIdeaSubtypeSelect(selectedCategory, cityName);
+        }
+    });
+}
+
+ideaCategory.addEventListener('change', (e) => {
+    const selectedCategory = e.target.value;
+    const selectedCityId = ideaCity?.value;
+    
+    // Get city name dari ID
+    const cityName = selectedCityId ? 
+        citiesCache.find(c => c.id === selectedCityId)?.name : 
+        null;
+    
+    // Populate subtype dengan filter city
+    populateIdeaSubtypeSelect(selectedCategory, cityName);
+    toggleNewCategoryInput(selectedCategory);
+});
 
 // --- Event Listeners lainnya ---
 
@@ -1670,15 +1836,15 @@ ideaForm.addEventListener('submit', async (e) => {
     
     if (submitIdeaBtn) {
         submitIdeaBtn.disabled = true;
-        submitIdeaBtn.textContent = 'Menyimpan... ⏳'; 
+        submitIdeaBtn.textContent = 'Menyimpan... ⏳';
     }
     
     const cat = ideaCategory.value;
     const subtypeVal = ideaSubtype.value;
     const title = ideaTitle.value.trim();
-    const file = ideaImageInput.files[0]; 
+    const file = ideaImageInput.files[0];
+    const cityId = ideaCity.value || null; // ✅ NEW: Get city_id
     
-    // ✅ AMBIL DATA DETAIL INFO BARU
     const detailInfo = {
         address: ideaAddress?.value.trim() || null,
         maps_url: ideaMapsUrl?.value.trim() || null,
@@ -1697,7 +1863,7 @@ ideaForm.addEventListener('submit', async (e) => {
         alert(msg);
         if (submitIdeaBtn) {
             submitIdeaBtn.disabled = false;
-            submitIdeaBtn.textContent = 'Simpan Ide'; 
+            submitIdeaBtn.textContent = 'Simpan Ide';
         }
     }
 
@@ -1711,7 +1877,7 @@ ideaForm.addEventListener('submit', async (e) => {
         finalCategoryName = newCategoryInput.value.trim();
         if (!finalCategoryName) { 
             handleFailure('Nama kategori baru tidak boleh kosong.');
-            return; 
+            return;
         }
     } else {
         finalCategoryName = ideaCategory.options[ideaCategory.selectedIndex].text;
@@ -1722,7 +1888,7 @@ ideaForm.addEventListener('submit', async (e) => {
         finalSubtypeName = newSubtypeInput.value.trim();
         if (!finalSubtypeName) { 
             handleFailure('Nama sub-tipe baru tidak boleh kosong.');
-            return; 
+            return;
         }
     } else {
         finalSubtypeName = ideaSubtype.options[ideaSubtype.selectedIndex].text;
@@ -1730,7 +1896,7 @@ ideaForm.addEventListener('submit', async (e) => {
 
     if (cat === 'custom' || subtypeVal === 'custom-new') {
         finalTypeKey = `${finalCategoryName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${finalSubtypeName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
-        finalTypeKey = finalTypeKey.replace(/--+/g, '-').replace(/^-|-$/g, ''); 
+        finalTypeKey = finalTypeKey.replace(/--+/g, '-').replace(/^-|-$/g, '');
 
         isNewCombo = !categoriesCache.some(c => c.type_key === finalTypeKey);
 
@@ -1746,11 +1912,11 @@ ideaForm.addEventListener('submit', async (e) => {
                 });
 
             if (catInsertError) {
-                 console.error('Gagal insert kategori kustom (idea_categories):', catInsertError);
-                 handleFailure(`Gagal menyimpan kategori baru. Error Supabase: ${catInsertError.message}. Cek Console!`);
+                 console.error('Gagal insert kategori kustom:', catInsertError);
+                 handleFailure(`Gagal menyimpan kategori baru: ${catInsertError.message}`);
                  return;
             }
-            await fetchData(); 
+            await fetchData();
         } 
     } 
     
@@ -1765,24 +1931,17 @@ ideaForm.addEventListener('submit', async (e) => {
             handleFailure('Gagal memperbarui foto sub-tipe.');
             return;
         }
-        await fetchData(); 
+        await fetchData();
     }
 
     if (title) {
-        // ✅ TAMBAHKAN DETAIL INFO KE PAYLOAD
         const doc = {
             idea_name: title,
             type_key: finalTypeKey, 
             day_of_week: "", 
             photo_url: imageUrl,
-            // Detail Info Fields
-            address: detailInfo.address,
-            maps_url: detailInfo.maps_url,
-            phone: detailInfo.phone,
-            opening_hours: detailInfo.opening_hours,
-            price_range: detailInfo.price_range,
-            website: detailInfo.website,
-            notes: detailInfo.notes,
+            city_id: cityId, // ✅ NEW: Save city_id
+            ...detailInfo
         };
         
         try {
@@ -1793,7 +1952,7 @@ ideaForm.addEventListener('submit', async (e) => {
             if (error) throw error;
         } catch (err) {
             console.error('Gagal insert ide Level 3:', err);
-            handleFailure(`Gagal menyimpan ide Level 3. Error Supabase: ${err.message}.`);
+            handleFailure(`Gagal menyimpan ide: ${err.message}`);
             return;
         }
         
@@ -1811,7 +1970,7 @@ ideaForm.addEventListener('submit', async (e) => {
     
     if (submitIdeaBtn) {
         submitIdeaBtn.disabled = false;
-        submitIdeaBtn.textContent = 'Simpan Ide'; 
+        submitIdeaBtn.textContent = 'Simpan Ide';
     }
 });
 // GENERATE TICKET (Menggunakan Set Ide yang Terpilih)
