@@ -1298,6 +1298,274 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
     box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
 }
 
+.modal-wide {
+    max-width: 800px;
+}
+
+.locations-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 10px 0;
+}
+
+.location-item {
+    background-color: var(--color-background-light);
+    border: 2px solid var(--color-secondary);
+    border-radius: 12px;
+    padding: 15px;
+    transition: all 0.2s ease;
+}
+
+.location-item:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 12px rgba(3, 37, 76, 0.1);
+}
+
+.location-header {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--color-secondary);
+}
+
+.location-name-input {
+    flex: 1;
+    font-size: 1.1em;
+    font-weight: bold;
+    padding: 10px 15px;
+    border: 2px solid var(--color-secondary);
+    border-radius: 8px;
+    background-color: white;
+}
+
+.location-name-input:focus {
+    border-color: var(--color-primary);
+    outline: none;
+}
+
+.btn-delete-location {
+    background-color: var(--color-error);
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.2em;
+    transition: all 0.2s ease;
+}
+
+.btn-delete-location:hover {
+    background-color: #ff5252;
+    transform: scale(1.1);
+}
+
+.location-fields {
+    display: flex;
+    flex-direction: column;
+}
+
+.location-fields label {
+    font-weight: 600;
+    color: var(--color-primary);
+    font-size: 0.9em;
+}
+
+.location-fields input,
+.location-fields textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--color-secondary);
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-size: 0.95em;
+    background-color: white;
+    margin-bottom: 10px;
+}
+
+.location-fields input:focus,
+.location-fields textarea:focus {
+    border-color: var(--color-primary);
+    outline: none;
+}
+
+@media (max-width: 768px) {
+    .modal-wide {
+        max-width: 95%;
+    }
+    
+    .location-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .btn-delete-location {
+        width: 100%;
+    }
+}
+
+/* ==================================================
+   MULTIPLE LOCATIONS ACCORDION STYLES
+   ================================================== */
+
+.multiple-locations-section {
+    background-color: var(--color-background-light);
+    border-radius: 12px;
+    padding: 15px;
+    border: 1px solid var(--color-secondary);
+    margin: 20px 0;
+}
+
+.multiple-locations-section > div:first-child h4 {
+    color: var(--color-primary);
+    font-size: 1.1em;
+}
+
+/* Location Accordion */
+.location-accordion {
+    background-color: white;
+    border: 2px solid var(--color-secondary);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.location-accordion:last-of-type {
+    margin-bottom: 0;
+}
+
+.location-accordion[open] {
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 12px rgba(3, 37, 76, 0.15);
+}
+
+.location-accordion-summary {
+    font-size: 1.05em;
+    font-weight: bold;
+    color: var(--color-primary);
+    cursor: pointer;
+    padding: 15px 20px;
+    list-style: none;
+    position: relative;
+    background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.location-accordion-summary:hover {
+    background: linear-gradient(135deg, #e1f3ff 0%, #f0f7ff 100%);
+}
+
+/* Arrow indicator */
+.location-accordion-summary::before {
+    content: '▶';
+    color: var(--color-primary);
+    position: absolute;
+    left: 5px;
+    top: 50%;
+    transform: translateY(-50%) rotate(0deg);
+    transition: transform 0.3s ease;
+    font-size: 0.8em;
+}
+
+.location-accordion[open] .location-accordion-summary::before {
+    transform: translateY(-50%) rotate(90deg);
+}
+
+/* Remove default marker */
+.location-accordion-summary::-webkit-details-marker {
+    display: none;
+}
+
+/* Accordion Content */
+.location-accordion-content {
+    padding: 15px;
+    background-color: white;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Info Section inside Accordion */
+.info-section-inline {
+    background-color: var(--color-background-light);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 15px;
+}
+
+.info-section-inline h5 {
+    margin: 0 0 10px 0;
+    color: var(--color-primary);
+    font-size: 1em;
+}
+
+/* Address Display inside Accordion */
+.location-accordion-content .address-display {
+    margin-bottom: 15px;
+}
+
+.location-accordion-content .maps-container {
+    margin-bottom: 15px;
+}
+
+.location-accordion-content .btn-open-maps {
+    margin-bottom: 15px;
+}
+
+/* ==================================================
+   RESPONSIVE
+   ================================================== */
+
+@media (max-width: 768px) {
+    .location-accordion-summary {
+        padding: 12px 15px 12px 35px;
+        font-size: 1em;
+    }
+    
+    .location-accordion-summary::before {
+        left: 10px;
+    }
+    
+    .location-accordion-content {
+        padding: 12px;
+    }
+    
+    .multiple-locations-section {
+        padding: 12px;
+    }
+}
+
+/* ==================================================
+   LOCATION COUNT BADGE (Optional Enhancement)
+   ================================================== */
+
+.location-count-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #03254c 0%, #1a4d7a 100%);
+    color: white;
+    font-size: 0.75em;
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
 /* ========== INFO SECTION ========== */
 .info-section {
     background-color: var(--color-background-light);

@@ -5,6 +5,13 @@ import { supabase } from './supabaseClient.js';
 let currentUser = { id: 'anon' }; 
 
 
+
+const locationsListContainer = document.getElementById('locationsListContainer');
+const locationItemTemplate = document.getElementById('locationItemTemplate');
+const addLocationBtn = document.getElementById('addLocationBtn');
+const saveAllLocations = document.getElementById('saveAllLocations');
+
+let currentLocationsData = []; // Array untuk track semua lokasi
 // ✅ TAMBAHKAN REFERENSI UI UNTUK FIELD BARU (di bagian deklarasi variabel)
 const ideaAddress = document.getElementById('ideaAddress');
 const ideaMapsUrl = document.getElementById('ideaMapsUrl');
@@ -87,16 +94,28 @@ window.editIdeaInfo = function(ideaId) {
         return;
     }
     
-    // Populate form dengan data yang sudah ada
     if (editInfoIdeaId) editInfoIdeaId.value = ideaId;
     if (editInfoIdeaName) editInfoIdeaName.textContent = idea.idea_name;
-    if (editInfoAddress) editInfoAddress.value = idea.address || '';
-    if (editInfoMapsUrl) editInfoMapsUrl.value = idea.maps_url || '';
-    if (editInfoPhone) editInfoPhone.value = idea.phone || '';
-    if (editInfoOpeningHours) editInfoOpeningHours.value = idea.opening_hours || '';
-    if (editInfoPriceRange) editInfoPriceRange.value = idea.price_range || '';
-    if (editInfoWebsite) editInfoWebsite.value = idea.website || '';
-    if (editInfoNotes) editInfoNotes.value = idea.notes || '';
+    
+    // Load locations data
+    currentLocationsData = idea.locations || [];
+    
+    // Jika belum ada lokasi, buat 1 lokasi default
+    if (currentLocationsData.length === 0) {
+        currentLocationsData = [{
+            name: 'Lokasi Utama',
+            address: idea.address || '',
+            maps_url: idea.maps_url || '',
+            phone: idea.phone || '',
+            opening_hours: idea.opening_hours || '',
+            price_range: idea.price_range || '',
+            website: idea.website || '',
+            notes: idea.notes || ''
+        }];
+    }
+    
+    // Render locations
+    renderLocationsList();
     
     // Tutup modal detail, buka modal edit
     if (ideaDetailModal) {
@@ -199,7 +218,164 @@ if (editInfoModal) {
         }
     });
 }
+function renderLocationsList() {
+    if (!locationsListContainer || !locationItemTemplate) return;
+    
+    locationsListContainer.innerHTML = '';
+    
+    currentLocationsData.forEach((location, index) => {
+        const locationItem = createLocationItem(location, index);
+        locationsListContainer.appendChild(locationItem);
+    });
+}
+if (addLocationBtn) {
+    addLocationBtn.addEventListener('click', () => {
+        currentLocationsData.push({
+            name: `Cabang ${currentLocationsData.length + 1}`,
+            address: '',
+            maps_url: '',
+            phone: '',
+            opening_hours: '',
+            price_range: '',
+            website: '',
+            notes: ''
+        });
+        renderLocationsList();
+        
+        // Auto scroll ke lokasi baru
+        setTimeout(() => {
+            if (locationsListContainer) {
+                locationsListContainer.scrollTop = locationsListContainer.scrollHeight;
+            }
+        }, 100);
+    });
+}
 
+if (saveAllLocations) {
+    saveAllLocations.addEventListener('click', async () => {
+        const ideaId = editInfoIdeaId.value;
+        
+        saveAllLocations.disabled = true;
+        saveAllLocations.textContent = 'Menyimpan... ⏳';
+        
+        // Collect data dari semua location items
+        const locationItems = locationsListContainer.querySelectorAll('.location-item');
+        const locationsArray = [];
+        
+        locationItems.forEach((item, index) => {
+            const name = item.querySelector('.location-name-input').value.trim();
+            
+            if (!name) {
+                alert(`Lokasi ${index + 1}: Nama lokasi tidak boleh kosong!`);
+                return;
+            }
+            
+            locationsArray.push({
+                name: name,
+                address: item.querySelector('.location-address').value.trim() || null,
+                maps_url: item.querySelector('.location-maps-url').value.trim() || null,
+                phone: item.querySelector('.location-phone').value.trim() || null,
+                opening_hours: item.querySelector('.location-opening-hours').value.trim() || null,
+                price_range: item.querySelector('.location-price-range').value.trim() || null,
+                website: item.querySelector('.location-website').value.trim() || null,
+                notes: item.querySelector('.location-notes').value.trim() || null,
+            });
+        });
+        
+        if (locationsArray.length === 0) {
+            alert('Minimal harus ada 1 lokasi!');
+            saveAllLocations.disabled = false;
+            saveAllLocations.textContent = '💾 Simpan Semua Lokasi';
+            return;
+        }
+        
+        try {
+            // Update data di Supabase
+            const { error } = await supabase
+                .from('trip_ideas_v2')
+                .update({ 
+                    locations: locationsArray,
+                    // Backward compatibility: Update kolom lama dengan data lokasi pertama
+                    address: locationsArray[0].address,
+                    maps_url: locationsArray[0].maps_url,
+                    phone: locationsArray[0].phone,
+                    opening_hours: locationsArray[0].opening_hours,
+                    price_range: locationsArray[0].price_range,
+                    website: locationsArray[0].website,
+                    notes: locationsArray[0].notes,
+                })
+                .eq('id', ideaId);
+            
+            if (error) throw error;
+            
+            // Update cache lokal
+            const ideaIndex = ideasCache.findIndex(i => i.id === ideaId);
+            if (ideaIndex !== -1) {
+                ideasCache[ideaIndex].locations = locationsArray;
+                // Update kolom lama juga
+                ideasCache[ideaIndex].address = locationsArray[0].address;
+                ideasCache[ideaIndex].maps_url = locationsArray[0].maps_url;
+                ideasCache[ideaIndex].phone = locationsArray[0].phone;
+                ideasCache[ideaIndex].opening_hours = locationsArray[0].opening_hours;
+                ideasCache[ideaIndex].price_range = locationsArray[0].price_range;
+                ideasCache[ideaIndex].website = locationsArray[0].website;
+                ideasCache[ideaIndex].notes = locationsArray[0].notes;
+            }
+            
+            alert(`✅ ${locationsArray.length} lokasi berhasil disimpan!`);
+            
+            // Tutup modal edit
+            if (editInfoModal) {
+                editInfoModal.classList.add('hidden');
+                editInfoModal.style.display = 'none';
+            }
+            
+            // Refresh tampilan detail
+            renderIdeaDetailModal(ideaId);
+            
+        } catch (error) {
+            console.error('Error saving locations:', error);
+            alert('Gagal menyimpan lokasi: ' + error.message);
+        } finally {
+            saveAllLocations.disabled = false;
+            saveAllLocations.textContent = '💾 Simpan Semua Lokasi';
+        }
+    });
+}
+
+
+function createLocationItem(locationData, index) {
+    const template = locationItemTemplate.content.cloneNode(true);
+    const container = template.querySelector('.location-item');
+    
+    container.dataset.locationIndex = index;
+    
+    // Populate fields
+    container.querySelector('.location-name-input').value = locationData.name || '';
+    container.querySelector('.location-address').value = locationData.address || '';
+    container.querySelector('.location-maps-url').value = locationData.maps_url || '';
+    container.querySelector('.location-phone').value = locationData.phone || '';
+    container.querySelector('.location-opening-hours').value = locationData.opening_hours || '';
+    container.querySelector('.location-price-range').value = locationData.price_range || '';
+    container.querySelector('.location-website').value = locationData.website || '';
+    container.querySelector('.location-notes').value = locationData.notes || '';
+    
+    // Delete button handler
+    const deleteBtn = container.querySelector('.btn-delete-location');
+    deleteBtn.addEventListener('click', () => {
+        if (currentLocationsData.length === 1) {
+            alert('Minimal harus ada 1 lokasi!');
+            return;
+        }
+        
+        if (confirm(`Hapus lokasi "${locationData.name}"?`)) {
+            currentLocationsData.splice(index, 1);
+            renderLocationsList();
+        }
+    });
+    
+    return container;
+}
 // =================================================================
 // 1. UTILITY & DATA FETCHING
 // =================================================================
@@ -734,137 +910,180 @@ function renderMapsAndInfo(idea) {
         detailIdeaImage.parentNode.insertBefore(mapsInfoContainer, detailIdeaImage.nextSibling);
     }
     
+    const locations = idea.locations || [];
+    
+    // Jika tidak ada data locations, fallback ke kolom lama
+    if (locations.length === 0 && (idea.address || idea.maps_url)) {
+        locations.push({
+            name: 'Lokasi Utama',
+            address: idea.address,
+            maps_url: idea.maps_url,
+            phone: idea.phone,
+            opening_hours: idea.opening_hours,
+            price_range: idea.price_range,
+            website: idea.website,
+            notes: idea.notes
+        });
+    }
+    
     let html = '';
     
-    // ========== GOOGLE MAPS SECTION ==========
-    const hasLocation = idea.address || idea.maps_url;
-    
-    if (hasLocation) {
-        let mapsEmbedUrl = '';
-        
-        if (idea.maps_url) {
-            mapsEmbedUrl = convertToEmbedUrl(idea.maps_url);
-        } else if (idea.address) {
-            const encodedAddress = encodeURIComponent(idea.address);
-            mapsEmbedUrl = `https://www.google.com/maps/embed/v1/place?key=YOUR_GOOGLE_MAPS_API_KEY&q=${encodedAddress}`;
-        }
-        
+    if (locations.length > 0) {
         html += `
-            <div class="maps-section">
+            <div class="multiple-locations-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h4 style="margin: 0;">📍 Lokasi</h4>
+                    <h4 style="margin: 0;">📍 Lokasi (${locations.length} Cabang)</h4>
                     <button class="btn secondary small" onclick="editIdeaInfo('${idea.id}')" style="padding: 6px 12px; font-size: 0.85em;">
-                        ✏️ Edit Info
+                        ✏️ Kelola Lokasi
                     </button>
                 </div>
-                ${idea.address ? `
-                    <div class="address-display">
-                        <p>📍 ${idea.address}</p>
-                    </div>
-                ` : ''}
-                ${mapsEmbedUrl ? `
-                    <div class="maps-container">
-                        <iframe
-                            width="100%"
-                            height="250"
-                            frameborder="0"
-                            style="border:0; border-radius: 8px;"
-                            src="${mapsEmbedUrl}"
-                            allowfullscreen>
-                        </iframe>
-                    </div>
-                ` : ''}
-                ${idea.maps_url ? `
-                    <a href="${idea.maps_url}" target="_blank" class="btn-open-maps">
-                        🗺️ Buka di Google Maps
-                    </a>
-                ` : ''}
-            </div>
-        `;
-    }
-    
-    // ========== INFO DETAIL SECTION ==========
-    const hasInfo = idea.phone || idea.opening_hours || idea.price_range || idea.website || idea.notes;
-    
-    if (hasInfo) {
-        html += `
-            <div class="info-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h4 style="margin: 0;">ℹ️ Informasi Detail</h4>
-                    ${!hasLocation ? `
-                        <button class="btn secondary small" onclick="editIdeaInfo('${idea.id}')" style="padding: 6px 12px; font-size: 0.85em;">
-                            ✏️ Edit Info
-                        </button>
-                    ` : ''}
-                </div>
-                <div class="info-grid">
         `;
         
-        if (idea.phone) {
+        locations.forEach((location, index) => {
+            const isFirst = index === 0;
+            const hasLocationData = location.address || location.maps_url;
+            const hasInfoData = location.phone || location.opening_hours || location.price_range || location.website || location.notes;
+            
+            let mapsEmbedUrl = '';
+            if (location.maps_url) {
+                mapsEmbedUrl = convertToEmbedUrl(location.maps_url);
+            } else if (location.address) {
+                const encodedAddress = encodeURIComponent(location.address);
+                mapsEmbedUrl = `https://www.google.com/maps/embed/v1/place?key=YOUR_GOOGLE_MAPS_API_KEY&q=${encodedAddress}`;
+            }
+            
             html += `
-                <div class="info-item">
-                    <span class="info-label">📞 Telepon:</span>
-                    <span class="info-value">
-                        <a href="tel:${idea.phone}">${idea.phone}</a>
-                    </span>
-                </div>
+                <details class="location-accordion" ${isFirst ? 'open' : ''}>
+                    <summary class="location-accordion-summary">
+                        ${location.name || `Lokasi ${index + 1}`}
+                    </summary>
+                    <div class="location-accordion-content">
             `;
-        }
-        
-        if (idea.opening_hours) {
+            
+            // Address & Maps
+            if (hasLocationData) {
+                if (location.address) {
+                    html += `
+                        <div class="address-display">
+                            <p>📍 ${location.address}</p>
+                        </div>
+                    `;
+                }
+                
+                if (mapsEmbedUrl) {
+                    html += `
+                        <div class="maps-container">
+                            <iframe
+                                width="100%"
+                                height="250"
+                                frameborder="0"
+                                style="border:0; border-radius: 8px;"
+                                src="${mapsEmbedUrl}"
+                                allowfullscreen>
+                            </iframe>
+                        </div>
+                    `;
+                }
+                
+                if (location.maps_url) {
+                    html += `
+                        <a href="${location.maps_url}" target="_blank" class="btn-open-maps">
+                            🗺️ Buka di Google Maps
+                        </a>
+                    `;
+                }
+            }
+            
+            // Info Detail
+            if (hasInfoData) {
+                html += `<div class="info-section-inline"><h5>ℹ️ Informasi Detail</h5><div class="info-grid">`;
+                
+                if (location.phone) {
+                    html += `
+                        <div class="info-item">
+                            <span class="info-label">📞 Telepon:</span>
+                            <span class="info-value"><a href="tel:${location.phone}">${location.phone}</a></span>
+                        </div>
+                    `;
+                }
+                
+                if (location.opening_hours) {
+                    html += `
+                        <div class="info-item">
+                            <span class="info-label">🕐 Jam Buka:</span>
+                            <span class="info-value">${location.opening_hours}</span>
+                        </div>
+                    `;
+                }
+                
+                if (location.price_range) {
+                    html += `
+                        <div class="info-item">
+                            <span class="info-label">💰 Kisaran Harga:</span>
+                            <span class="info-value">${location.price_range}</span>
+                        </div>
+                    `;
+                }
+                
+                if (location.website) {
+                    html += `
+                        <div class="info-item">
+                            <span class="info-label">🌐 Website:</span>
+                            <span class="info-value"><a href="${location.website}" target="_blank">${formatUrl(location.website)}</a></span>
+                        </div>
+                    `;
+                }
+                
+                if (location.notes) {
+                    html += `
+                        <div class="info-item full-width">
+                            <span class="info-label">📝 Catatan:</span>
+                            <span class="info-value">${location.notes}</span>
+                        </div>
+                    `;
+                }
+                
+                html += `</div></div>`;
+            }
+            
             html += `
-                <div class="info-item">
-                    <span class="info-label">🕐 Jam Buka:</span>
-                    <span class="info-value">${idea.opening_hours}</span>
-                </div>
+                    </div>
+                </details>
             `;
-        }
+        });
         
-        if (idea.price_range) {
-            html += `
-                <div class="info-item">
-                    <span class="info-label">💰 Kisaran Harga:</span>
-                    <span class="info-value">${idea.price_range}</span>
-                </div>
-            `;
-        }
-        
-        if (idea.website) {
-            html += `
-                <div class="info-item">
-                    <span class="info-label">🌐 Website:</span>
-                    <span class="info-value">
-                        <a href="${idea.website}" target="_blank">${formatUrl(idea.website)}</a>
-                    </span>
-                </div>
-            `;
-        }
-        
-        if (idea.notes) {
-            html += `
-                <div class="info-item full-width">
-                    <span class="info-label">📝 Catatan:</span>
-                    <span class="info-value">${idea.notes}</span>
-                </div>
-            `;
-        }
-        
-        html += `</div></div>`;
-    }
-    
-    // Jika tidak ada info sama sekali
-    if (!hasLocation && !hasInfo) {
+        html += `</div>`;
+    } else {
+        // No locations at all
         html = `
             <div class="no-info-message">
-                <p>💡 <strong>Info lokasi dan detail belum ditambahkan.</strong></p>
+                <p>💡 <strong>Info lokasi belum ditambahkan.</strong></p>
                 <button class="btn secondary" onclick="editIdeaInfo('${idea.id}')" style="margin-top: 10px;">
-                    ✏️ Tambah Info Sekarang
+                    ✏️ Tambah Lokasi
                 </button>
             </div>
         `;
     }
     
     mapsInfoContainer.innerHTML = html;
+    
+    // Setup accordion behavior (hanya 1 terbuka)
+    setupLocationAccordion();
+}
+
+function setupLocationAccordion() {
+    document.querySelectorAll('.location-accordion').forEach(accordion => {
+        accordion.addEventListener('toggle', (e) => {
+            if (e.target.open) {
+                // Tutup semua accordion lain
+                document.querySelectorAll('.location-accordion').forEach(other => {
+                    if (other !== e.target && other.open) {
+                        other.open = false;
+                    }
+                });
+            }
+        });
+    });
 }
 
 

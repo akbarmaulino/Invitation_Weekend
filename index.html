@@ -208,45 +208,67 @@
     </div>
     
     <!-- Modal Edit Info -->
-    <div id="editInfoModal" class="modal hidden">
-        <div class="modal-content">
-            <button class="close-btn" id="closeEditInfoModal">&times;</button>
-            <h3>✏️ Edit Informasi: <span id="editInfoIdeaName">Nama Tempat</span></h3>
-            
-            <form id="editInfoForm">
-                <input type="hidden" id="editInfoIdeaId">
-                
-                <label for="editInfoAddress">📍 Alamat Lengkap</label>
-                <input type="text" id="editInfoAddress" placeholder="Jl. Contoh No. 123, Jakarta">
-                
-                <label for="editInfoMapsUrl" style="margin-top: 10px;">🗺️ Link Google Maps</label>
-                <input type="url" id="editInfoMapsUrl" placeholder="https://maps.app.goo.gl/xxx">
-                <small style="color: var(--color-muted); display: block; margin-top: 5px;">
-                    💡 Copy link dari Google Maps app
-                </small>
-                
-                <label for="editInfoPhone" style="margin-top: 10px;">📞 No. Telepon</label>
-                <input type="tel" id="editInfoPhone" placeholder="021-12345678">
-                
-                <label for="editInfoOpeningHours" style="margin-top: 10px;">🕐 Jam Buka</label>
-                <input type="text" id="editInfoOpeningHours" placeholder="10:00 - 22:00 (Setiap Hari)">
-                
-                <label for="editInfoPriceRange" style="margin-top: 10px;">💰 Kisaran Harga</label>
-                <input type="text" id="editInfoPriceRange" placeholder="Rp 50.000 - 150.000">
-                
-                <label for="editInfoWebsite" style="margin-top: 10px;">🌐 Website/Instagram</label>
-                <input type="url" id="editInfoWebsite" placeholder="https://instagram.com/namatempat">
-                
-                <label for="editInfoNotes" style="margin-top: 10px;">📝 Catatan</label>
-                <textarea id="editInfoNotes" placeholder="Tips: Datang sore untuk sunset view yang bagus!" style="min-height: 60px;"></textarea>
-                
-                <div class="modal-actions">
-                    <button type="submit" class="btn primary">💾 Simpan Perubahan</button>
-                    <button type="button" id="cancelEditInfo" class="btn secondary">Batal</button>
-                </div>
-            </form>
+<div id="editInfoModal" class="modal hidden">
+    <div class="modal-content modal-wide">
+        <button class="close-btn" id="closeEditInfoModal">&times;</button>
+        <h3>📍 Kelola Lokasi: <span id="editInfoIdeaName">Nama Tempat</span></h3>
+        
+        <input type="hidden" id="editInfoIdeaId">
+        
+        <!-- Locations List -->
+        <div id="locationsListContainer" class="locations-list-container">
+            <!-- Dynamic locations akan dirender di sini -->
+        </div>
+        
+        <!-- Add Location Button -->
+        <button type="button" id="addLocationBtn" class="btn secondary full-width" style="margin-top: 15px;">
+            ➕ Tambah Lokasi Baru
+        </button>
+        
+        <!-- Action Buttons -->
+        <div class="modal-actions" style="margin-top: 20px;">
+            <button type="button" id="saveAllLocations" class="btn primary">💾 Simpan Semua Lokasi</button>
+            <button type="button" id="cancelEditInfo" class="btn secondary">Batal</button>
         </div>
     </div>
+</div>
+
+<template id="locationItemTemplate">
+    <div class="location-item" data-location-index="0">
+        <div class="location-header">
+            <input 
+                type="text" 
+                class="location-name-input" 
+                placeholder="Nama Lokasi (misal: Cabang Senayan City)" 
+                required
+            >
+            <button type="button" class="btn-delete-location" title="Hapus Lokasi">🗑️</button>
+        </div>
+        
+        <div class="location-fields">
+            <label>📍 Alamat Lengkap</label>
+            <input type="text" class="location-address" placeholder="Jl. Contoh No. 123, Jakarta">
+            
+            <label style="margin-top: 10px;">🗺️ Link Google Maps</label>
+            <input type="url" class="location-maps-url" placeholder="https://maps.app.goo.gl/xxx">
+            
+            <label style="margin-top: 10px;">📞 No. Telepon</label>
+            <input type="tel" class="location-phone" placeholder="021-12345678">
+            
+            <label style="margin-top: 10px;">🕐 Jam Buka</label>
+            <input type="text" class="location-opening-hours" placeholder="10:00 - 22:00 (Setiap Hari)">
+            
+            <label style="margin-top: 10px;">💰 Kisaran Harga</label>
+            <input type="text" class="location-price-range" placeholder="Rp 50.000 - 150.000">
+            
+            <label style="margin-top: 10px;">🌐 Website/Instagram</label>
+            <input type="url" class="location-website" placeholder="https://instagram.com/namatempat">
+            
+            <label style="margin-top: 10px;">📝 Catatan</label>
+            <textarea class="location-notes" placeholder="Tips: Parkir luas, ada wifi gratis" style="min-height: 60px;"></textarea>
+        </div>
+    </div>
+</template>
 
     <script type="module" src="js/main.js"></script>
     <script type="module" src="js/history.js"></script>
