@@ -36,6 +36,19 @@
                 <button id="viewHistoryBtn" class="btn secondary">Lihat Riwayat & Review 📖</button>
             </div>
         </div>
+        <div class="search-bar-container">
+            <div class="search-input-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input 
+                        type="text" 
+                        id="searchIdeas" 
+                        placeholder="Cari tempat, kategori, atau kota..." 
+                        autocomplete="off"
+                    >
+                    <button id="clearSearch" class="clear-search-btn" title="Hapus Pencarian">✕</button>
+                </div>
+                <small class="search-hint">💡 Ketik nama tempat (misal: KFC, Starbucks) atau kategori</small>
+            </div>
         <div id="activityArea" class="activity-area">
             <p>Memuat ide trip...</p>
         </div>
@@ -49,31 +62,43 @@
     <div id="modal" class="modal hidden">
         <div class="modal-content">
             <h3>Tambahkan Ide Trip Baru</h3>
-            <form id="ideaForm">    
-                <!-- ✅ NEW: CITY DROPDOWN (Paling atas) -->
+            <form id="ideaForm">
+                <!-- City Dropdown -->
                 <label for="ideaCity">📍 Pilih Kota (Opsional)</label>
                 <select id="ideaCity">
                     <option value="">-- Pilih Kota --</option>
-                    <!-- Options akan diisi via JavaScript dari database -->
                 </select>
-                <small style="color: var(--color-muted); display: block; margin-top: 5px; margin-bottom: 15px;">
-                    💡 Kosongkan jika tempat ini tidak terkait kota tertentu
+                <small style="color: var(--color-muted); display: block; margin: 5px 0 15px 0;">
+                    💡 Kosongkan jika tidak terkait kota tertentu
                 </small>
 
+                <!-- Category -->
                 <label for="ideaCategory">Mau Kemana Kitaaa?</label>
                 <select id="ideaCategory" required>
                 </select>
-                <input type="text" id="newCategoryInput" name="newCategory" placeholder="Nama Kategori Baru" style="display: none;" required>
+                <input type="text" id="newCategoryInput" placeholder="Nama Kategori Baru" style="display: none;">
 
-                <label for="ideaSubtype" style="margin-top: 10px;">Dimana yaa enaknyaa?</label>
-                <select id="ideaSubtype" required>
+                <!-- ✅ NEW: Search untuk Subtype -->
+                <label for="subtypeSearch" style="margin-top: 10px;">🔍 Cari Jenis Tempat</label>
+                <input 
+                    type="text" 
+                    id="subtypeSearch" 
+                    placeholder="Ketik untuk mencari (misal: Bubur, Steak, Coffee)..." 
+                    style="margin-bottom: 5px;"
+                >
+
+                <!-- Subtype Dropdown -->
+                <label for="ideaSubtype">Dimana yaa enaknyaa?</label>
+                <select id="ideaSubtype" required size="8">
+                    <!-- Options will be populated & filtered via JS -->
                 </select>
-                <input type="text" id="newSubtypeInput" name="newSubtype" placeholder="Nama Subtipe Baru" style="display: none;" required>
+                <input type="text" id="newSubtypeInput" placeholder="Nama Subtipe Baru" style="display: none;">
 
+                <!-- Nama Tempat -->
                 <label for="ideaTitle" style="margin-top: 10px;">Kasih tau dong...</label>
                 <input type="text" id="ideaTitle" placeholder="Misal: KFC, Starbucks, dll">
 
-                <label for="ideaImageInput" style="margin-top: 10px;">Foto/Gambar (Opsional)</label>
+               <label for="ideaImageInput" style="margin-top: 10px;">Foto/Gambar (Opsional)</label>
                 <input type="file" id="ideaImageInput" accept="image/*">
 
                 <!-- DETAIL INFO SECTION (Existing, tidak berubah) -->

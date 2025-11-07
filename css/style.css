@@ -1526,6 +1526,168 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
 .location-accordion-content .btn-open-maps {
     margin-bottom: 15px;
 }
+
+/* ==================================================
+   SEARCH BAR STYLES
+   ================================================== */
+
+.search-bar-container {
+    background: linear-gradient(135deg, #f0f7ff 0%, #e1f3ff 100%);
+    border: 2px solid var(--color-secondary);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(3, 37, 76, 0.1);
+}
+
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: white;
+    border: 2px solid var(--color-secondary);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.search-input-wrapper:focus-within {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(3, 37, 76, 0.1);
+}
+
+.search-icon {
+    position: absolute;
+    left: 15px;
+    font-size: 1.2em;
+    color: var(--color-muted);
+    pointer-events: none;
+}
+
+#searchIdeas {
+    flex: 1;
+    padding: 12px 50px 12px 50px;
+    border: none;
+    outline: none;
+    font-size: 1em;
+    color: var(--color-text-light);
+    background: transparent;
+}
+
+#searchIdeas::placeholder {
+    color: var(--color-muted);
+    font-style: italic;
+}
+
+.clear-search-btn {
+    position: absolute;
+    right: 10px;
+    background: transparent;
+    border: none;
+    color: var(--color-muted);
+    font-size: 1.5em;
+    cursor: pointer;
+    padding: 5px 10px;
+    transition: all 0.2s ease;
+    display: none; /* Hidden by default */
+}
+
+.clear-search-btn:hover {
+    color: var(--color-error);
+    transform: scale(1.2);
+}
+
+/* Show clear button when input has value */
+#searchIdeas:not(:placeholder-shown) ~ .clear-search-btn {
+    display: block;
+}
+
+.search-hint {
+    display: block;
+    margin-top: 8px;
+    color: var(--color-muted);
+    font-size: 0.85em;
+    text-align: center;
+}
+
+/* ==================================================
+   SEARCH RESULTS INFO
+   ================================================== */
+
+.search-results-info {
+    background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%);
+    border: 2px solid #fbc02d;
+    border-radius: 10px;
+    padding: 12px 20px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.search-results-info p {
+    margin: 0;
+    color: #f57f17;
+    font-size: 1em;
+}
+
+.search-results-info strong {
+    color: var(--color-primary);
+}
+
+/* No results message */
+.no-results-message {
+    text-align: center;
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+    border: 2px dashed var(--color-error);
+    border-radius: 12px;
+    margin: 20px 0;
+}
+
+.no-results-message p {
+    font-size: 1.2em;
+    color: var(--color-error);
+    margin: 0 0 10px 0;
+}
+
+.no-results-message small {
+    color: var(--color-muted);
+    font-size: 0.9em;
+}
+
+/* ==================================================
+   RESPONSIVE
+   ================================================== */
+
+@media (max-width: 768px) {
+    .search-bar-container {
+        padding: 12px;
+    }
+    
+    #searchIdeas {
+        padding: 10px 45px 10px 45px;
+        font-size: 0.95em;
+    }
+    
+    .search-icon {
+        left: 12px;
+        font-size: 1.1em;
+    }
+    
+    .search-hint {
+        font-size: 0.8em;
+    }
+}
+
+/* ==================================================
+   HIGHLIGHT SEARCH RESULTS (OPTIONAL ENHANCEMENT)
+   ================================================== */
+
+.search-highlight {
+    background-color: #fff9c4;
+    font-weight: bold;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
 /* ==================================================
    CITY GROUPING STYLES (Level 0 - Highest)
    ================================================== */
@@ -1567,6 +1729,40 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
 .city-details summary:hover {
     color: var(--color-primary-light);
     padding-left: 45px;
+}
+
+#subtypeSearch {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid var(--color-secondary);
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-size: 0.95em;
+    transition: border-color 0.2s;
+}
+
+#subtypeSearch:focus {
+    border-color: var(--color-primary);
+    outline: none;
+}
+
+/* Subtype dropdown dengan scrollable list */
+#ideaSubtype {
+    width: 100%;
+    padding: 8px;
+    border: 2px solid var(--color-secondary);
+    border-radius: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#ideaSubtype option {
+    padding: 8px;
+    cursor: pointer;
+}
+
+#ideaSubtype option:hover {
+    background-color: var(--color-secondary);
 }
 
 /* City Icon/Flag */

@@ -12,6 +12,7 @@ const addLocationBtn = document.getElementById('addLocationBtn');
 const saveAllLocations = document.getElementById('saveAllLocations');
 const ideaCity = document.getElementById('ideaCity');
 let citiesCache = []; 
+let searchQuery = '';
 
 let currentLocationsData = []; // Array untuk track semua lokasi
 // ✅ TAMBAHKAN REFERENSI UI UNTUK FIELD BARU (di bagian deklarasi variabel)
@@ -89,6 +90,82 @@ let allReviews = [];
 let selectedIdeaIds = new Set();
 
 
+function filterIdeasBySearch(ideas, query) {
+    if (!query || query.trim() === '') return ideas;
+    
+    const lowerQuery = query.toLowerCase().trim();
+    
+    return ideas.filter(idea => {
+        // Search by: idea name, category, subtype, city
+        const ideaName = (idea.idea_name || '').toLowerCase();
+        const categoryName = (idea.category_name || '').toLowerCase();
+        const subtypeName = (idea.subtype_name || '').toLowerCase();
+        const cityId = (idea.city_id || '').toLowerCase();
+        
+        // Get city name for search
+        const city = citiesCache.find(c => c.id === cityId);
+        const cityName = (city?.name || '').toLowerCase();
+        
+        // ✅ KRITIS: Return TRUE jika ada yang match
+        return ideaName.includes(lowerQuery) ||
+               categoryName.includes(lowerQuery) ||
+               subtypeName.includes(lowerQuery) ||
+               cityName.includes(lowerQuery);
+    });
+}
+
+function setupSearchBar() {
+    const searchInput = document.getElementById('searchIdeas');
+    const clearSearchBtn = document.getElementById('clearSearch');
+    
+    if (!searchInput) return;
+    
+    // Input event for search
+    searchInput.addEventListener('input', (e) => {
+        searchQuery = e.target.value;
+        
+        // ✅ Show/hide clear button
+        if (clearSearchBtn) {
+            clearSearchBtn.style.display = searchQuery ? 'block' : 'none';
+        }
+        
+        renderCategoriesForDay(tripDateInput.value);
+    });
+    
+    // Clear search button
+    if (clearSearchBtn) {
+        clearSearchBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            searchQuery = '';
+            clearSearchBtn.style.display = 'none';
+            searchInput.focus(); // Focus back to input
+            renderCategoriesForDay(tripDateInput.value);
+        });
+    }
+    
+    // ✅ BONUS: Clear search saat ESC key
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            searchInput.value = '';
+            searchQuery = '';
+            if (clearSearchBtn) clearSearchBtn.style.display = 'none';
+            renderCategoriesForDay(tripDateInput.value);
+        }
+    });
+}
+
+// =================================================================
+// ALPHABETICAL SORT
+// =================================================================
+
+// ✅ FUNGSI: Sort array alphabetically by name
+function sortAlphabetically(arr, key = 'name') {
+    return arr.sort((a, b) => {
+        const nameA = (a[key] || '').toLowerCase();
+        const nameB = (b[key] || '').toLowerCase();
+        return nameA.localeCompare(nameB, 'id-ID'); // Indonesian locale
+    });
+}
 window.editIdeaInfo = function(ideaId) {
     const idea = ideasCache.find(i => i.id === ideaId);
     if (!idea) {
@@ -1175,12 +1252,47 @@ function formatUrl(url) {
 // =================================================================
 // 2. RENDERING IDEAS (FIX: Kategori Utama juga Collapsible)
 // =================================================================
-
+// ✅ FUNGSI BARU: Filter subtype dropdown dengan search
+function setupSubtypeSearch() {
+    const subtypeSearchInput = document.getElementById('subtypeSearch');
+    const ideaSubtype = document.getElementById('ideaSubtype');
+    
+    if (!subtypeSearchInput || !ideaSubtype) return;
+    
+    subtypeSearchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        
+        // Filter options
+        Array.from(ideaSubtype.options).forEach(option => {
+            const text = option.textContent.toLowerCase();
+            
+            if (text.includes(query)) {
+                option.style.display = '';
+            } else {
+                option.style.display = 'none';
+            }
+        });
+    });
+}
 function renderCategoriesForDay(selectedDate) {
     activityArea.innerHTML = '';
     
     if (!selectedDate && ideasCache.length > 0) {
         activityArea.innerHTML = '<p class="info-message">☝️ **Pilih tanggal trip Anda di atas** untuk melihat opsi aktivitas yang tersedia!</p>';
+        return;
+    }
+    
+    // ✅ Filter by search (FIXED - make sure this is called)
+    let filteredIdeas = filterIdeasBySearch(ideasCache, searchQuery);
+    
+    // Handle no results
+    if (searchQuery && searchQuery.trim() !== '' && filteredIdeas.length === 0) {
+        activityArea.innerHTML = `
+            <div class="no-results-message">
+                <p>🔍 Tidak ada hasil untuk "<strong>${searchQuery}</strong>"</p>
+                <small>Coba kata kunci lain atau periksa ejaan</small>
+            </div>
+        `;
         return;
     }
     
@@ -1192,7 +1304,7 @@ function renderCategoriesForDay(selectedDate) {
         return acc;
     }, {});
 
-    const ideasBySubtype = ideasCache.reduce((acc, current) => {
+    const ideasBySubtype = filteredIdeas.reduce((acc, current) => {
         const key = current.type_key;
         const isDayMatch = current.day_of_week === '' || current.day_of_week === null || current.day_of_week === undefined;
         
@@ -1200,8 +1312,7 @@ function renderCategoriesForDay(selectedDate) {
         return acc;
     }, {});
     
-    // ✅ GROUP BY CITY (NEW LOGIC)
-    const ideasByCity = ideasCache.reduce((acc, idea) => {
+    const ideasByCity = filteredIdeas.reduce((acc, idea) => {
         const cityKey = idea.city_id || 'no-city';
         if (!acc[cityKey]) {
             acc[cityKey] = [];
@@ -1210,16 +1321,28 @@ function renderCategoriesForDay(selectedDate) {
         return acc;
     }, {});
     
-    // ✅ RENDER CITY GROUPS
+    // Sort cities alphabetically
     const sortedCities = [
-        ...citiesCache,
+        ...sortAlphabetically(citiesCache, 'name'),
         { id: 'no-city', name: 'Tanpa Kota', display_order: 9999 }
     ];
     
+    // Show search results info
+    if (searchQuery && searchQuery.trim() !== '') {
+        const totalResults = filteredIdeas.length;
+        const searchInfo = document.createElement('div');
+        searchInfo.className = 'search-results-info';
+        searchInfo.innerHTML = `
+            <p>🔍 Ditemukan <strong>${totalResults}</strong> hasil untuk "<strong>${searchQuery}</strong>"</p>
+        `;
+        activityArea.appendChild(searchInfo);
+    }
+    
+    // Render per city
     sortedCities.forEach(city => {
         const ideasInCity = ideasByCity[city.id] || [];
         
-        if (ideasInCity.length === 0) return; // Skip kota tanpa ide
+        if (ideasInCity.length === 0) return;
         
         const cityCard = document.createElement('div');
         cityCard.className = `city-card ${city.id === 'no-city' ? 'no-city-group' : ''}`;
@@ -1233,14 +1356,17 @@ function renderCategoriesForDay(selectedDate) {
         
         const cityContent = cityCard.querySelector('.city-content');
         
-        // Render categories dalam city ini
-        Object.values(groupedCategories).forEach(catGroup => {
+        // Sort categories alphabetically
+        const sortedCategoryGroups = Object.values(groupedCategories).sort((a, b) => 
+            a.category.localeCompare(b.category, 'id-ID')
+        );
+        
+        sortedCategoryGroups.forEach(catGroup => {
             const card = document.createElement('div');
             card.className = 'category-card';
             
             const icon = catGroup.subtypes[0]?.icon || '📍';
             
-            // Hitung berapa item terpilih di kategori ini (dalam city ini)
             const selectedCountInCategory = countSelectedInCategoryForCity(catGroup, city.id);
             const categoryBadge = selectedCountInCategory > 0 ? `<span class="selection-badge">${selectedCountInCategory}</span>` : '';
             
@@ -1256,7 +1382,12 @@ function renderCategoriesForDay(selectedDate) {
             const subtypesWrap = card.querySelector('.subtypes-wrap');
             let hasContentInCity = false;
 
-            catGroup.subtypes.forEach(subtype => {
+            // Sort subtypes alphabetically
+            const sortedSubtypes = catGroup.subtypes.sort((a, b) => 
+                a.subtype.localeCompare(b.subtype, 'id-ID')
+            );
+
+            sortedSubtypes.forEach(subtype => {
                 const ideasList = (ideasBySubtype[subtype.type_key] || [])
                     .filter(idea => (idea.city_id || 'no-city') === city.id);
                 
@@ -1274,7 +1405,16 @@ function renderCategoriesForDay(selectedDate) {
                     details.setAttribute('open', '');
                     
                     const summary = document.createElement('summary');
-                    summary.innerHTML = `${subtype.subtype} ${subtypeBadge}`;
+                    // ✅ KRITIS: REMOVE ICON - Hanya text dan badge!
+                    summary.textContent = subtype.subtype + ' '; // Text only, no icon!
+                    
+                    // Append badge jika ada (sebagai DOM element, bukan innerHTML)
+                    if (subtypeBadge) {
+                        const badgeSpan = document.createElement('span');
+                        badgeSpan.className = 'selection-badge small';
+                        summary.appendChild(badgeSpan);
+                    }
+                    
                     details.appendChild(summary);
 
                     const optionsWrap = document.createElement('div');
@@ -1301,7 +1441,12 @@ function renderCategoriesForDay(selectedDate) {
                     }
 
                     if (hasIdeas) {
-                        ideasList.forEach(item => {
+                        // Sort ideas alphabetically
+                        const sortedIdeasList = ideasList.sort((a, b) => 
+                            a.idea_name.localeCompare(b.idea_name, 'id-ID')
+                        );
+                        
+                        sortedIdeasList.forEach(item => {
                             const itemId = item.id;
                             const isSelected = selectedIdeaIds.has(itemId);
                             const ratingHtml = createRatingDisplay(item.id);
@@ -1635,7 +1780,12 @@ function saveProgress() {
 // =================================================================
 // UPDATE: Event Delegation untuk tambah checkmark
 // =================================================================
-
+document.addEventListener('DOMContentLoaded', () => {
+    // ... (existing code) ...
+    
+    setupSearchBar();
+    setupSubtypeSearch(); // ✅ NEW
+});
 activityArea.addEventListener('click', (e) => {
     const optionItem = e.target.closest('.option-item');
     if (!optionItem) return;
