@@ -1,8 +1,18 @@
-// js/main.js (Logika utama - Seleksi Click vs Detail Button)
+import { supabase } from './supabaseClient.js';
+import {
+    getPublicImageUrl,
+    renderPhotoUrls,
+    uploadImage,
+    uploadImages,
+    sortAlphabetically,
+    formatUrl,
+    convertToEmbedUrl,
+    setupModalClose,
+    showModal,
+    hideModal
+} from './utils.js';
 
-import { supabase } from './supabaseClient.js'; 
-
-let currentUser = { id: 'anon' }; 
+let currentUser = { id: 'anon' };
 
 
 
@@ -158,14 +168,6 @@ function setupSearchBar() {
 // ALPHABETICAL SORT
 // =================================================================
 
-// ✅ FUNGSI: Sort array alphabetically by name
-function sortAlphabetically(arr, key = 'name') {
-    return arr.sort((a, b) => {
-        const nameA = (a[key] || '').toLowerCase();
-        const nameB = (b[key] || '').toLowerCase();
-        return nameA.localeCompare(nameB, 'id-ID'); // Indonesian locale
-    });
-}
 window.editIdeaInfo = function(ideaId) {
     const idea = ideasCache.find(i => i.id === ideaId);
     if (!idea) {
@@ -632,64 +634,6 @@ function populateCityDropdown() {
 }
 
 
-// main.js - GANTI TOTAL FUNGSI INI
-// function getPublicImageUrl(photoUrl) {
-//     let urlToProcess = photoUrl;
-    
-//    if (Array.isArray(photoUrl)) {
-//         if (photoUrl.length === 0) {
-//             return 'images/placeholder.jpg';
-//         }
-//         urlToProcess = photoUrl[0]; // Ambil elemen pertama (String)
-//     }
-
-//     // 2. Handle Null, Undefined, atau nilai falsy lainnya
-//     if (!urlToProcess) {
-//         return 'images/placeholder.jpg';
-//     }
-
-//     // 3. KRITIS: Pastikan urlToProcess benar-benar string sebelum memanggil startsWith
-//     if (typeof urlToProcess !== 'string' || urlToProcess === '') {
-//         return 'images/placeholder.jpg';
-//     }
-
-//     // 4. Proses URL
-//     if (urlToProcess.startsWith('http')) return urlToProcess; 
-    
-//     // Logic untuk Supabase path
-//     try {
-//         const { data } = supabase.storage
-//             .from('trip-ideas-images') 
-//             .getPublicUrl(urlToProcess);
-//         return data.publicUrl || urlToProcess; 
-//     } catch (e) {
-//         console.error("Error getting public URL:", e);
-//         return urlToProcess;
-//     }
-// }
-
-
-async function uploadImage(file){
-    if (!file) return null;
-    const uid = currentUser.id || 'anon';
-    const path = `${uid}/${Date.now()}_${file.name}`;
-    
-    const { error } = await supabase.storage
-      .from('trip-ideas-images') 
-      .upload(path, file);
-
-    if (error) {
-        console.error('Supabase Storage upload error', error);
-        alert('Gagal mengupload foto. Cek RLS Storage Anda.');
-        return null;
-    }
-    
-    const { data: publicUrlData } = supabase.storage
-      .from('trip-ideas-images')
-      .getPublicUrl(path);
-
-    return publicUrlData.publicUrl;
-}
 
 function toggleNewCategoryInput(selectedValue) {
     if (!newCategoryInput) return;
@@ -734,29 +678,6 @@ function populateIdeaCategorySelect(){
     toggleNewCategoryInput(ideaCategory.value);
 }
 
-// function populateIdeaSubtypeSelect(selectedCategory){
-//     ideaSubtype.innerHTML = '';
-//     if (selectedCategory === 'custom') {
-//         const opt = document.createElement('option');
-//         opt.value = 'custom-new';
-//         opt.textContent = 'Tambahkan Sub-tipe Baru...';
-//         ideaSubtype.appendChild(opt);
-//         toggleNewSubtypeInput(ideaSubtype.value); 
-//         return;
-//     }
-//     const subtypes = categoriesCache.filter(c => c.category === selectedCategory);
-//     subtypes.forEach(sub => {
-//         const opt = document.createElement('option');
-//         opt.value = sub.type_key; 
-//         opt.textContent = sub.subtype;
-//         ideaSubtype.appendChild(opt);
-//     });
-//     const custom = document.createElement('option');
-//     custom.value = 'custom-new';
-//     custom.textContent = 'Tambahkan Sub-tipe Baru...';
-//     ideaSubtype.appendChild(custom);
-//     toggleNewSubtypeInput(ideaSubtype.value);
-// }
 
 
 function setupImageClickHandlers() {
@@ -840,19 +761,18 @@ function createRatingDisplay(ideaId) {
 
     const avg = parseFloat(ratingData.average);
     const roundedRating = Math.round(avg * 2) / 2;
-    const starIcon = '★'; 
-    let starsHtml = '';
     
+    // Generate stars HTML manually (karena perlu half-star support)
+    let starsHtml = '';
     for (let i = 1; i <= 5; i++) {
         if (i <= roundedRating) {
-            starsHtml += `<span style="color: gold;">${starIcon}</span>`;
+            starsHtml += '<span style="color: gold;">★</span>';
         } else if (i - 0.5 === roundedRating) {
-            starsHtml += `<span style="color: gold; opacity: 0.5;">${starIcon}</span>`; 
+            starsHtml += '<span style="color: gold; opacity: 0.5;">★</span>'; 
         } else {
-            starsHtml += `<span style="color: #ccc;">${starIcon}</span>`;
+            starsHtml += '<span style="color: #ccc;">★</span>';
         }
     }
-
 
     return `
         <div class="rating-display">
@@ -861,60 +781,6 @@ function createRatingDisplay(ideaId) {
         </div>
     `;
 }
-
-// main.js (TEMPELKAN DI BAWAH IMPORTS, SEBELUM FUNGSI UTAMA LAINNYA)
-
-// --- Fungsi Utility dari history.js agar bisa dipakai di main.js ---
-
-function getPublicImageUrl(photoUrl) {
-    let urlToProcess = photoUrl;
-    // KRITIS: Anda harus memastikan 'supabase' client didefinisikan 
-    // di main.js agar fungsi ini bekerja, yang sudah Anda lakukan dengan import.
-    
-    if (!urlToProcess || typeof urlToProcess !== 'string' || urlToProcess === '') {
-        return 'images/placeholder.jpg';
-    }
-    if (urlToProcess.startsWith('http')) return urlToProcess; 
-    
-    try {
-        // Asumsi 'supabase' sudah tersedia via import di main.js
-        const { data } = supabase.storage 
-            .from('trip-ideas-images') 
-            .getPublicUrl(urlToProcess);
-        return data.publicUrl || urlToProcess; 
-    } catch (e) {
-        console.error("Error getting public URL:", e);
-        return urlToProcess;
-    }
-}
-
-function renderPhotoUrls(photoUrls, className = 'review-photo') {
-    let urls = photoUrls;
-    
-    // Jika hanya string tunggal (skema lama), ubah menjadi array
-    if (typeof urls === 'string' && urls.length > 0) {
-        urls = [urls];
-    } else if (!Array.isArray(urls)) {
-        return '';
-    }
-    
-    if (urls.length === 0) {
-        return '';
-    }
-
-    let html = '<div class="review-photos-container">';
-    urls.forEach(url => {
-        // Panggil getPublicImageUrl untuk memastikan URL publik yang valid
-        const publicUrl = getPublicImageUrl(url);
-        // Abaikan placeholder jika ini adalah array
-        if (publicUrl !== 'images/placeholder.jpg') {
-            html += `<img src="${publicUrl}" alt="Foto Review" class="${className}">`;
-        }
-    });
-    html += '</div>';
-    return html;
-}
-
 // --- Akhir Fungsi Utility ---
 
 // ... Lanjutkan dengan fungsi dan event listener lainnya di main.js
@@ -1192,55 +1058,6 @@ function setupLocationAccordion() {
 }
 
 
-
-// ✅ HELPER: Convert Google Maps URL ke Embed URL
-function convertToEmbedUrl(mapsUrl) {
-    // CATATAN: Untuk production, Anda HARUS mendapatkan Google Maps API Key
-    // dan mengganti 'YOUR_GOOGLE_MAPS_API_KEY' dengan API key Anda
-    
-    // Deteksi berbagai format Google Maps URL
-    
-    // Format 1: https://maps.app.goo.gl/xxx (short link)
-    if (mapsUrl.includes('maps.app.goo.gl') || mapsUrl.includes('goo.gl/maps')) {
-        // Untuk short link, gunakan place search dengan nama tempat
-        return ''; // Return kosong, akan fallback ke address
-    }
-    
-    // Format 2: https://www.google.com/maps/place/...
-    const placeMatch = mapsUrl.match(/place\/([^\/]+)/);
-    if (placeMatch) {
-        const placeName = decodeURIComponent(placeMatch[1].replace(/\+/g, ' '));
-        return `https://www.google.com/maps/embed/v1/place?key=YOUR_GOOGLE_MAPS_API_KEY&q=${encodeURIComponent(placeName)}`;
-    }
-    
-    // Format 3: Coordinates @lat,lng
-    const coordMatch = mapsUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-    if (coordMatch) {
-        const lat = coordMatch[1];
-        const lng = coordMatch[2];
-        return `https://www.google.com/maps/embed/v1/view?key=YOUR_GOOGLE_MAPS_API_KEY&center=${lat},${lng}&zoom=15`;
-    }
-    
-    // Format 4: Place ID
-    const placeIdMatch = mapsUrl.match(/place_id=([^&]+)/);
-    if (placeIdMatch) {
-        return `https://www.google.com/maps/embed/v1/place?key=YOUR_GOOGLE_MAPS_API_KEY&q=place_id:${placeIdMatch[1]}`;
-    }
-    
-    // Fallback: Return original URL (tidak akan berfungsi untuk embed, tapi bisa untuk link)
-    return '';
-}
-
-// ✅ HELPER: Format URL untuk display
-function formatUrl(url) {
-    try {
-        const urlObj = new URL(url);
-        return urlObj.hostname.replace('www.', '');
-    } catch (e) {
-        return url;
-    }
-}
-
 // =================================================================
 // 2. RENDERING IDEAS (FIX LOGIKA DUPLIKASI ANTAR LEVEL)
 // =================================================================
@@ -1357,8 +1174,9 @@ function renderCategoriesForDay(selectedDate) {
         const cityContent = cityCard.querySelector('.city-content');
         
         // Sort categories alphabetically
-        const sortedCategoryGroups = Object.values(groupedCategories).sort((a, b) => 
-            a.category.localeCompare(b.category, 'id-ID')
+        const sortedCategoryGroups = sortAlphabetically(
+            Object.values(groupedCategories), 
+            'category'
         );
         
         sortedCategoryGroups.forEach(catGroup => {
@@ -1943,10 +1761,7 @@ ideaCategory.addEventListener('change', (e) => {
 
 // --- Event Listeners lainnya ---
 
-ideaCategory.addEventListener('change', (e) => {
-    populateIdeaSubtypeSelect(e.target.value);
-    toggleNewCategoryInput(e.target.value);
-});
+
 
 ideaSubtype.addEventListener('change', (e) => {
     toggleNewSubtypeInput(e.target.value);
@@ -2006,7 +1821,7 @@ ideaForm.addEventListener('submit', async (e) => {
     };
     
     let finalTypeKey = subtypeVal;
-    let imageUrl = file ? await uploadImage(file) : null;
+    let imageUrl = file ? await uploadImage(file, currentUser.id || 'anon') : null;
     let isNewCombo = false;
     
     const handleFailure = (msg) => {
@@ -2051,6 +1866,10 @@ ideaForm.addEventListener('submit', async (e) => {
         isNewCombo = !categoriesCache.some(c => c.type_key === finalTypeKey);
 
         if (isNewCombo) {
+            // ✅ FIX: Hanya save foto jika TIDAK ADA nama ide (pure kategori baru)
+            // Kalau ada nama ide, foto akan di-save ke trip_ideas_v2 di bawah
+            const categoryPhotoUrl = (!title && imageUrl) ? imageUrl : null;
+            
             const { error: catInsertError } = await supabase
                 .from('idea_categories')
                 .insert({ 
@@ -2058,18 +1877,19 @@ ideaForm.addEventListener('submit', async (e) => {
                     subtype: finalSubtypeName, 
                     icon: '🆕', 
                     type_key: finalTypeKey,
-                    photo_url: imageUrl,
+                    photo_url: categoryPhotoUrl, // ✅ NULL jika ada nama ide
                 });
 
             if (catInsertError) {
-                 console.error('Gagal insert kategori kustom:', catInsertError);
-                 handleFailure(`Gagal menyimpan kategori baru: ${catInsertError.message}`);
-                 return;
+                console.error('Gagal insert kategori kustom:', catInsertError);
+                handleFailure(`Gagal menyimpan kategori baru: ${catInsertError.message}`);
+                return;
             }
             await fetchData();
-        } 
-    } 
-    
+        }
+    }
+
+    // UPDATE foto kategori HANYA jika pure kategori tanpa nama ide
     else if (imageUrl && !title) {
         const { error: catUpdateError } = await supabase
             .from('idea_categories')
@@ -2084,13 +1904,14 @@ ideaForm.addEventListener('submit', async (e) => {
         await fetchData();
     }
 
+    // Save nama ide (Level 3) - foto akan di-save di sini jika ada nama
     if (title) {
         const doc = {
             idea_name: title,
             type_key: finalTypeKey, 
             day_of_week: "", 
-            photo_url: imageUrl,
-            city_id: cityId, // ✅ NEW: Save city_id
+            photo_url: imageUrl, // ✅ Foto di-save di trip_ideas_v2
+            city_id: cityId,
             ...detailInfo
         };
         

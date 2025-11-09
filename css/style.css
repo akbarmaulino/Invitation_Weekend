@@ -1186,37 +1186,44 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
    ================================================== */
 
 @media (max-width: 768px) {
-    .selected-activities-panel {
-        padding: 15px;
-        margin: 15px 0;
-    }
-    
-    .panel-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-    
-    .btn-clear-all {
-        width: 100%;
+    main {
         padding: 10px;
     }
     
-    .selected-item {
+    header h1 {
+        font-size: 1.5em;
+    }
+
+    .controls {
         flex-direction: column;
         align-items: flex-start;
-        gap: 10px;
     }
     
-    .selected-item-actions {
+    .btn {
         width: 100%;
-        justify-content: flex-end;
+        margin: 5px 0;
+    }
+
+    .modal-content {
+        margin: 20px auto;
+        width: 90%;
+        padding: 20px;
     }
     
-    .checkmark {
-        width: 24px;
-        height: 24px;
-        font-size: 1em;
+    /* ✅ HANYA override properties yang BERBEDA di mobile */
+    .option-item-content img {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .idea-text-wrap {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+    
+    .options-wrap {
+        gap: 15px;
+        padding: 10px 0; 
     }
 }
 
@@ -1766,7 +1773,8 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
 }
 
 /* City Icon/Flag */
-.city-details summary::before {
+/* Hanya apply untuk CITY summary, bukan subtype */
+details.city-details > summary::before {
     content: '📍';
     position: absolute;
     left: 0;
@@ -1777,7 +1785,7 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
 }
 
 /* Arrow Indicator for City */
-.city-details summary::after {
+/* .city-details summary::after {
     content: '▼';
     position: absolute;
     right: 20px;
@@ -1786,17 +1794,17 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
     transition: transform 0.3s ease;
     font-size: 0.8em;
     color: var(--color-primary);
-}
+} */
 
-.city-details[open] summary::after {
+/* .city-details[open] summary::after {
     transform: translateY(-50%) rotate(0deg);
-}
+} */
 
 /* City Content */
-.city-content {
+/* .city-content {
     padding-top: 20px;
     animation: citySlideDown 0.4s ease-out;
-}
+} */
 
 @keyframes citySlideDown {
     from {
