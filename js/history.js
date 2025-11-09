@@ -90,14 +90,56 @@ function renderHistoryList(trips) {
         const item = document.createElement('div');
         item.className = 'history-item';
         item.dataset.tripId = trip.id;
+        
+        // ✅ BARIS BARU: Tambah container untuk header + button
         item.innerHTML = `
-            <h4>Trip ${formatTanggalIndonesia(trip.trip_date)} (${trip.trip_day})</h4>
-            <p>${trip.selection_json.length} aktivitas terpilih.</p>
+            <div class="history-item-header">
+                <div class="history-item-info">
+                    <h4>Trip ${formatTanggalIndonesia(trip.trip_date)} (${trip.trip_day})</h4>
+                    <p>${trip.selection_json.length} aktivitas terpilih.</p>
+                </div>
+                <button class="btn-regenerate-ticket" data-trip-id="${trip.id}" title="Lihat Tiket Trip Ini">
+                    🎫 Lihat Tiket
+                </button>
+            </div>
         `;
         
-        item.addEventListener('click', () => showTripDetails(trip.id));
+        // ✅ BARIS BARU: Click handler untuk area info (bukan tombol)
+        const infoArea = item.querySelector('.history-item-info');
+        infoArea.addEventListener('click', () => showTripDetails(trip.id));
+        infoArea.style.cursor = 'pointer';
+        
+        // ✅ BARIS BARU: Click handler untuk tombol re-generate
+        const regenBtn = item.querySelector('.btn-regenerate-ticket');
+        regenBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            regenerateTicket(trip);
+        });
+        
         historyList.appendChild(item);
     });
+}
+
+// ============================================================
+// FUNGSI BARU: Regenerate Ticket dari History
+// ============================================================
+
+function regenerateTicket(trip) {
+    // Convert trip data ke format localStorage
+    const selections = trip.selection_json.map(item => ({
+        ideaId: item.idea_id || `cat-${item.name}`,
+        name: item.name,
+        cat: item.category,
+        subtype: item.subtype
+    }));
+    
+    // Save ke localStorage
+    localStorage.setItem('tripDate', trip.trip_date);
+    localStorage.setItem('tripSelections', JSON.stringify(selections));
+    localStorage.setItem('secretMessage', trip.secret_message || '');
+    
+    // Redirect ke summary.html
+    window.location.href = 'summary.html';
 }
 
 async function showTripDetails(tripId) {
