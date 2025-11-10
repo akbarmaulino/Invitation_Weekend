@@ -6,6 +6,7 @@ import {
     uploadImages,
     sortAlphabetically,
     formatUrl,
+    formatTanggalIndonesia, // ✅ TAMBAHKAN INI
     convertToEmbedUrl,
     setupModalClose,
     showModal,
@@ -783,8 +784,6 @@ function createRatingDisplay(ideaId) {
 }
 // --- Akhir Fungsi Utility ---
 
-// ... Lanjutkan dengan fungsi dan event listener lainnya di main.js
-// FUNGSI INI AKAN DIPANGGIL OLEH TOMBOL DETAIL
 function renderIdeaDetailModal(ideaId) {
     if (ideaId.startsWith('cat-')) return; 
 
@@ -832,32 +831,62 @@ function renderIdeaDetailModal(ideaId) {
     detailReviewList.innerHTML = '';
 
     if (reviews.length > 0) {
-        reviews.sort((a, b) => {
-            if (!a || !b) return 0; 
-            const dateA = new Date(a.created_at);
-            const dateB = new Date(b.created_at);
-            return dateB.getTime() - dateA.getTime(); 
-        });
-
-        reviews.forEach(review => {
-            const reviewItem = document.createElement('div');
-            reviewItem.className = 'review-item';
-
-            const reviewStars = '⭐'.repeat(review.rating || 0);
-            const reviewPhotoHtml = renderPhotoUrls(review.photo_url, 'review-photo-main');
-            
-            reviewItem.innerHTML = `
-                <div class="review-rating">${reviewStars}</div>
-                <p class="review-text">${review.review_text || '(Tidak ada komentar)'}</p>
-                ${reviewPhotoHtml}
-            `;
-
-            detailReviewList.appendChild(reviewItem);
-        });
+        // ✅ BARU: Ambil data trip untuk setiap review
+        const tripIds = [...new Set(reviews.map(r => r.trip_id).filter(Boolean))];
         
-        if (noReviewsMessage) {
-            noReviewsMessage.style.display = 'none';
-        }
+        // ✅ BARU: Fetch trip data dari Supabase
+        const fetchTripsPromise = tripIds.length > 0 
+            ? supabase.from('trip_history').select('id, trip_date, trip_day').in('id', tripIds)
+            : Promise.resolve({ data: [] });
+        
+        fetchTripsPromise.then(({ data: trips, error: tripError }) => {
+            if (tripError) {
+                console.warn('Could not fetch trip dates:', tripError);
+            }
+            
+            // Create trip lookup map
+            const tripMap = {};
+            (trips || []).forEach(trip => {
+                tripMap[trip.id] = trip;
+            });
+            
+            // Sort reviews
+            reviews.sort((a, b) => {
+                if (!a || !b) return 0; 
+                const dateA = new Date(a.created_at);
+                const dateB = new Date(b.created_at);
+                return dateB.getTime() - dateA.getTime(); 
+            });
+
+            reviews.forEach(review => {
+                const reviewItem = document.createElement('div');
+                reviewItem.className = 'review-item';
+
+                const reviewStars = '⭐'.repeat(review.rating || 0);
+                const reviewPhotoHtml = renderPhotoUrls(review.photo_url, 'review-photo-main');
+                
+                // ✅ BARU: Format tanggal trip
+                let tripDateHtml = '';
+                if (review.trip_id && tripMap[review.trip_id]) {
+                    const trip = tripMap[review.trip_id];
+                    const tripDateFormatted = formatTanggalIndonesia(trip.trip_date);
+                    tripDateHtml = `<div class="review-trip-date">📅 Trip: ${tripDateFormatted}</div>`;
+                }
+                
+                reviewItem.innerHTML = `
+                    <div class="review-rating">${reviewStars}</div>
+                    ${tripDateHtml}
+                    <p class="review-text">${review.review_text || '(Tidak ada komentar)'}</p>
+                    ${reviewPhotoHtml}
+                `;
+
+                detailReviewList.appendChild(reviewItem);
+            });
+            
+            if (noReviewsMessage) {
+                noReviewsMessage.style.display = 'none';
+            }
+        });
 
     } else {
         if (noReviewsMessage) {
@@ -1497,40 +1526,91 @@ function setupPanelEventListeners() {
 // ✅ FUNGSI BARU: Scroll ke dan highlight ide
 function scrollToAndHighlightIdea(ideaId) {
     const itemData = getIdeaDataById(ideaId);
-    if (!itemData) return;
+    if (!itemData) {
+        console.warn('Item data not found for ideaId:', ideaId);
+        return;
+    }
     
-    // 1. Buka kategori dan sub-type yang relevan
-    const categoryCards = document.querySelectorAll('.category-card');
-    categoryCards.forEach(card => {
-        const categoryDetails = card.querySelector('.category-details');
-        const categoryName = categoryDetails.querySelector('summary').textContent.trim().split(' ').slice(1).join(' ').replace(/\d+/g, '').trim();
+    // ✅ STEP 1: Buka CITY accordion (Level 0) dulu
+    const cityCards = document.querySelectorAll('.city-card');
+    let targetCityCard = null;
+    
+    cityCards.forEach(cityCard => {
+        const cityDetails = cityCard.querySelector('.city-details');
+        if (!cityDetails) return;
         
-        if (categoryName === itemData.category) {
-            categoryDetails.open = true;
+        // Cek apakah di city ini ada kategori yang match
+        const categoryCardsInCity = cityCard.querySelectorAll('.category-card');
+        categoryCardsInCity.forEach(categoryCard => {
+            const categoryDetails = categoryCard.querySelector('.category-details');
+            if (!categoryDetails) return;
             
-            // Buka sub-type
-            const subtypeDetails = card.querySelectorAll('.subtype-details');
-            subtypeDetails.forEach(subDetail => {
-                const subtypeName = subDetail.querySelector('summary').textContent.trim().split(' ').slice(0, -1).join(' ').trim();
-                if (subtypeName === itemData.subtype) {
-                    subDetail.open = true;
-                }
-            });
-        }
+            const categorySummary = categoryDetails.querySelector('summary.category-summary');
+            if (!categorySummary) return;
+            
+            // Extract category name (remove icon, badge, extra spaces)
+            let categoryText = categorySummary.textContent.trim();
+            // Remove leading icon/emoji
+            categoryText = categoryText.replace(/^[^\w\s]+\s*/, '');
+            // Remove trailing badge (numbers in parentheses or standalone)
+            categoryText = categoryText.replace(/\s*\d+\s*$/, '').trim();
+            
+            if (categoryText === itemData.category) {
+                targetCityCard = cityCard;
+                
+                // ✅ BUKA city accordion
+                cityDetails.open = true;
+                
+                // ✅ STEP 2: Buka category accordion (Level 1)
+                categoryDetails.open = true;
+                
+                // ✅ STEP 3: Buka subtype accordion (Level 2)
+                const subtypeDetailsArray = categoryCard.querySelectorAll('.subtype-details');
+                subtypeDetailsArray.forEach(subtypeDetail => {
+                    const subtypeSummary = subtypeDetail.querySelector('summary');
+                    if (!subtypeSummary) return;
+                    
+                    // Extract subtype name (remove icon, badge, extra spaces)
+                    let subtypeText = subtypeSummary.textContent.trim();
+                    // Remove leading icon/emoji
+                    subtypeText = subtypeText.replace(/^[^\w\s]+\s*/, '');
+                    // Remove trailing badge
+                    subtypeText = subtypeText.replace(/\s*\d+\s*$/, '').trim();
+                    
+                    if (subtypeText === itemData.subtype) {
+                        subtypeDetail.open = true;
+                    }
+                });
+            }
+        });
     });
     
-    // 2. Scroll ke item
-    const targetItem = document.querySelector(`.option-item[data-ideaid="${ideaId}"]`);
-    if (targetItem) {
-        targetItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
-        // 3. Highlight sementara
-        targetItem.classList.add('highlight-flash');
-        setTimeout(() => {
-            targetItem.classList.remove('highlight-flash');
-        }, 2000);
-    }
+    // ✅ STEP 4: Wait untuk accordion animation selesai, baru scroll
+    setTimeout(() => {
+        const targetItem = document.querySelector(`.option-item[data-ideaid="${ideaId}"]`);
+        if (targetItem) {
+            // Scroll dengan offset agar tidak tertutup header sticky
+            const headerHeight = document.querySelector('header')?.offsetHeight || 0;
+            const elementPosition = targetItem.getBoundingClientRect().top + window.pageYOffset;
+            const offsetPosition = elementPosition - headerHeight - 20; // Extra 20px padding
+            
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+            });
+            
+            // ✅ STEP 5: Highlight dengan animation
+            targetItem.classList.add('highlight-flash');
+            setTimeout(() => {
+                targetItem.classList.remove('highlight-flash');
+            }, 2000); // 2 detik highlight
+        } else {
+            console.warn('Target item not found in DOM:', ideaId);
+        }
+    }, 300); // Tunggu 300ms untuk accordion animation
 }
+
+
 // ✅ FUNGSI BARU: Setup Collapse untuk Kategori Utama
 function setupCategoryCollapse() {
     document.querySelectorAll('.category-details').forEach(details => {

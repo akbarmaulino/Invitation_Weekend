@@ -71,6 +71,43 @@ async function loadHistory(startDate = null, endDate = null) {
     
     renderHistoryList(trips);
 }
+// ============================================================
+// HELPER: Calculate Review Progress
+// ============================================================
+
+function calculateReviewProgress(trip) {
+    if (!trip.selection_json || trip.selection_json.length === 0) {
+        return { total: 0, reviewed: 0, percentage: 0, status: 'empty' };
+    }
+    
+    const totalActivities = trip.selection_json.length;
+    
+    // Hitung berapa aktivitas yang sudah direview
+    const reviewedActivities = trip.selection_json.filter(activity => {
+        // Cari review untuk aktivitas ini di trip ini
+        const hasReview = allReviewsCache.find(review => 
+            review.trip_id == trip.id && 
+            review.idea_id == activity.idea_id
+        );
+        return !!hasReview;
+    }).length;
+    
+    const percentage = Math.round((reviewedActivities / totalActivities) * 100);
+    
+    let status = 'none'; // Belum ada review
+    if (reviewedActivities === totalActivities) {
+        status = 'complete'; // Semua selesai
+    } else if (reviewedActivities > 0) {
+        status = 'partial'; // Sebagian
+    }
+    
+    return {
+        total: totalActivities,
+        reviewed: reviewedActivities,
+        percentage: percentage,
+        status: status
+    };
+}
 
 function renderHistoryList(trips) {
     if (!historyList) return;
@@ -91,12 +128,51 @@ function renderHistoryList(trips) {
         item.className = 'history-item';
         item.dataset.tripId = trip.id;
         
-        // ✅ BARIS BARU: Tambah container untuk header + button
+        // ✅ BARU: Hitung review progress
+        const progress = calculateReviewProgress(trip);
+        
+        // ✅ BARU: Generate badge HTML
+        let badgeHtml = '';
+        let statusClass = '';
+        
+        switch(progress.status) {
+            case 'complete':
+                badgeHtml = '<span class="review-badge badge-complete">✅ Selesai Review</span>';
+                statusClass = 'status-complete';
+                break;
+            case 'partial':
+                badgeHtml = `<span class="review-badge badge-partial">⏳ ${progress.reviewed}/${progress.total} Review</span>`;
+                statusClass = 'status-partial';
+                break;
+            case 'none':
+                badgeHtml = '<span class="review-badge badge-none">📝 Belum Review</span>';
+                statusClass = 'status-none';
+                break;
+            case 'empty':
+                badgeHtml = '<span class="review-badge badge-empty">⚠️ Tidak Ada Aktivitas</span>';
+                statusClass = 'status-empty';
+                break;
+        }
+        
+        // ✅ BARU: Progress bar HTML
+        const progressBarHtml = progress.total > 0 ? `
+            <div class="review-progress-bar">
+                <div class="progress-bar-fill" style="width: ${progress.percentage}%"></div>
+            </div>
+        ` : '';
+        
+        // ✅ BARU: Tambah status class ke item
+        item.classList.add(statusClass);
+        
         item.innerHTML = `
             <div class="history-item-header">
                 <div class="history-item-info">
-                    <h4>Trip ${formatTanggalIndonesia(trip.trip_date)} (${trip.trip_day})</h4>
+                    <div class="trip-header-row">
+                        <h4>Trip ${formatTanggalIndonesia(trip.trip_date)} (${trip.trip_day})</h4>
+                        ${badgeHtml}
+                    </div>
                     <p>${trip.selection_json.length} aktivitas terpilih.</p>
+                    ${progressBarHtml}
                 </div>
                 <button class="btn-regenerate-ticket" data-trip-id="${trip.id}" title="Lihat Tiket Trip Ini">
                     🎫 Lihat Tiket
@@ -104,12 +180,12 @@ function renderHistoryList(trips) {
             </div>
         `;
         
-        // ✅ BARIS BARU: Click handler untuk area info (bukan tombol)
+        // Click handler untuk area info
         const infoArea = item.querySelector('.history-item-info');
         infoArea.addEventListener('click', () => showTripDetails(trip.id));
         infoArea.style.cursor = 'pointer';
         
-        // ✅ BARIS BARU: Click handler untuk tombol re-generate
+        // Click handler untuk tombol re-generate
         const regenBtn = item.querySelector('.btn-regenerate-ticket');
         regenBtn.addEventListener('click', (e) => {
             e.stopPropagation();

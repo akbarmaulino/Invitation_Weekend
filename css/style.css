@@ -709,6 +709,18 @@ button:focus, a:focus, input:focus, textarea:focus, select:focus, .filter-days l
     border-bottom: 1px dashed #d0d0d0;
 }
 
+.review-trip-date {
+    font-size: 0.85em;
+    color: var(--color-primary);
+    background-color: var(--color-background-light);
+    padding: 5px 10px;
+    border-radius: 6px;
+    display: inline-block;
+    margin: 5px 0 10px 0;
+    font-weight: 500;
+    border-left: 3px solid var(--color-primary);
+}
+
 .review-item:last-child {
     border-bottom: none;
 }
