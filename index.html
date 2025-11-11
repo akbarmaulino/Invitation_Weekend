@@ -11,7 +11,18 @@
 <body>
 
     <header>
-        <h1>TripLove ❤️</h1>
+        <div class="header-container">
+            <h1>TripLove ❤️</h1>
+            
+            <!-- NEW: Navigation Bar -->
+            <nav class="main-nav">
+                <a href="index.html" class="nav-link active">🏠 Home</a>
+                <a href="statistics.html" class="nav-link">📊 Statistics</a>
+                <a href="gallery.html" class="nav-link">📸 Gallery</a>
+                <a href="#" id="viewHistoryBtn" class="nav-link">📖 History</a>
+            </nav>
+        </div>
+        
         <p id="countdownDisplay">Memuat hitungan mundur...</p>
         
         <div class="date-control">
@@ -33,22 +44,32 @@
             </div>
             <div class="buttons-wrap">
                 <button id="addIdeaBtn" class="btn secondary">Tambah Ide Baru 💡</button>
-                <button id="viewHistoryBtn" class="btn secondary">Lihat Riwayat & Review 📖</button>
+                <!-- <button id="viewHistoryBtn" class="btn secondary">Lihat Riwayat & Review 📖</button> -->
             </div>
         </div>
         <div class="search-bar-container">
             <div class="search-input-wrapper">
-                    <span class="search-icon">🔍</span>
-                    <input 
-                        type="text" 
-                        id="searchIdeas" 
-                        placeholder="Cari tempat, kategori, atau kota..." 
-                        autocomplete="off"
-                    >
-                    <button id="clearSearch" class="clear-search-btn" title="Hapus Pencarian">✕</button>
-                </div>
-                <small class="search-hint">💡 Ketik nama tempat (misal: KFC, Starbucks) atau kategori</small>
+                <span class="search-icon">🔍</span>
+                <input 
+                    type="text" 
+                    id="searchIdeas" 
+                    placeholder="Cari tempat, kategori, atau kota..." 
+                    autocomplete="off"
+                >
+                <button id="clearSearch" class="clear-search-btn" title="Hapus Pencarian">✕</button>
             </div>
+            <small class="search-hint">💡 Ketik nama tempat (misal: KFC, Starbucks) atau kategori</small>
+        </div>
+        <!-- NEW: Accordion Controls -->
+        <div class="accordion-controls">
+            <button id="expandAllBtn" class="btn secondary small">
+                ➕ Buka Semua
+            </button>
+            <button id="collapseAllBtn" class="btn secondary small">
+                ➖ Tutup Semua
+            </button>
+            <span class="accordion-hint">💡 Buka/tutup semua kategori sekaligus</span>
+        </div>
         <div id="activityArea" class="activity-area">
             <p>Memuat ide trip...</p>
         </div>

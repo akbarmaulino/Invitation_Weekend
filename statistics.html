@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistics - TripLove ❤️</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>❤️</text></svg>">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/statistics.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+    <header>
+        <div class="header-container">
+            <h1>TripLove ❤️</h1>
+            
+            <!-- Navigation Bar -->
+            <nav class="main-nav">
+                <a href="index.html" class="nav-link">🏠 Home</a>
+                <a href="statistics.html" class="nav-link active">📊 Statistics</a>
+                <a href="gallery.html" class="nav-link">📸 Gallery</a>
+                <a href="index.html#history" class="nav-link">📖 History</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="statistics-container">
+        <div class="page-header">
+            <h2>📊 Trip Statistics & Insights</h2>
+            <p class="subtitle">Lihat ringkasan aktivitas trip Anda</p>
+            
+            <!-- Filter Controls -->
+            <div class="stats-controls">
+                <select id="timeRangeFilter" class="filter-select">
+                    <option value="all">All Time</option>
+                    <option value="30">Last 30 Days</option>
+                    <option value="90">Last 3 Months</option>
+                    <option value="180">Last 6 Months</option>
+                    <option value="365">This Year</option>
+                </select>
+                <button id="refreshStatsBtn" class="btn secondary small">🔄 Refresh</button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingStats" class="loading-container">
+            <div class="loader"></div>
+            <p>Memuat data statistics...</p>
+        </div>
+
+        <!-- Main Stats Content -->
+        <div id="statsContent" style="display: none;">
+            
+            <!-- SECTION 1: Summary Cards -->
+            <section class="stats-section" id="summaryCardsSection">
+                <div class="summary-cards">
+                    <div class="stat-card">
+                        <div class="stat-icon">🎫</div>
+                        <div class="stat-value" id="totalTrips">0</div>
+                        <div class="stat-label">Total Trips</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">📍</div>
+                        <div class="stat-value" id="totalPlaces">0</div>
+                        <div class="stat-label">Places Visited</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">⭐</div>
+                        <div class="stat-value" id="avgRating">0.0</div>
+                        <div class="stat-label">Avg Rating</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-value" id="reviewCompletion">0%</div>
+                        <div class="stat-label">Review Rate</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: Trip Activity Chart -->
+            <section class="stats-section" id="tripActivitySection">
+                <div class="section-header">
+                    <h3>📈 Trip Activity Over Time</h3>
+                    <button class="export-btn" data-chart="tripActivityChart">💾 Export PNG</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="tripActivityChart"></canvas>
+                </div>
+            </section>
+
+            <!-- SECTION 3: Top Places -->
+            <section class="stats-section" id="topPlacesSection">
+                <div class="section-header">
+                    <h3>🏆 Top 10 Most Visited Places</h3>
+                    <button class="export-btn" data-chart="topPlacesChart">💾 Export PNG</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="topPlacesChart"></canvas>
+                </div>
+            </section>
+
+            <!-- SECTION 4: Category Breakdown -->
+            <section class="stats-section" id="categoryBreakdownSection">
+                <div class="section-header">
+                    <h3>📍 Category Distribution</h3>
+                    <button class="export-btn" data-chart="categoryChart">💾 Export PNG</button>
+                </div>
+                <div class="chart-container chart-doughnut">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </section>
+
+            <!-- SECTION 5: Review Quality -->
+            <section class="stats-section" id="reviewQualitySection">
+                <div class="section-header">
+                    <h3>⭐ Review Quality Distribution</h3>
+                </div>
+                <div class="review-quality-bars">
+                    <div class="quality-bar-item">
+                        <span class="quality-label">5 ⭐</span>
+                        <div class="quality-bar">
+                            <div class="quality-bar-fill star-5" id="star5Bar" style="width: 0%"></div>
+                        </div>
+                        <span class="quality-percentage" id="star5Percent">0%</span>
+                    </div>
+                    <div class="quality-bar-item">
+                        <span class="quality-label">4 ⭐</span>
+                        <div class="quality-bar">
+                            <div class="quality-bar-fill star-4" id="star4Bar" style="width: 0%"></div>
+                        </div>
+                        <span class="quality-percentage" id="star4Percent">0%</span>
+                    </div>
+                    <div class="quality-bar-item">
+                        <span class="quality-label">3 ⭐</span>
+                        <div class="quality-bar">
+                            <div class="quality-bar-fill star-3" id="star3Bar" style="width: 0%"></div>
+                        </div>
+                        <span class="quality-percentage" id="star3Percent">0%</span>
+                    </div>
+                    <div class="quality-bar-item">
+                        <span class="quality-label">2 ⭐</span>
+                        <div class="quality-bar">
+                            <div class="quality-bar-fill star-2" id="star2Bar" style="width: 0%"></div>
+                        </div>
+                        <span class="quality-percentage" id="star2Percent">0%</span>
+                    </div>
+                    <div class="quality-bar-item">
+                        <span class="quality-label">1 ⭐</span>
+                        <div class="quality-bar">
+                            <div class="quality-bar-fill star-1" id="star1Bar" style="width: 0%"></div>
+                        </div>
+                        <span class="quality-percentage" id="star1Percent">0%</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 6: Year Summary -->
+            <section class="stats-section" id="yearSummarySection">
+                <div class="section-header">
+                    <h3>🎯 Summary</h3>
+                </div>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">📅 Period:</span>
+                        <span class="summary-value" id="summaryPeriod">All Time</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">🆕 New Places:</span>
+                        <span class="summary-value" id="summaryNewPlaces">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">🏙️ Cities Visited:</span>
+                        <span class="summary-value" id="summaryCities">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">📊 Avg Trip Size:</span>
+                        <span class="summary-value" id="summaryAvgTripSize">0</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">🔥 Most Active Month:</span>
+                        <span class="summary-value" id="summaryActiveMonth">-</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">⭐ Highest Rated:</span>
+                        <span class="summary-value" id="summaryTopRated">-</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- No Data Message -->
+            <div id="noDataMessage" class="no-data-message" style="display: none;">
+                <p>📊 Belum ada data untuk ditampilkan.</p>
+                <p>Mulai buat trip dan review untuk melihat statistics!</p>
+                <a href="index.html" class="btn primary">🏠 Kembali ke Home</a>
+            </div>
+
+        </div>
+    </main>
+
+    <script type="module" src="js/statistics.js"></script>
+</body>
+</html>

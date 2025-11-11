@@ -2048,11 +2048,94 @@ generateBtn.addEventListener('click', () => {
     window.location.href = 'summary.html';
 });
 
+// ============================================================
+// ACCORDION CONTROLS: EXPAND/COLLAPSE ALL
+// ============================================================
 
+function setupAccordionControls() {
+    const expandBtn = document.getElementById('expandAllBtn');
+    const collapseBtn = document.getElementById('collapseAllBtn');
+    
+    if (!expandBtn || !collapseBtn) return;
+    
+    // Expand All
+    expandBtn.addEventListener('click', () => {
+        const allDetails = document.querySelectorAll('.city-details, .category-details, .subtype-details');
+        allDetails.forEach(detail => {
+            detail.open = true;
+        });
+        
+        // Save state
+        localStorage.setItem('accordionState', 'expanded');
+        
+        // Visual feedback
+        expandBtn.style.opacity = '0.5';
+        setTimeout(() => {
+            expandBtn.style.opacity = '1';
+        }, 200);
+    });
+    
+    // Collapse All
+    collapseBtn.addEventListener('click', () => {
+        const allDetails = document.querySelectorAll('.city-details, .category-details, .subtype-details');
+        allDetails.forEach(detail => {
+            detail.open = false;
+        });
+        
+        // Save state
+        localStorage.setItem('accordionState', 'collapsed');
+        
+        // Visual feedback
+        collapseBtn.style.opacity = '0.5';
+        setTimeout(() => {
+            collapseBtn.style.opacity = '1';
+        }, 200);
+    });
+}
+
+// Restore accordion state from localStorage
+function restoreAccordionState() {
+    const savedState = localStorage.getItem('accordionState');
+    
+    if (savedState === 'expanded') {
+        const allDetails = document.querySelectorAll('.city-details, .category-details, .subtype-details');
+        allDetails.forEach(detail => {
+            detail.open = true;
+        });
+    } else if (savedState === 'collapsed') {
+        const allDetails = document.querySelectorAll('.city-details, .category-details, .subtype-details');
+        allDetails.forEach(detail => {
+            detail.open = false;
+        });
+    }
+    // Jika null/undefined, pakai default (yang di-set di HTML)
+}
+
+// ============================================================
+// NAVIGATION: History Button Handler
+// ============================================================
+
+function setupNavigationHandlers() {
+    const historyNavBtn = document.getElementById('historyNavBtn');
+    const viewHistoryBtn = document.getElementById('viewHistoryBtn');
+    
+    if (historyNavBtn && viewHistoryBtn) {
+        historyNavBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Trigger modal history yang sudah ada
+            viewHistoryBtn.click();
+        });
+    }
+}
 // Init
 (async function init(){
     await fetchData(); 
     
     loadInitialState();
     startCountdown();
+    
+    // NEW: Setup accordion controls
+    setupAccordionControls();
+    restoreAccordionState();
+    setupNavigationHandlers();
 })();

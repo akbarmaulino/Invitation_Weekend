@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Gallery - TripLove ❤️</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>❤️</text></svg>">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/gallery.css">
+    <!-- GLightbox CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox@3.2.0/dist/css/glightbox.min.css">
+</head>
+<body>
+
+    <header>
+        <div class="header-container">
+            <h1>TripLove ❤️</h1>
+            
+            <!-- Navigation Bar -->
+            <nav class="main-nav">
+                <a href="index.html" class="nav-link">🏠 Home</a>
+                <a href="statistics.html" class="nav-link">📊 Statistics</a>
+                <a href="gallery.html" class="nav-link active">📸 Gallery</a>
+                <a href="index.html#history" class="nav-link">📖 History</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="gallery-container">
+        <div class="page-header">
+            <h2>📸 Photo Gallery</h2>
+            <p class="subtitle">Semua kenangan indah trip Anda dalam satu tempat</p>
+            
+            <!-- Filter Controls -->
+            <div class="gallery-controls">
+                <select id="tripFilter" class="filter-select">
+                    <option value="all">Semua Trip</option>
+                    <!-- Dynamic options akan ditambahkan via JS -->
+                </select>
+                
+                <select id="categoryFilter" class="filter-select">
+                    <option value="all">Semua Kategori</option>
+                    <!-- Dynamic options akan ditambahkan via JS -->
+                </select>
+                
+                <select id="ratingFilter" class="filter-select">
+                    <option value="all">Semua Rating</option>
+                    <option value="5">⭐⭐⭐⭐⭐ (5 Bintang)</option>
+                    <option value="4">⭐⭐⭐⭐ (4+ Bintang)</option>
+                    <option value="3">⭐⭐⭐ (3+ Bintang)</option>
+                </select>
+                
+                <select id="sortFilter" class="filter-select">
+                    <option value="date-desc">Terbaru</option>
+                    <option value="date-asc">Terlama</option>
+                    <option value="rating-desc">Rating Tertinggi</option>
+                    <option value="rating-asc">Rating Terendah</option>
+                </select>
+                
+                <button id="resetFiltersBtn" class="btn secondary small">🔄 Reset</button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingGallery" class="loading-container">
+            <div class="loader"></div>
+            <p>Memuat foto-foto...</p>
+        </div>
+
+        <!-- Gallery Content -->
+        <div id="galleryContent" style="display: none;">
+            
+            <!-- Stats Bar -->
+            <div class="gallery-stats">
+                <span id="photoCount" class="stat-item">
+                    <strong>0</strong> foto
+                </span>
+                <span class="stat-divider">•</span>
+                <span id="tripCount" class="stat-item">
+                    <strong>0</strong> trip
+                </span>
+                <span class="stat-divider">•</span>
+                <span id="placeCount" class="stat-item">
+                    <strong>0</strong> tempat
+                </span>
+            </div>
+            
+            <!-- Photo Grid -->
+            <div id="photoGrid" class="photo-grid">
+                <!-- Photos akan di-render di sini via JS -->
+            </div>
+            
+            <!-- No Photos Message -->
+            <div id="noPhotosMessage" class="no-photos-message" style="display: none;">
+                <div class="no-photos-icon">📷</div>
+                <p>Tidak ada foto ditemukan</p>
+                <p class="hint">Coba ubah filter atau mulai tambahkan foto di review Anda!</p>
+                <a href="index.html" class="btn primary">🏠 Kembali ke Home</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- GLightbox JS -->
+    <script src="https://cdn.jsdelivr.net/npm/glightbox@3.2.0/dist/js/glightbox.min.js"></script>
+    <script type="module" src="js/gallery.js"></script>
+</body>
+</html>

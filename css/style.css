@@ -2201,3 +2201,104 @@ details.city-details > summary::before {
         margin-top: 10px;
     }
 }
+/*==================================================
+  NAVIGATION BAR
+==================================================*/
+
+.header-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.main-nav {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.nav-link {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, var(--color-background-light) 0%, #ffffff 100%);
+    border: 2px solid var(--color-secondary);
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--color-primary);
+    font-weight: 600;
+    font-size: 0.95em;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px var(--color-shadow-light);
+}
+
+.nav-link:hover {
+    background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-background-light) 100%);
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px var(--color-shadow-medium);
+}
+
+.nav-link.active {
+    background: linear-gradient(135deg, var(--color-primary) 0%, #1a4d7a 100%);
+    color: white;
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 10px rgba(3, 37, 76, 0.3);
+}
+
+/*==================================================
+  ACCORDION CONTROLS
+==================================================*/
+
+.accordion-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin: 15px 0 20px 0;
+    padding: 15px;
+    background: linear-gradient(135deg, #fff9e6 0%, #fff4d6 100%);
+    border-radius: 12px;
+    border: 2px dashed #ffc107;
+}
+
+.accordion-controls .btn.small {
+    padding: 8px 16px;
+    font-size: 0.9em;
+}
+
+.accordion-hint {
+    font-size: 0.85em;
+    color: var(--color-muted);
+    font-style: italic;
+    margin-left: 10px;
+}
+
+/*==================================================
+  RESPONSIVE NAVIGATION
+==================================================*/
+
+@media (max-width: 768px) {
+    .main-nav {
+        gap: 5px;
+    }
+    
+    .nav-link {
+        padding: 8px 12px;
+        font-size: 0.85em;
+    }
+    
+    .accordion-controls {
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px;
+    }
+    
+    .accordion-controls .btn.small {
+        width: 100%;
+    }
+    
+    .accordion-hint {
+        margin-left: 0;
+        text-align: center;
+    }
+}
