@@ -1259,9 +1259,11 @@ function renderCategoriesForDay(selectedDate) {
                     if (subtypeBadge) {
                         const badgeSpan = document.createElement('span');
                         badgeSpan.className = 'selection-badge small';
+                        badgeSpan.textContent = selectedCountInSubtype;
                         summary.appendChild(badgeSpan);
                     }
-                    
+
+
                     details.appendChild(summary);
 
                     const optionsWrap = document.createElement('div');
@@ -2049,7 +2051,7 @@ generateBtn.addEventListener('click', () => {
 });
 
 // ============================================================
-// ACCORDION CONTROLS: EXPAND/COLLAPSE ALL
+// ACCORDION CONTROLS: EXPAND/COLLAPSE ALL (FIXED)
 // ============================================================
 
 function setupAccordionControls() {
@@ -2058,57 +2060,106 @@ function setupAccordionControls() {
     
     if (!expandBtn || !collapseBtn) return;
     
-    // Expand All
+    // Expand All - FIXED: Buka BERTAHAP dari luar ke dalam
     expandBtn.addEventListener('click', () => {
-        const allDetails = document.querySelectorAll('.city-details, .category-details, .subtype-details');
-        allDetails.forEach(detail => {
+        expandBtn.disabled = true;
+        expandBtn.style.opacity = '0.5';
+        
+        // STEP 1: Buka City dulu (Level 0)
+        const cityDetails = document.querySelectorAll('.city-details');
+        cityDetails.forEach(detail => {
             detail.open = true;
         });
         
-        // Save state
-        localStorage.setItem('accordionState', 'expanded');
-        
-        // Visual feedback
-        expandBtn.style.opacity = '0.5';
+        // STEP 2: Tunggu 50ms, lalu buka Category (Level 1)
         setTimeout(() => {
-            expandBtn.style.opacity = '1';
-        }, 200);
+            const categoryDetails = document.querySelectorAll('.category-details');
+            categoryDetails.forEach(detail => {
+                detail.open = true;
+            });
+            
+            // STEP 3: Tunggu lagi 50ms, lalu buka Subtype (Level 2)
+            setTimeout(() => {
+                const subtypeDetails = document.querySelectorAll('.subtype-details');
+                subtypeDetails.forEach(detail => {
+                    detail.open = true;
+                });
+                
+                // Save state
+                localStorage.setItem('accordionState', 'expanded');
+                
+                // Re-enable button
+                expandBtn.disabled = false;
+                expandBtn.style.opacity = '1';
+                
+                console.log('✅ Semua accordion dibuka:', {
+                    cities: cityDetails.length,
+                    categories: document.querySelectorAll('.category-details').length,
+                    subtypes: document.querySelectorAll('.subtype-details').length
+                });
+            }, 50);
+        }, 50);
     });
     
-    // Collapse All
+    // Collapse All - FIXED: Tutup BERTAHAP dari dalam ke luar
     collapseBtn.addEventListener('click', () => {
-        const allDetails = document.querySelectorAll('.city-details, .category-details, .subtype-details');
-        allDetails.forEach(detail => {
+        collapseBtn.disabled = true;
+        collapseBtn.style.opacity = '0.5';
+        
+        // STEP 1: Tutup Subtype dulu (Level 2)
+        const subtypeDetails = document.querySelectorAll('.subtype-details');
+        subtypeDetails.forEach(detail => {
             detail.open = false;
         });
         
-        // Save state
-        localStorage.setItem('accordionState', 'collapsed');
-        
-        // Visual feedback
-        collapseBtn.style.opacity = '0.5';
+        // STEP 2: Tunggu 50ms, tutup Category (Level 1)
         setTimeout(() => {
-            collapseBtn.style.opacity = '1';
-        }, 200);
+            const categoryDetails = document.querySelectorAll('.category-details');
+            categoryDetails.forEach(detail => {
+                detail.open = false;
+            });
+            
+            // STEP 3: Tunggu lagi 50ms, tutup City (Level 0)
+            setTimeout(() => {
+                const cityDetails = document.querySelectorAll('.city-details');
+                cityDetails.forEach(detail => {
+                    detail.open = false;
+                });
+                
+                // Save state
+                localStorage.setItem('accordionState', 'collapsed');
+                
+                // Re-enable button
+                collapseBtn.disabled = false;
+                collapseBtn.style.opacity = '1';
+                
+                console.log('✅ Semua accordion ditutup');
+            }, 50);
+        }, 50);
     });
 }
 
-// Restore accordion state from localStorage
+
+// Restore accordion state from localStorage (IMPROVED)
 function restoreAccordionState() {
     const savedState = localStorage.getItem('accordionState');
     
     if (savedState === 'expanded') {
-        const allDetails = document.querySelectorAll('.city-details, .category-details, .subtype-details');
-        allDetails.forEach(detail => {
-            detail.open = true;
-        });
+        // Buka semua level
+        setTimeout(() => {
+            document.querySelectorAll('.city-details, .category-details, .subtype-details').forEach(detail => {
+                detail.open = true;
+            });
+            console.log('✅ Restored: All expanded');
+        }, 100); // Small delay untuk ensure DOM ready
     } else if (savedState === 'collapsed') {
-        const allDetails = document.querySelectorAll('.city-details, .category-details, .subtype-details');
-        allDetails.forEach(detail => {
+        // Tutup semua level
+        document.querySelectorAll('.city-details, .category-details, .subtype-details').forEach(detail => {
             detail.open = false;
         });
+        console.log('✅ Restored: All collapsed');
     }
-    // Jika null/undefined, pakai default (yang di-set di HTML)
+    // Jika null/undefined, pakai default (open) yang di-set di HTML
 }
 
 // ============================================================
