@@ -79,16 +79,24 @@
 }
 
 /*==================================================
-  STATS SECTIONS
+  STATS SECTIONS (FIXED SPACING)
+==================================================*/
+
+
+/* PATCH untuk statistics.css - Section Spacing Fix */
+
+/*==================================================
+  STATS SECTIONS (FIXED SPACING)
 ==================================================*/
 
 .stats-section {
     background: white;
     border-radius: 16px;
-    padding: 30px;
+    padding: 30px 25px; /* ✅ Kurangi padding horizontal */
     margin-bottom: 30px;
     box-shadow: 0 4px 12px rgba(3, 37, 76, 0.08);
     border: 1px solid rgba(3, 37, 76, 0.05);
+    overflow: hidden; /* ✅ Prevent overflow */
 }
 
 .section-header {
@@ -96,6 +104,7 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 25px;
+    padding: 0 5px; /* ✅ Small padding untuk alignment */
 }
 
 .section-header h3 {
@@ -173,17 +182,35 @@
 
 .chart-container {
     position: relative;
+    width: 100%;
     height: 350px;
     margin-top: 20px;
+    padding: 0; /* ✅ Remove padding, biar chart full width */
 }
 
 .chart-doughnut {
-    height: 400px;
+    height: 450px; /* ✅ Tinggi lebih untuk legend */
+    max-width: 600px; /* ✅ Max width untuk doughnut */
+    margin: 0 auto;
+    padding: 20px 0;
 }
 
 canvas {
-    max-width: 100%;
-    height: auto !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    
+    /* ✅ KRITIS untuk sharp rendering */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    
+    /* Smooth anti-aliasing */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    
+    /* Hardware acceleration */
+    transform: translateZ(0);
+    backface-visibility: hidden;
 }
 
 /*==================================================
@@ -306,7 +333,26 @@ canvas {
 }
 
 /*==================================================
-  RESPONSIVE
+  RESPONSIVE - TABLET
+==================================================*/
+
+@media (max-width: 992px) {
+    .stats-section {
+        padding: 25px 20px;
+    }
+    
+    .chart-container {
+        height: 300px;
+    }
+    
+    .chart-doughnut {
+        height: 400px;
+        max-width: 500px;
+    }
+}
+
+/*==================================================
+  RESPONSIVE - MOBILE
 ==================================================*/
 
 @media (max-width: 768px) {
@@ -314,12 +360,8 @@ canvas {
         padding: 15px;
     }
     
-    .page-header h2 {
-        font-size: 1.8em;
-    }
-    
     .stats-section {
-        padding: 20px;
+        padding: 20px 15px;
         margin-bottom: 20px;
     }
     
@@ -333,72 +375,29 @@ canvas {
         width: 100%;
     }
     
-    .summary-cards {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 15px;
-    }
-    
-    .stat-card {
-        padding: 20px 15px;
-    }
-    
-    .stat-icon {
-        font-size: 2em;
-    }
-    
-    .stat-value {
-        font-size: 2em;
-    }
-    
     .chart-container {
-        height: 300px;
+        height: 280px;
     }
     
     .chart-doughnut {
         height: 350px;
-    }
-    
-    .quality-bar-item {
-        grid-template-columns: 50px 1fr 50px;
-        gap: 10px;
-    }
-    
-    .quality-label {
-        font-size: 1em;
-    }
-    
-    .quality-bar {
-        height: 25px;
-    }
-    
-    .summary-grid {
-        grid-template-columns: 1fr;
-        gap: 15px;
-    }
-    
-    .summary-item {
-        padding: 12px 15px;
+        max-width: 100%;
     }
 }
 
 @media (max-width: 480px) {
-    .page-header h2 {
-        font-size: 1.5em;
+    .stats-section {
+        padding: 15px;
     }
     
-    .subtitle {
-        font-size: 1em;
+    .chart-container {
+        height: 250px;
     }
     
-    .summary-cards {
-        grid-template-columns: 1fr;
-    }
-    
-    .stat-card {
-        padding: 25px 20px;
+    .chart-doughnut {
+        height: 320px;
     }
 }
-
 /*==================================================
   HIDE/SHOW SECTIONS (UNTUK CUSTOMIZATION)
 ==================================================*/

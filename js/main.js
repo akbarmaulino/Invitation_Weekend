@@ -1120,6 +1120,16 @@ function setupSubtypeSearch() {
         });
     });
 }
+
+function renderCategoryBadge(catGroup, cityId) {
+    const count = countSelectedInCategoryForCity(catGroup, cityId);
+    
+    // KRITIS: Pastikan badge selalu render ulang
+    if (count > 0) {
+        return `<span class="selection-badge">${count}</span>`;
+    }
+    return '';
+}
 function renderCategoriesForDay(selectedDate) {
     activityArea.innerHTML = '';
     
@@ -1214,9 +1224,8 @@ function renderCategoriesForDay(selectedDate) {
             
             const icon = catGroup.subtypes[0]?.icon || '📍';
             
-            const selectedCountInCategory = countSelectedInCategoryForCity(catGroup, city.id);
-            const categoryBadge = selectedCountInCategory > 0 ? `<span class="selection-badge">${selectedCountInCategory}</span>` : '';
-            
+            const categoryBadge = renderCategoryBadge(catGroup, city.id);
+
             card.innerHTML = `
                 <details class="category-details" open>
                     <summary class="category-summary">
@@ -1338,7 +1347,14 @@ function renderCategoriesForDay(selectedDate) {
     populateIdeaCategorySelect();
     renderSelectedActivitiesPanel();
 }
-
+function renderSubtypeBadge(typeKey, ideasList) {
+    const count = countSelectedInSubtypeForCity(typeKey, ideasList);
+    
+    if (count > 0) {
+        return `<span class="selection-badge small">${count}</span>`;
+    }
+    return '';
+}
 function countSelectedInSubtypeForCity(typeKey, ideasList) {
     let count = 0;
     const level2Id = `cat-${typeKey}`;
@@ -2060,85 +2076,77 @@ function setupAccordionControls() {
     
     if (!expandBtn || !collapseBtn) return;
     
-    // Expand All - FIXED: Buka BERTAHAP dari luar ke dalam
-    expandBtn.addEventListener('click', () => {
-        expandBtn.disabled = true;
-        expandBtn.style.opacity = '0.5';
+    // Helper: Expand all details recursively
+    function expandAllDetails() {
+        // Get ALL details elements at once
+        const allDetails = document.querySelectorAll('details');
         
-        // STEP 1: Buka City dulu (Level 0)
-        const cityDetails = document.querySelectorAll('.city-details');
-        cityDetails.forEach(detail => {
+        // Open them all
+        allDetails.forEach(detail => {
             detail.open = true;
         });
         
-        // STEP 2: Tunggu 50ms, lalu buka Category (Level 1)
+        // Double-check after short delay (force re-render)
         setTimeout(() => {
-            const categoryDetails = document.querySelectorAll('.category-details');
-            categoryDetails.forEach(detail => {
+            const stillClosed = document.querySelectorAll('details:not([open])');
+            stillClosed.forEach(detail => {
+                detail.setAttribute('open', '');
                 detail.open = true;
             });
             
-            // STEP 3: Tunggu lagi 50ms, lalu buka Subtype (Level 2)
-            setTimeout(() => {
-                const subtypeDetails = document.querySelectorAll('.subtype-details');
-                subtypeDetails.forEach(detail => {
-                    detail.open = true;
-                });
-                
-                // Save state
-                localStorage.setItem('accordionState', 'expanded');
-                
-                // Re-enable button
-                expandBtn.disabled = false;
-                expandBtn.style.opacity = '1';
-                
-                console.log('✅ Semua accordion dibuka:', {
-                    cities: cityDetails.length,
-                    categories: document.querySelectorAll('.category-details').length,
-                    subtypes: document.querySelectorAll('.subtype-details').length
-                });
-            }, 50);
-        }, 50);
-    });
+            console.log('✅ Accordion dibuka:', {
+                total: allDetails.length,
+                forcedOpen: stillClosed.length
+            });
+        }, 100);
+    }
     
-    // Collapse All - FIXED: Tutup BERTAHAP dari dalam ke luar
-    collapseBtn.addEventListener('click', () => {
-        collapseBtn.disabled = true;
-        collapseBtn.style.opacity = '0.5';
+    // Helper: Collapse all details
+    function collapseAllDetails() {
+        const allDetails = document.querySelectorAll('details');
         
-        // STEP 1: Tutup Subtype dulu (Level 2)
-        const subtypeDetails = document.querySelectorAll('.subtype-details');
-        subtypeDetails.forEach(detail => {
+        allDetails.forEach(detail => {
             detail.open = false;
+            detail.removeAttribute('open');
         });
         
-        // STEP 2: Tunggu 50ms, tutup Category (Level 1)
+        console.log('✅ Accordion ditutup:', allDetails.length);
+    }
+    
+    // Expand All Button
+    expandBtn.addEventListener('click', () => {
+        expandBtn.disabled = true;
+        expandBtn.textContent = '⏳ Membuka...';
+        
+        expandAllDetails();
+        
+        // Save state
+        localStorage.setItem('accordionState', 'expanded');
+        
+        // Re-enable button
         setTimeout(() => {
-            const categoryDetails = document.querySelectorAll('.category-details');
-            categoryDetails.forEach(detail => {
-                detail.open = false;
-            });
-            
-            // STEP 3: Tunggu lagi 50ms, tutup City (Level 0)
-            setTimeout(() => {
-                const cityDetails = document.querySelectorAll('.city-details');
-                cityDetails.forEach(detail => {
-                    detail.open = false;
-                });
-                
-                // Save state
-                localStorage.setItem('accordionState', 'collapsed');
-                
-                // Re-enable button
-                collapseBtn.disabled = false;
-                collapseBtn.style.opacity = '1';
-                
-                console.log('✅ Semua accordion ditutup');
-            }, 50);
-        }, 50);
+            expandBtn.disabled = false;
+            expandBtn.textContent = '➕ Buka Semua';
+        }, 150);
+    });
+    
+    // Collapse All Button
+    collapseBtn.addEventListener('click', () => {
+        collapseBtn.disabled = true;
+        collapseBtn.textContent = '⏳ Menutup...';
+        
+        collapseAllDetails();
+        
+        // Save state
+        localStorage.setItem('accordionState', 'collapsed');
+        
+        // Re-enable button
+        setTimeout(() => {
+            collapseBtn.disabled = false;
+            collapseBtn.textContent = '➖ Tutup Semua';
+        }, 150);
     });
 }
-
 
 // Restore accordion state from localStorage (IMPROVED)
 function restoreAccordionState() {
