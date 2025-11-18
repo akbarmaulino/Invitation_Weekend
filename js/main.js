@@ -10,7 +10,8 @@ import {
     convertToEmbedUrl,
     setupModalClose,
     showModal,
-    hideModal
+    hideModal,
+    renderReviewerName
 } from './utils.js';
 
 let currentUser = { id: 'anon' };
@@ -800,7 +801,7 @@ function renderIdeaDetailModal(ideaId) {
     detailIdeaImage.src = getPublicImageUrl(idea.photo_url);
     detailIdeaImage.onerror = () => detailIdeaImage.src = 'images/placeholder.jpg'; 
 
-    // ✅ 2. RENDER MAPS & INFO SECTION (BARU)
+    // 2. RENDER MAPS & INFO SECTION
     renderMapsAndInfo(idea);
 
     // 3. Update Rating Summary
@@ -831,10 +832,9 @@ function renderIdeaDetailModal(ideaId) {
     detailReviewList.innerHTML = '';
 
     if (reviews.length > 0) {
-        // ✅ BARU: Ambil data trip untuk setiap review
+        // Fetch trip data
         const tripIds = [...new Set(reviews.map(r => r.trip_id).filter(Boolean))];
         
-        // ✅ BARU: Fetch trip data dari Supabase
         const fetchTripsPromise = tripIds.length > 0 
             ? supabase.from('trip_history').select('id, trip_date, trip_day').in('id', tripIds)
             : Promise.resolve({ data: [] });
@@ -858,6 +858,7 @@ function renderIdeaDetailModal(ideaId) {
                 return dateB.getTime() - dateA.getTime(); 
             });
 
+            // ✅ UPDATED: Render reviews with reviewer name
             reviews.forEach(review => {
                 const reviewItem = document.createElement('div');
                 reviewItem.className = 'review-item';
@@ -865,7 +866,12 @@ function renderIdeaDetailModal(ideaId) {
                 const reviewStars = '⭐'.repeat(review.rating || 0);
                 const reviewPhotoHtml = renderPhotoUrls(review.photo_url, 'review-photo-main');
                 
-                // ✅ BARU: Format tanggal trip
+                // ✅ NEW: Render reviewer name
+                const reviewerNameHtml = review.reviewer_name 
+                    ? renderReviewerName(review.reviewer_name)
+                    : '';
+                
+                // Trip date HTML
                 let tripDateHtml = '';
                 if (review.trip_id && tripMap[review.trip_id]) {
                     const trip = tripMap[review.trip_id];
@@ -874,6 +880,7 @@ function renderIdeaDetailModal(ideaId) {
                 }
                 
                 reviewItem.innerHTML = `
+                    ${reviewerNameHtml}
                     <div class="review-rating">${reviewStars}</div>
                     ${tripDateHtml}
                     <p class="review-text">${review.review_text || '(Tidak ada komentar)'}</p>
@@ -2066,108 +2073,76 @@ generateBtn.addEventListener('click', () => {
     window.location.href = 'summary.html';
 });
 
+
 // ============================================================
-// ACCORDION CONTROLS: EXPAND/COLLAPSE ALL (FIXED)
+// BUG FIX: ACCORDION CONTROLS - COLLAPSE ALL (DIPERBAIKI)
+// Ganti fungsi collapseAllDetails() yang ada dengan ini
 // ============================================================
 
 function setupAccordionControls() {
-    const expandBtn = document.getElementById('expandAllBtn');
     const collapseBtn = document.getElementById('collapseAllBtn');
     
-    if (!expandBtn || !collapseBtn) return;
+    console.log('🔍 Accordion Controls:', {
+        collapseBtn: collapseBtn ? 'Found ✅' : 'NOT FOUND ❌'
+    });
     
-    // Helper: Expand all details recursively
-    function expandAllDetails() {
-        // Get ALL details elements at once
-        const allDetails = document.querySelectorAll('details');
-        
-        // Open them all
-        allDetails.forEach(detail => {
-            detail.open = true;
-        });
-        
-        // Double-check after short delay (force re-render)
-        setTimeout(() => {
-            const stillClosed = document.querySelectorAll('details:not([open])');
-            stillClosed.forEach(detail => {
-                detail.setAttribute('open', '');
-                detail.open = true;
-            });
-            
-            console.log('✅ Accordion dibuka:', {
-                total: allDetails.length,
-                forcedOpen: stillClosed.length
-            });
-        }, 100);
+    // ✅ Return early jika tombol tidak ada
+    if (!collapseBtn) {
+        console.warn('⚠️ Collapse button not found, skipping accordion controls setup');
+        return;
     }
     
-    // Helper: Collapse all details
+    // ✅ Helper: Collapse all details
     function collapseAllDetails() {
-        const allDetails = document.querySelectorAll('details');
+        const allDetails = document.querySelectorAll('.city-details, .category-details, .subtype-details');
+        
+        console.log('📁 Collapsing', allDetails.length, 'accordions');
         
         allDetails.forEach(detail => {
             detail.open = false;
             detail.removeAttribute('open');
         });
         
-        console.log('✅ Accordion ditutup:', allDetails.length);
+        console.log('✅ Collapse complete');
     }
     
-    // Expand All Button
-    expandBtn.addEventListener('click', () => {
-        expandBtn.disabled = true;
-        expandBtn.textContent = '⏳ Membuka...';
+    // ✅ Collapse All Button Event
+    collapseBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         
-        expandAllDetails();
-        
-        // Save state
-        localStorage.setItem('accordionState', 'expanded');
-        
-        // Re-enable button
-        setTimeout(() => {
-            expandBtn.disabled = false;
-            expandBtn.textContent = '➕ Buka Semua';
-        }, 150);
-    });
-    
-    // Collapse All Button
-    collapseBtn.addEventListener('click', () => {
         collapseBtn.disabled = true;
         collapseBtn.textContent = '⏳ Menutup...';
         
-        collapseAllDetails();
-        
-        // Save state
-        localStorage.setItem('accordionState', 'collapsed');
-        
-        // Re-enable button
+        // Collapse dengan slight delay untuk visual feedback
         setTimeout(() => {
+            collapseAllDetails();
+            localStorage.setItem('accordionState', 'collapsed');
+            
             collapseBtn.disabled = false;
             collapseBtn.textContent = '➖ Tutup Semua';
-        }, 150);
+        }, 100);
     });
+    
+    console.log('✅ Accordion controls initialized (Collapse only)');
 }
 
 // Restore accordion state from localStorage (IMPROVED)
 function restoreAccordionState() {
     const savedState = localStorage.getItem('accordionState');
     
-    if (savedState === 'expanded') {
-        // Buka semua level
+    if (savedState === 'collapsed') {
+        // Tutup semua level
         setTimeout(() => {
             document.querySelectorAll('.city-details, .category-details, .subtype-details').forEach(detail => {
-                detail.open = true;
+                detail.open = false;
+                detail.removeAttribute('open');
             });
-            console.log('✅ Restored: All expanded');
-        }, 100); // Small delay untuk ensure DOM ready
-    } else if (savedState === 'collapsed') {
-        // Tutup semua level
-        document.querySelectorAll('.city-details, .category-details, .subtype-details').forEach(detail => {
-            detail.open = false;
-        });
-        console.log('✅ Restored: All collapsed');
+            console.log('✅ Restored: All collapsed');
+        }, 100);
     }
-    // Jika null/undefined, pakai default (open) yang di-set di HTML
+    // ✅ Jika tidak ada state atau state lain, biarkan default (open)
+    // Default behavior dari HTML <details open> akan jalan
 }
 
 // ============================================================

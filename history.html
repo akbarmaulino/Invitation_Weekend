@@ -133,10 +133,27 @@
                     <!-- Stars akan dirender via JS -->
                 </div>
                 
-                <label for="reviewText">Ulasan (Opsional):</label>
+                <!-- ✅ NEW: Reviewer Name Dropdown -->
+                <label for="reviewerNameInputHistory" style="margin-top: 15px;">👤 Nama Reviewer:</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <select id="reviewerNameSelectHistory" style="flex: 1;">
+                        <option value="">-- Pilih Nama --</option>
+                        <!-- Dynamic options akan ditambahkan via JS -->
+                        <option value="custom">➕ Nama Baru...</option>
+                    </select>
+                </div>
+                <input 
+                    type="text" 
+                    id="reviewerNameInputHistory" 
+                    placeholder="Masukkan nama reviewer" 
+                    maxlength="50"
+                    style="display: none; margin-top: 10px;"
+                >
+                
+                <label for="reviewText" style="margin-top: 15px;">Ulasan (Opsional):</label>
                 <textarea id="reviewText" placeholder="Bagaimana pengalaman Anda?" maxlength="300"></textarea>
                 
-                <label for="reviewPhoto">📷 Foto (Opsional, Max 5):</label>
+                <label for="reviewPhoto" style="margin-top: 10px;">📷 Foto (Opsional, Max 5):</label>
                 <input type="file" id="reviewPhoto" accept="image/*" multiple>
                 <div id="reviewPhotoPreview" class="photo-preview"></div>
                 

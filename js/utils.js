@@ -306,3 +306,126 @@ export function sortAlphabetically(arr, key = 'name') {
         return nameA.localeCompare(nameB, 'id-ID');
     });
 }
+
+/**
+ * Fetch unique reviewer names dari database
+ * @param {string} userId - User ID
+ * @returns {Promise<Array<string>>} Array of reviewer names
+ */
+export async function fetchReviewerNames(userId = 'anon') {
+    try {
+        const { data: reviews, error } = await supabase
+            .from('idea_reviews')
+            .select('reviewer_name')
+            .eq('user_id', userId)
+            .not('reviewer_name', 'is', null);
+        
+        if (error) throw error;
+        
+        // Get unique names
+        const uniqueNames = [...new Set(reviews.map(r => r.reviewer_name).filter(Boolean))];
+        
+        // Sort alphabetically
+        return uniqueNames.sort((a, b) => a.localeCompare(b, 'id-ID'));
+    } catch (error) {
+        console.error('Error fetching reviewer names:', error);
+        return [];
+    }
+}
+
+/**
+ * Populate reviewer name dropdown
+ * @param {HTMLSelectElement} selectElement - Select element
+ * @param {Array<string>} names - Array of names
+ */
+export function populateReviewerNameDropdown(selectElement, names) {
+    if (!selectElement) return;
+    
+    // Clear existing options except first and last (default + custom)
+    const firstOption = selectElement.options[0]; // "-- Pilih Nama --"
+    const lastOption = selectElement.options[selectElement.options.length - 1]; // "➕ Nama Baru..."
+    
+    selectElement.innerHTML = '';
+    selectElement.appendChild(firstOption);
+    
+    // Add name options
+    names.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        selectElement.appendChild(option);
+    });
+    
+    // Re-add custom option
+    selectElement.appendChild(lastOption);
+}
+
+/**
+ * Setup reviewer name input behavior
+ * @param {HTMLSelectElement} selectElement - Select element
+ * @param {HTMLInputElement} inputElement - Input element
+ */
+export function setupReviewerNameInput(selectElement, inputElement) {
+    if (!selectElement || !inputElement) return;
+    
+    selectElement.addEventListener('change', (e) => {
+        const value = e.target.value;
+        
+        if (value === 'custom') {
+            inputElement.style.display = 'block';
+            inputElement.required = true;
+            inputElement.focus();
+        } else {
+            inputElement.style.display = 'none';
+            inputElement.required = false;
+            inputElement.value = '';
+        }
+    });
+}
+
+/**
+ * Get selected reviewer name (dari dropdown atau input)
+ * @param {HTMLSelectElement} selectElement - Select element
+ * @param {HTMLInputElement} inputElement - Input element
+ * @returns {string|null} Reviewer name or null
+ */
+export function getSelectedReviewerName(selectElement, inputElement) {
+    if (!selectElement) return null;
+    
+    const selectedValue = selectElement.value;
+    
+    if (selectedValue === 'custom') {
+        return inputElement?.value.trim() || null;
+    } else if (selectedValue === '') {
+        return null;
+    } else {
+        return selectedValue;
+    }
+}
+
+/**
+ * Render reviewer name in review display
+ * @param {string} reviewerName - Reviewer name
+ * @returns {string} HTML string
+ */
+export function renderReviewerName(reviewerName) {
+    if (!reviewerName) return '';
+    
+    return `
+        <div class="reviewer-info" style="
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            background: linear-gradient(135deg, #e1f3ff 0%, #c4e8ff 100%);
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--color-primary);
+            margin-bottom: 8px;
+        ">
+            <span style="font-size: 1.1em;">👤</span>
+            ${reviewerName}
+        </div>
+    `;
+}

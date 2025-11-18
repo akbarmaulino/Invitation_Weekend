@@ -241,19 +241,35 @@
 
     <div id="ideaReviewModal" class="modal hidden">
         <div class="modal-content">
-            <h3>Review Ide: <span id="reviewIdeaName">Nama Ide</span></h3>
+            <h3>⭐ Review: <span id="reviewIdeaName">Nama Ide</span></h3>
             <form id="ideaReviewForm">
                 <input type="hidden" id="reviewIdeaId">
                 <input type="hidden" id="reviewTripId">
 
                 <label>Rating Anda:</label>
-                <div id="ideaReviewRatingDiv" class="star-rating">
-                    </div>
+                <div id="ideaReviewRatingDiv" class="star-rating"></div>
 
-                <label for="ideaReviewText">Ulasan Anda (Opsional):</label>
+                <!-- ✅ NEW: Reviewer Name Dropdown -->
+                <label for="reviewerNameInput" style="margin-top: 15px;">👤 Nama Reviewer:</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <select id="reviewerNameSelect" style="flex: 1;">
+                        <option value="">-- Pilih Nama --</option>
+                        <!-- Dynamic options akan ditambahkan via JS -->
+                        <option value="custom">➕ Nama Baru...</option>
+                    </select>
+                </div>
+                <input 
+                    type="text" 
+                    id="reviewerNameInput" 
+                    placeholder="Masukkan nama reviewer (misal: Ciaaa, Lino)" 
+                    maxlength="50"
+                    style="display: none; margin-top: 10px;"
+                >
+
+                <label for="ideaReviewText" style="margin-top: 15px;">Ulasan Anda (Opsional):</label>
                 <textarea id="ideaReviewText" placeholder="Bagaimana pengalaman Anda? (Maks 300 karakter)" maxlength="300"></textarea>
 
-                <label for="ideaReviewPhotoInput" style="margin-top: 10px;">Foto Kenangan (Opsional):</label>
+                <label for="ideaReviewPhotoInput" style="margin-top: 10px;">Foto Kenangan (Opsional, Max 5):</label>
                 <input type="file" id="ideaReviewPhotoInput" accept="image/*" multiple>
                 <div id="ideaReviewPhotoPreview" style="margin-top: 10px;"></div>
 

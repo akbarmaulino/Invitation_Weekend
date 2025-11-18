@@ -9,9 +9,15 @@ import {
     calculateAverageRating,
     renderStars,
     showModal,
-    hideModal
+    hideModal,
+    fetchReviewerNames,
+    populateReviewerNameDropdown,
+    setupReviewerNameInput,
+    getSelectedReviewerName,
+    renderReviewerName
 } from './utils.js';
 
+let reviewerNames = [];
 let currentUser = { id: 'anon' };
 let allTrips = [];
 let allReviews = [];
@@ -273,8 +279,10 @@ function showTripDetail(tripId) {
         const item = document.createElement('div');
         item.className = 'activity-detail-item';
         
+        // ✅ FIX: Menggunakan renderReviewerName() dari utils.js
         const reviewSection = review ? `
             <div class="review-section">
+                ${renderReviewerName(review.reviewer_name)}
                 <div class="review-rating">${'⭐'.repeat(review.rating || 0)}</div>
                 <p class="review-text-content">${review.review_text || '(Tidak ada komentar)'}</p>
                 ${renderPhotoUrls(review.photo_url, 'review-photo')}
@@ -334,7 +342,7 @@ function setupReviewButtons() {
 // REVIEW MODAL
 // ============================================================
 
-function showReviewModal(ideaId, tripId, ideaName, existingReview = null) {
+async function showReviewModal(ideaId, tripId, ideaName, existingReview = null) {
     const modal = document.getElementById('reviewModal');
     const placeName = document.getElementById('reviewPlaceName');
     const form = document.getElementById('reviewForm');
@@ -344,6 +352,10 @@ function showReviewModal(ideaId, tripId, ideaName, existingReview = null) {
     const photoInput = document.getElementById('reviewPhoto');
     const photoPreview = document.getElementById('reviewPhotoPreview');
     const statusMsg = document.getElementById('reviewStatus');
+    
+    // ✅ NEW: Reviewer name inputs
+    const reviewerSelect = document.getElementById('reviewerNameSelectHistory');
+    const reviewerInput = document.getElementById('reviewerNameInputHistory');
     
     placeName.textContent = ideaName;
     ideaIdInput.value = ideaId;
@@ -355,10 +367,34 @@ function showReviewModal(ideaId, tripId, ideaName, existingReview = null) {
     statusMsg.textContent = '';
     currentRating = 0;
     
+    // ✅ NEW: Load dan populate reviewer names
+    reviewerNames = await fetchReviewerNames(currentUser.id);
+    if (reviewerSelect) {
+        populateReviewerNameDropdown(reviewerSelect, reviewerNames);
+        setupReviewerNameInput(reviewerSelect, reviewerInput);
+    }
+    
     // If editing existing review
     if (existingReview) {
         reviewText.value = existingReview.review_text || '';
         currentRating = existingReview.rating || 0;
+        
+        // ✅ NEW: Set reviewer name
+        if (reviewerSelect && existingReview.reviewer_name) {
+            const optionExists = Array.from(reviewerSelect.options).some(
+                opt => opt.value === existingReview.reviewer_name
+            );
+            
+            if (optionExists) {
+                reviewerSelect.value = existingReview.reviewer_name;
+            } else {
+                reviewerSelect.value = 'custom';
+                if (reviewerInput) {
+                    reviewerInput.style.display = 'block';
+                    reviewerInput.value = existingReview.reviewer_name;
+                }
+            }
+        }
         
         // Show existing photos
         let photoUrls = existingReview.photo_url;
@@ -542,79 +578,91 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Submit review
     reviewForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const ideaId = document.getElementById('reviewIdeaId').value;
-        const tripId = document.getElementById('reviewTripId').value;
-        const reviewText = document.getElementById('reviewText').value.trim();
-        const files = document.getElementById('reviewPhoto').files;
-        const statusMsg = document.getElementById('reviewStatus');
-        const submitBtn = reviewForm.querySelector('button[type="submit"]');
-        
-        if (currentRating === 0) {
-            statusMsg.textContent = '⚠️ Beri minimal 1 bintang!';
-            return;
-        }
-        
-        statusMsg.textContent = '⏳ Menyimpan review...';
-        submitBtn.disabled = true;
-        
-        // Upload photos
-        let photoUrls = [];
-        if (files.length > 0) {
-            photoUrls = await uploadImages(files, currentUser.id, 'review');
-        }
-        
-        // Check existing review
-        const existingReview = allReviews.find(r => 
-            r.trip_id == tripId && 
-            r.idea_id == ideaId
-        );
-        
-        // If no new photos uploaded, keep old ones
-        if (photoUrls.length === 0 && existingReview?.photo_url) {
-            photoUrls = existingReview.photo_url;
-        }
-        
-        // Save review
-        const reviewData = {
-            idea_id: ideaId,
-            trip_id: tripId,
-            user_id: currentUser.id,
-            review_text: reviewText || null,
-            rating: currentRating,
-            photo_url: Array.isArray(photoUrls) && photoUrls.length > 0 ? photoUrls : null,
-            created_at: new Date().toISOString()
-        };
-        
-        try {
-            const { error } = await supabase
-                .from('idea_reviews')
-                .upsert([reviewData], { 
-                    onConflict: 'idea_id, trip_id',
-                    ignoreDuplicates: false 
-                });
+            e.preventDefault();
             
-            if (error) throw error;
+            const ideaId = document.getElementById('reviewIdeaId').value;
+            const tripId = document.getElementById('reviewTripId').value;
+            const reviewText = document.getElementById('reviewText').value.trim();
+            const files = document.getElementById('reviewPhoto').files;
+            const statusMsg = document.getElementById('reviewStatus');
+            const submitBtn = reviewForm.querySelector('button[type="submit"]');
             
-            statusMsg.textContent = '✅ Review berhasil disimpan!';
+            // ✅ NEW: Get reviewer name
+            const reviewerSelect = document.getElementById('reviewerNameSelectHistory');
+            const reviewerInput = document.getElementById('reviewerNameInputHistory');
+            const reviewerName = getSelectedReviewerName(reviewerSelect, reviewerInput);
             
-            // Reload data
-            await fetchAllData();
-            const stats = calculateStats();
-            renderStats(stats);
-            renderTimeline();
+            if (currentRating === 0) {
+                statusMsg.textContent = '⚠️ Beri minimal 1 bintang!';
+                return;
+            }
             
-            setTimeout(() => {
-                hideModal(document.getElementById('reviewModal'));
-                showTripDetail(tripId);
-            }, 1000);
+            // ✅ NEW: Validasi nama reviewer
+            if (!reviewerName) {
+                statusMsg.textContent = '⚠️ Pilih atau masukkan nama reviewer!';
+                return;
+            }
             
-        } catch (error) {
-            console.error('Error saving review:', error);
-            statusMsg.textContent = '❌ Gagal menyimpan: ' + error.message;
-        } finally {
-            submitBtn.disabled = false;
-        }
+            statusMsg.textContent = '⏳ Menyimpan review...';
+            submitBtn.disabled = true;
+            
+            // Upload photos
+            let photoUrls = [];
+            if (files.length > 0) {
+                photoUrls = await uploadImages(files, currentUser.id, 'review');
+            }
+            
+            // Check existing review
+            const existingReview = allReviews.find(r => 
+                r.trip_id == tripId && 
+                r.idea_id == ideaId
+            );
+            
+            // If no new photos uploaded, keep old ones
+            if (photoUrls.length === 0 && existingReview?.photo_url) {
+                photoUrls = existingReview.photo_url;
+            }
+            
+            // ✅ NEW: Include reviewer_name
+            const reviewData = {
+                idea_id: ideaId,
+                trip_id: tripId,
+                user_id: currentUser.id,
+                review_text: reviewText || null,
+                rating: currentRating,
+                photo_url: Array.isArray(photoUrls) && photoUrls.length > 0 ? photoUrls : null,
+                reviewer_name: reviewerName, // ✅ NEW FIELD
+                created_at: new Date().toISOString()
+            };
+            
+            try {
+                const { error } = await supabase
+                    .from('idea_reviews')
+                    .upsert([reviewData], { 
+                        onConflict: 'idea_id, trip_id',
+                        ignoreDuplicates: false 
+                    });
+                
+                if (error) throw error;
+                
+                statusMsg.textContent = '✅ Review berhasil disimpan!';
+                
+                // Reload data
+                await fetchAllData();
+                const stats = calculateStats();
+                renderStats(stats);
+                renderTimeline();
+                
+                setTimeout(() => {
+                    hideModal(document.getElementById('reviewModal'));
+                    showTripDetail(tripId);
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Error saving review:', error);
+                statusMsg.textContent = '❌ Gagal menyimpan: ' + error.message;
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
     });
-});

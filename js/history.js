@@ -10,7 +10,12 @@ import {
     renderStars,
     setupModalClose,
     showModal,
-    hideModal
+    hideModal,
+    fetchReviewerNames,
+    populateReviewerNameDropdown,
+    setupReviewerNameInput,
+    getSelectedReviewerName,
+    renderReviewerName
 } from './utils.js';
 
 let currentUser = { id: 'anon' }; 
@@ -23,7 +28,7 @@ let viewHistoryBtn, historyListModal, historyList, historyDetailModal,
     submitIdeaReviewBtn, cancelIdeaReview, ideaReviewRatingDiv,
     closeHistoryListModal, backToHistoryList,
     filterStartDate, filterEndDate, applyHistoryFilterBtn; 
-
+let reviewerNames = [];
 let currentRating = 0;
 let currentTrip = null; 
 let allReviewsCache = []; 
@@ -285,6 +290,26 @@ function renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews) {
     const globalRatingHtml = renderStars(average);
 
     const reviewPhotoHtml = isReviewedInThisTrip ? renderPhotoUrls(currentTripReview.photo_url) : '';
+    
+    // ✅ FIX: Render reviewer name di Trip Detail
+    const reviewerNameHtml = isReviewedInThisTrip && currentTripReview.reviewer_name 
+        ? `<div style="
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            background: linear-gradient(135deg, #e1f3ff 0%, #c4e8ff 100%);
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--color-primary);
+            margin-bottom: 8px;
+            box-shadow: 0 2px 4px rgba(3, 37, 76, 0.1);
+        ">
+            <span style="font-size: 1.1em;">👤</span>
+            ${currentTripReview.reviewer_name}
+        </div>`
+        : '';
 
     return `
         <div class="idea-detail-item">
@@ -312,6 +337,7 @@ function renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews) {
 
             ${isReviewedInThisTrip ? `
                 <div class="review-content">
+                    ${reviewerNameHtml}
                     <p><strong>Review Anda di Trip Ini:</strong> ${currentTripReview.review_text || '-'}</p>
                     ${reviewPhotoHtml} 
                 </div>
@@ -324,7 +350,7 @@ function renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews) {
 // REVIEW MODAL
 // =========================================================
 
-function showReviewModal(tripId, ideaId, ideaName, existingReview = null) {
+async function showReviewModal(tripId, ideaId, ideaName, existingReview = null) {
     if (historyDetailModal) {
         hideModal(historyDetailModal);
     }
@@ -346,10 +372,39 @@ function showReviewModal(tripId, ideaId, ideaName, existingReview = null) {
     if (ideaReviewStatus) ideaReviewStatus.textContent = '';
     currentRating = 0;
     
+    // ✅ NEW: Load dan populate reviewer names
+    reviewerNames = await fetchReviewerNames(currentUser.id);
+    const reviewerSelect = document.getElementById('reviewerNameSelect');
+    const reviewerInput = document.getElementById('reviewerNameInput');
+    
+    if (reviewerSelect) {
+        populateReviewerNameDropdown(reviewerSelect, reviewerNames);
+        setupReviewerNameInput(reviewerSelect, reviewerInput);
+    }
+    
     // Isi form jika ada review yang sudah ada
     if (existingReview) {
         if (ideaReviewText) ideaReviewText.value = existingReview.review_text || '';
         currentRating = existingReview.rating || 0;
+        
+        // ✅ NEW: Set reviewer name
+        if (reviewerSelect && existingReview.reviewer_name) {
+            // Cek apakah nama ada di dropdown
+            const optionExists = Array.from(reviewerSelect.options).some(
+                opt => opt.value === existingReview.reviewer_name
+            );
+            
+            if (optionExists) {
+                reviewerSelect.value = existingReview.reviewer_name;
+            } else {
+                // Jika nama tidak ada, set ke custom dan isi input
+                reviewerSelect.value = 'custom';
+                if (reviewerInput) {
+                    reviewerInput.style.display = 'block';
+                    reviewerInput.value = existingReview.reviewer_name;
+                }
+            }
+        }
         
         // Tampilkan preview foto existing
         if (ideaReviewPhotoPreview) {
@@ -536,9 +591,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const reviewText = ideaReviewText.value.trim();
             const rating = currentRating;
             const fileList = ideaReviewPhotoInput.files;
+            
+            // ✅ NEW: Get reviewer name
+            const reviewerSelect = document.getElementById('reviewerNameSelect');
+            const reviewerInput = document.getElementById('reviewerNameInput');
+            const reviewerName = getSelectedReviewerName(reviewerSelect, reviewerInput);
 
             if (rating === 0) {
                 if (ideaReviewStatus) ideaReviewStatus.textContent = 'Beri minimal 1 bintang!';
+                return;
+            }
+            
+            // ✅ NEW: Validasi nama reviewer (opsional, tapi direkomendasikan)
+            if (!reviewerName) {
+                if (ideaReviewStatus) ideaReviewStatus.textContent = '⚠️ Pilih atau masukkan nama reviewer!';
                 return;
             }
 
@@ -581,7 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Save review
+            // ✅ NEW: Include reviewer_name in reviewData
             const reviewData = {
                 idea_id: ideaId,
                 trip_id: tripId,
@@ -589,6 +655,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 review_text: reviewText || null,
                 rating: rating || 0,
                 photo_url: Array.isArray(uploadedUrls) && uploadedUrls.length > 0 ? uploadedUrls : (typeof uploadedUrls === 'string' ? uploadedUrls : null),
+                reviewer_name: reviewerName, // ✅ NEW FIELD
                 created_at: new Date().toISOString()
             };
 
