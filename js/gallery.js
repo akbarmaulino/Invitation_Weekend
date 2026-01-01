@@ -257,12 +257,14 @@ function renderPhotoGrid(media) {
                         controls 
                         preload="metadata"
                         class="gallery-video"
+                        onplay="this.parentElement.classList.add('playing')"
+                        onpause="this.parentElement.classList.remove('playing')"
+                        onended="this.parentElement.classList.remove('playing')"
                     ></video>
                     <div class="photo-overlay">
                         <div class="photo-info">
                             <h4>${item.placeName || 'Video'}</h4>
                             <p class="photo-rating">${stars}</p>
-                            <span class="video-badge">🎬 Video</span>
                         </div>
                     </div>
                 </div>
