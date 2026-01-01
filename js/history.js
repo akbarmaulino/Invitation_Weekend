@@ -590,7 +590,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const tripId = reviewTripId.value;
             const reviewText = ideaReviewText.value.trim();
             const rating = currentRating;
-            const fileList = ideaReviewPhotoInput.files;
+            const photoFiles = ideaReviewPhotoInput.files;
+            const videoFile = ideaReviewVideoInput.files[0]; // ✅ TAMBAH INI
             
             // ✅ NEW: Get reviewer name
             const reviewerSelect = document.getElementById('reviewerNameSelect');
@@ -642,20 +643,50 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
             } else {
-                if (existingReview?.photo_url) {
-                    uploadedUrls = existingReview.photo_url;
+            if (existingReview?.photo_url) {
+                uploadedPhotoUrls = existingReview.photo_url;
+            }
+        }
+
+        // ✅ TAMBAH CODE INI - Upload video
+        let uploadedVideoUrl = null;
+        if (videoFile) {
+            if (ideaReviewStatus) ideaReviewStatus.textContent = '🎬 Mengupload video...';
+            
+            uploadedVideoUrl = await uploadVideo(videoFile, currentUser.id || 'anon', 'review');
+            
+            if (!uploadedVideoUrl) {
+                ideaReviewStatus.textContent = '❌ Gagal upload video. Coba lagi.';
+                if (submitIdeaReviewBtn) submitIdeaReviewBtn.disabled = false;
+                return;
+            }
+            
+            // Delete old video if exists
+            if (existingReview?.video_url && typeof existingReview.video_url === 'string' && !existingReview.video_url.startsWith('http')) {
+                try {
+                    await supabase.storage
+                        .from('trip-videos')
+                        .remove([existingReview.video_url]);
+                } catch (e) {
+                    console.warn('Failed to delete old video:', e);
                 }
             }
+        } else {
+            // Keep existing video if not uploading new one
+            if (existingReview?.video_url) {
+                uploadedVideoUrl = existingReview.video_url;
+            }
+        }
 
-            // ✅ NEW: Include reviewer_name in reviewData
-            const reviewData = {
+        // Existing reviewData code continues here...
+        const reviewData = {
                 idea_id: ideaId,
                 trip_id: tripId,
                 user_id: currentUser.id || 'anon',
                 review_text: reviewText || null,
                 rating: rating || 0,
-                photo_url: Array.isArray(uploadedUrls) && uploadedUrls.length > 0 ? uploadedUrls : (typeof uploadedUrls === 'string' ? uploadedUrls : null),
-                reviewer_name: reviewerName, // ✅ NEW FIELD
+                photo_url: Array.isArray(uploadedPhotoUrls) && uploadedPhotoUrls.length > 0 ? uploadedPhotoUrls : null,
+                reviewer_name: reviewerName,
                 created_at: new Date().toISOString()
             };
 

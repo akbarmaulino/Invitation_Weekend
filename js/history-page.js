@@ -5,6 +5,9 @@ import {
     getPublicImageUrl,
     renderPhotoUrls,
     uploadImages,
+    uploadVideo,
+    renderVideoUrls,
+    getPublicVideoUrl,
     formatTanggalIndonesia,
     calculateAverageRating,
     renderStars,
@@ -279,13 +282,13 @@ function showTripDetail(tripId) {
         const item = document.createElement('div');
         item.className = 'activity-detail-item';
         
-        // ✅ FIX: Menggunakan renderReviewerName() dari utils.js
         const reviewSection = review ? `
             <div class="review-section">
                 ${renderReviewerName(review.reviewer_name)}
                 <div class="review-rating">${'⭐'.repeat(review.rating || 0)}</div>
                 <p class="review-text-content">${review.review_text || '(Tidak ada komentar)'}</p>
                 ${renderPhotoUrls(review.photo_url, 'review-photo')}
+                ${renderVideoUrls(review.video_url, 'review-video')}
                 <button class="btn secondary small btn-edit-review" 
                         data-idea-id="${activity.idea_id}" 
                         data-trip-id="${tripId}"
@@ -352,8 +355,10 @@ async function showReviewModal(ideaId, tripId, ideaName, existingReview = null) 
     const photoInput = document.getElementById('reviewPhoto');
     const photoPreview = document.getElementById('reviewPhotoPreview');
     const statusMsg = document.getElementById('reviewStatus');
+    const videoInput = document.getElementById('reviewVideo');
+    const videoPreview = document.getElementById('reviewVideoPreview');
     
-    // ✅ NEW: Reviewer name inputs
+    // Reviewer name inputs
     const reviewerSelect = document.getElementById('reviewerNameSelectHistory');
     const reviewerInput = document.getElementById('reviewerNameInputHistory');
     
@@ -362,12 +367,13 @@ async function showReviewModal(ideaId, tripId, ideaName, existingReview = null) 
     tripIdInput.value = tripId;
     
     // Reset
-    form.reset();
-    photoPreview.innerHTML = '';
-    statusMsg.textContent = '';
-    currentRating = 0;
+form.reset();
+if (photoPreview) photoPreview.innerHTML = '';
+if (videoPreview) videoPreview.innerHTML = '';  // ✅ FIX: Check null dulu
+if (statusMsg) statusMsg.textContent = '';
+currentRating = 0;
     
-    // ✅ NEW: Load dan populate reviewer names
+    // Load dan populate reviewer names
     reviewerNames = await fetchReviewerNames(currentUser.id);
     if (reviewerSelect) {
         populateReviewerNameDropdown(reviewerSelect, reviewerNames);
@@ -379,7 +385,7 @@ async function showReviewModal(ideaId, tripId, ideaName, existingReview = null) 
         reviewText.value = existingReview.review_text || '';
         currentRating = existingReview.rating || 0;
         
-        // ✅ NEW: Set reviewer name
+        // Set reviewer name
         if (reviewerSelect && existingReview.reviewer_name) {
             const optionExists = Array.from(reviewerSelect.options).some(
                 opt => opt.value === existingReview.reviewer_name
@@ -412,6 +418,20 @@ async function showReviewModal(ideaId, tripId, ideaName, existingReview = null) 
                 photoPreview.appendChild(img);
             }
         });
+        
+        // Show existing video
+        if (existingReview.video_url) {
+            const videoUrl = getPublicVideoUrl(existingReview.video_url);
+            if (videoUrl) {
+                const video = document.createElement('video');
+                video.src = videoUrl;
+                video.controls = true;
+                video.style.maxWidth = '300px';
+                video.style.maxHeight = '200px';
+                video.style.borderRadius = '8px';
+                videoPreview.appendChild(video);
+            }
+        }
     }
     
     // Render stars
@@ -576,93 +596,159 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
     
-    // Submit review
-    reviewForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
+    // Video preview
+    const reviewVideo = document.getElementById('reviewVideo');
+    if (reviewVideo) {
+        reviewVideo.addEventListener('change', (e) => {
+            const preview = document.getElementById('reviewVideoPreview');
+            if (!preview) return;
             
-            const ideaId = document.getElementById('reviewIdeaId').value;
-            const tripId = document.getElementById('reviewTripId').value;
-            const reviewText = document.getElementById('reviewText').value.trim();
-            const files = document.getElementById('reviewPhoto').files;
-            const statusMsg = document.getElementById('reviewStatus');
-            const submitBtn = reviewForm.querySelector('button[type="submit"]');
+            preview.innerHTML = '';
             
-            // ✅ NEW: Get reviewer name
-            const reviewerSelect = document.getElementById('reviewerNameSelectHistory');
-            const reviewerInput = document.getElementById('reviewerNameInputHistory');
-            const reviewerName = getSelectedReviewerName(reviewerSelect, reviewerInput);
-            
-            if (currentRating === 0) {
-                statusMsg.textContent = '⚠️ Beri minimal 1 bintang!';
-                return;
-            }
-            
-            // ✅ NEW: Validasi nama reviewer
-            if (!reviewerName) {
-                statusMsg.textContent = '⚠️ Pilih atau masukkan nama reviewer!';
-                return;
-            }
-            
-            statusMsg.textContent = '⏳ Menyimpan review...';
-            submitBtn.disabled = true;
-            
-            // Upload photos
-            let photoUrls = [];
-            if (files.length > 0) {
-                photoUrls = await uploadImages(files, currentUser.id, 'review');
-            }
-            
-            // Check existing review
-            const existingReview = allReviews.find(r => 
-                r.trip_id == tripId && 
-                r.idea_id == ideaId
-            );
-            
-            // If no new photos uploaded, keep old ones
-            if (photoUrls.length === 0 && existingReview?.photo_url) {
-                photoUrls = existingReview.photo_url;
-            }
-            
-            // ✅ NEW: Include reviewer_name
-            const reviewData = {
-                idea_id: ideaId,
-                trip_id: tripId,
-                user_id: currentUser.id,
-                review_text: reviewText || null,
-                rating: currentRating,
-                photo_url: Array.isArray(photoUrls) && photoUrls.length > 0 ? photoUrls : null,
-                reviewer_name: reviewerName, // ✅ NEW FIELD
-                created_at: new Date().toISOString()
-            };
-            
-            try {
-                const { error } = await supabase
-                    .from('idea_reviews')
-                    .upsert([reviewData], { 
-                        onConflict: 'idea_id, trip_id',
-                        ignoreDuplicates: false 
-                    });
+            const file = e.target.files[0];
+            if (file) {
+                // Validate size
+                const maxSize = 50 * 1024 * 1024; // 50MB
+                if (file.size > maxSize) {
+                    alert('Video terlalu besar! Maksimal 50MB.');
+                    e.target.value = '';
+                    return;
+                }
                 
-                if (error) throw error;
+                // Validate type
+                const allowedTypes = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Format video tidak didukung! Gunakan MP4, MOV, atau WEBM.');
+                    e.target.value = '';
+                    return;
+                }
                 
-                statusMsg.textContent = '✅ Review berhasil disimpan!';
-                
-                // Reload data
-                await fetchAllData();
-                const stats = calculateStats();
-                renderStats(stats);
-                renderTimeline();
-                
-                setTimeout(() => {
-                    hideModal(document.getElementById('reviewModal'));
-                    showTripDetail(tripId);
-                }, 1000);
-                
-            } catch (error) {
-                console.error('Error saving review:', error);
-                statusMsg.textContent = '❌ Gagal menyimpan: ' + error.message;
-            } finally {
-                submitBtn.disabled = false;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const video = document.createElement('video');
+                    video.src = event.target.result;
+                    video.controls = true;
+                    video.style.maxWidth = '300px';
+                    video.style.maxHeight = '200px';
+                    video.style.borderRadius = '8px';
+                    preview.appendChild(video);
+                };
+                reader.readAsDataURL(file);
             }
         });
+    }
+    
+    // Submit review
+    reviewForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const ideaId = document.getElementById('reviewIdeaId').value;
+        const tripId = document.getElementById('reviewTripId').value;
+        const reviewText = document.getElementById('reviewText').value.trim();
+        const files = document.getElementById('reviewPhoto').files;
+        const statusMsg = document.getElementById('reviewStatus');
+        const submitBtn = reviewForm.querySelector('button[type="submit"]');
+        const videoFile = document.getElementById('reviewVideo').files[0];
+        
+        const reviewerSelect = document.getElementById('reviewerNameSelectHistory');
+        const reviewerInput = document.getElementById('reviewerNameInputHistory');
+        const reviewerName = getSelectedReviewerName(reviewerSelect, reviewerInput);
+        
+        if (currentRating === 0) {
+            statusMsg.textContent = '⚠️ Beri minimal 1 bintang!';
+            return;
+        }
+        
+        if (!reviewerName) {
+            statusMsg.textContent = '⚠️ Pilih atau masukkan nama reviewer!';
+            return;
+        }
+        
+        statusMsg.textContent = '⏳ Menyimpan review...';
+        submitBtn.disabled = true;
+        
+        // Check existing review once
+        const existingReview = allReviews.find(r => 
+            r.trip_id == tripId && 
+            r.idea_id == ideaId
+        );
+        
+        // Upload photos
+        let photoUrls = [];
+        if (files.length > 0) {
+            photoUrls = await uploadImages(files, currentUser.id, 'review');
+        } else if (existingReview?.photo_url) {
+            // Keep old photos if no new upload
+            photoUrls = existingReview.photo_url;
+        }
+        
+        // Upload video
+        let videoUrl = null;
+        if (videoFile) {
+            statusMsg.textContent = '🎬 Uploading video...';
+            videoUrl = await uploadVideo(videoFile, currentUser.id, 'review');
+            
+            if (!videoUrl) {
+                statusMsg.textContent = '❌ Failed to upload video';
+                submitBtn.disabled = false;
+                return;
+            }
+            
+            // Delete old video if exists
+            if (existingReview?.video_url && typeof existingReview.video_url === 'string' && !existingReview.video_url.startsWith('http')) {
+                try {
+                    await supabase.storage
+                        .from('trip-videos')
+                        .remove([existingReview.video_url]);
+                } catch (e) {
+                    console.warn('Failed to delete old video:', e);
+                }
+            }
+        } else if (existingReview?.video_url) {
+            // Keep old video if no new upload
+            videoUrl = existingReview.video_url;
+        }
+        
+        const reviewData = {
+            idea_id: ideaId,
+            trip_id: tripId,
+            user_id: currentUser.id,
+            review_text: reviewText || null,
+            rating: currentRating,
+            photo_url: Array.isArray(photoUrls) && photoUrls.length > 0 ? photoUrls : null,
+            video_url: videoUrl,
+            reviewer_name: reviewerName,
+            created_at: new Date().toISOString()
+        };
+        
+        try {
+            const { error } = await supabase
+                .from('idea_reviews')
+                .upsert([reviewData], { 
+                    onConflict: 'idea_id, trip_id',
+                    ignoreDuplicates: false 
+                });
+            
+            if (error) throw error;
+            
+            statusMsg.textContent = '✅ Review berhasil disimpan!';
+            
+            // Reload data
+            await fetchAllData();
+            const stats = calculateStats();
+            renderStats(stats);
+            renderTimeline();
+            
+            setTimeout(() => {
+                hideModal(document.getElementById('reviewModal'));
+                showTripDetail(tripId);
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Error saving review:', error);
+            statusMsg.textContent = '❌ Gagal menyimpan: ' + error.message;
+        } finally {
+            submitBtn.disabled = false;
+        }
     });
+});

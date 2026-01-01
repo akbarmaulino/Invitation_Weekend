@@ -8,125 +8,8 @@ let filteredPhotos = [];
 let lightbox = null;
 
 // ============================================================
-// DATA FETCHING
+// UTILITY: Get Public Image URL
 // ============================================================
-
-async function fetchAllPhotos() {
-    try {
-        // Fetch all reviews dengan photos
-        const { data: reviews, error: reviewError } = await supabase
-            .from('idea_reviews')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .not('photo_url', 'is', null);
-        
-        if (reviewError) throw reviewError;
-        
-        // Fetch trip data untuk setiap review
-        const tripIds = [...new Set(reviews.map(r => r.trip_id).filter(Boolean))];
-        const { data: trips, error: tripError } = await supabase
-            .from('trip_history')
-            .select('id, trip_date, trip_day')
-            .in('id', tripIds);
-        
-        if (tripError) throw tripError;
-        
-        // Create trip lookup
-        const tripMap = {};
-        (trips || []).forEach(trip => {
-            tripMap[trip.id] = trip;
-        });
-        
-        // Process photos
-        const photos = [];
-        reviews.forEach(review => {
-            let photoUrls = review.photo_url;
-            
-            // Convert string ke array jika perlu
-            if (typeof photoUrls === 'string' && photoUrls.length > 0) {
-                photoUrls = [photoUrls];
-            } else if (!Array.isArray(photoUrls)) {
-                photoUrls = [];
-            }
-            
-            // Process setiap foto
-            photoUrls.forEach(url => {
-                const publicUrl = getPublicImageUrl(url);
-                if (publicUrl && publicUrl !== 'images/placeholder.jpg') {
-                    const trip = tripMap[review.trip_id];
-                    photos.push({
-                        url: publicUrl,
-                        ideaId: review.idea_id,
-                        tripId: review.trip_id,
-                        tripDate: trip ? trip.trip_date : null,
-                        tripDay: trip ? trip.trip_day : null,
-                        rating: review.rating || 0,
-                        reviewText: review.review_text || '',
-                        createdAt: review.created_at
-                    });
-                }
-            });
-        });
-        
-        // Fetch idea names
-        const ideaIds = [...new Set(photos.map(p => p.ideaId).filter(Boolean))];
-        if (ideaIds.length > 0) {
-            const { data: ideas, error: ideaError } = await supabase
-                .from('trip_ideas_v2')
-                .select('id, idea_name, type_key')
-                .in('id', ideaIds);
-            
-            if (!ideaError && ideas) {
-                const ideaMap = {};
-                ideas.forEach(idea => {
-                    ideaMap[idea.id] = idea.idea_name;
-                });
-                
-                // Add place names to photos
-                photos.forEach(photo => {
-                    photo.placeName = ideaMap[photo.ideaId] || 'Unknown Place';
-                });
-            }
-        }
-        
-        // Get category info from trip_history selection_json
-        photos.forEach(photo => {
-            const trip = tripMap[photo.tripId];
-            if (trip && trip.selection_json) {
-                // Cari di selection_json berdasarkan idea_id (stored as string di selection_json)
-                // Perlu load full trip data dengan selection_json
-            }
-        });
-        
-        // Fetch full trip data untuk get category
-        if (tripIds.length > 0) {
-            const { data: fullTrips, error: fullTripError } = await supabase
-                .from('trip_history')
-                .select('*')
-                .in('id', tripIds);
-            
-            if (!fullTripError && fullTrips) {
-                photos.forEach(photo => {
-                    const trip = fullTrips.find(t => t.id === photo.tripId);
-                    if (trip && trip.selection_json) {
-                        const item = trip.selection_json.find(i => i.idea_id == photo.ideaId);
-                        if (item) {
-                            photo.category = item.category || 'Uncategorized';
-                            photo.subtype = item.subtype || '';
-                        }
-                    }
-                });
-            }
-        }
-        
-        allPhotos = photos;
-        return photos;
-    } catch (error) {
-        console.error('Error fetching photos:', error);
-        return [];
-    }
-}
-
 function getPublicImageUrl(photoUrl) {
     if (!photoUrl || typeof photoUrl !== 'string' || photoUrl === '') {
         return null;
@@ -146,9 +29,160 @@ function getPublicImageUrl(photoUrl) {
 }
 
 // ============================================================
+// DATA FETCHING
+// ============================================================
+async function fetchAllPhotos() {
+    try {
+        console.log('🔍 Fetching media (photos + videos)...');
+        
+        // Fetch reviews dengan photos ATAU videos
+        const { data: reviews, error: reviewError } = await supabase
+            .from('idea_reviews')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .or('photo_url.not.is.null,video_url.not.is.null');
+        
+        if (reviewError) throw reviewError;
+        
+        console.log('✅ Reviews fetched:', reviews?.length || 0);
+        
+        // Fetch trip data
+        const tripIds = [...new Set(reviews.map(r => r.trip_id).filter(Boolean))];
+        const { data: trips, error: tripError } = await supabase
+            .from('trip_history')
+            .select('id, trip_date, trip_day')
+            .in('id', tripIds);
+        
+        if (tripError) throw tripError;
+        
+        // Create trip lookup
+        const tripMap = {};
+        (trips || []).forEach(trip => {
+            tripMap[trip.id] = trip;
+        });
+        
+        // Process media (photos + videos)
+        const media = [];
+        
+        reviews.forEach(review => {
+            const trip = tripMap[review.trip_id];
+            
+            // ========== PROCESS PHOTOS ==========
+            let photoUrls = review.photo_url;
+            
+            if (typeof photoUrls === 'string' && photoUrls.length > 0) {
+                photoUrls = [photoUrls];
+            } else if (!Array.isArray(photoUrls)) {
+                photoUrls = [];
+            }
+            
+            photoUrls.forEach(url => {
+                const publicUrl = getPublicImageUrl(url);
+                if (publicUrl && publicUrl !== 'images/placeholder.jpg') {
+                    media.push({
+                        url: publicUrl,
+                        type: 'photo',
+                        ideaId: review.idea_id,
+                        tripId: review.trip_id,
+                        tripDate: trip ? trip.trip_date : null,
+                        tripDay: trip ? trip.trip_day : null,
+                        rating: review.rating || 0,
+                        reviewText: review.review_text || '',
+                        createdAt: review.created_at,
+                        placeName: null
+                    });
+                }
+            });
+            
+            // ========== PROCESS VIDEOS ==========
+            if (review.video_url) {
+                let videoUrls = review.video_url;
+                
+                if (typeof videoUrls === 'string' && videoUrls.length > 0) {
+                    videoUrls = [videoUrls];
+                } else if (!Array.isArray(videoUrls)) {
+                    videoUrls = [];
+                }
+                
+                videoUrls.forEach(url => {
+                    if (url && url !== '') {
+                        media.push({
+                            url: url,
+                            type: 'video',
+                            ideaId: review.idea_id,
+                            tripId: review.trip_id,
+                            tripDate: trip ? trip.trip_date : null,
+                            tripDay: trip ? trip.trip_day : null,
+                            rating: review.rating || 0,
+                            reviewText: review.review_text || '',
+                            createdAt: review.created_at,
+                            placeName: null
+                        });
+                    }
+                });
+            }
+        });
+        
+        console.log('📊 Media processed:', {
+            photos: media.filter(m => m.type === 'photo').length,
+            videos: media.filter(m => m.type === 'video').length,
+            total: media.length
+        });
+        
+        // Fetch idea names
+        const ideaIds = [...new Set(media.map(m => m.ideaId).filter(Boolean))];
+        if (ideaIds.length > 0) {
+            const { data: ideas, error: ideaError } = await supabase
+                .from('trip_ideas_v2')
+                .select('id, idea_name, type_key')
+                .in('id', ideaIds);
+            
+            if (!ideaError && ideas) {
+                const ideaMap = {};
+                ideas.forEach(idea => {
+                    ideaMap[idea.id] = idea.idea_name;
+                });
+                
+                media.forEach(item => {
+                    item.placeName = ideaMap[item.ideaId] || 'Unknown Place';
+                });
+            }
+        }
+        
+        // Get category info
+        const tripIdsWithMedia = [...new Set(media.map(m => m.tripId).filter(Boolean))];
+        if (tripIdsWithMedia.length > 0) {
+            const { data: fullTrips, error: fullTripError } = await supabase
+                .from('trip_history')
+                .select('*')
+                .in('id', tripIdsWithMedia);
+            
+            if (!fullTripError && fullTrips) {
+                media.forEach(item => {
+                    const trip = fullTrips.find(t => t.id === item.tripId);
+                    if (trip && trip.selection_json) {
+                        const selectionItem = trip.selection_json.find(i => i.idea_id == item.ideaId);
+                        if (selectionItem) {
+                            item.category = selectionItem.category || 'Uncategorized';
+                            item.subtype = selectionItem.subtype || '';
+                        }
+                    }
+                });
+            }
+        }
+        
+        allPhotos = media;
+        return media;
+        
+    } catch (error) {
+        console.error('❌ Error fetching media:', error);
+        return [];
+    }
+}
+
+// ============================================================
 // FILTERING & SORTING
 // ============================================================
-
 function applyFilters() {
     const tripFilter = document.getElementById('tripFilter').value;
     const categoryFilter = document.getElementById('categoryFilter').value;
@@ -159,18 +193,18 @@ function applyFilters() {
     
     // Filter by trip
     if (tripFilter !== 'all') {
-        filtered = filtered.filter(p => p.tripId == tripFilter);
+        filtered = filtered.filter(m => m.tripId == tripFilter);
     }
     
     // Filter by category
     if (categoryFilter !== 'all') {
-        filtered = filtered.filter(p => p.category === categoryFilter);
+        filtered = filtered.filter(m => m.category === categoryFilter);
     }
     
     // Filter by rating
     if (ratingFilter !== 'all') {
         const minRating = parseInt(ratingFilter);
-        filtered = filtered.filter(p => p.rating >= minRating);
+        filtered = filtered.filter(m => m.rating >= minRating);
     }
     
     // Sort
@@ -196,12 +230,11 @@ function applyFilters() {
 // ============================================================
 // RENDERING
 // ============================================================
-
-function renderPhotoGrid(photos) {
+function renderPhotoGrid(media) {
     const grid = document.getElementById('photoGrid');
     const noPhotos = document.getElementById('noPhotosMessage');
     
-    if (!photos || photos.length === 0) {
+    if (!media || media.length === 0) {
         grid.innerHTML = '';
         noPhotos.style.display = 'flex';
         return;
@@ -209,66 +242,91 @@ function renderPhotoGrid(photos) {
     
     noPhotos.style.display = 'none';
     
-    grid.innerHTML = photos.map((photo, index) => {
-        const stars = '⭐'.repeat(photo.rating || 0);
-        const tripDateFormatted = photo.tripDate 
-            ? new Date(photo.tripDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+    grid.innerHTML = media.map((item, index) => {
+        const stars = '⭐'.repeat(item.rating || 0);
+        const tripDateFormatted = item.tripDate 
+            ? new Date(item.tripDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
             : '-';
         
-        return `
-            <a href="${photo.url}" 
-               class="photo-item glightbox" 
-               data-gallery="gallery"
-               data-title="${photo.placeName}"
-               data-description="${photo.reviewText || ''}"
-               data-glightbox="description: .photo-desc-${index}">
-                <img src="${photo.url}" alt="${photo.placeName}" loading="lazy">
-                <div class="photo-overlay">
-                    <div class="photo-info">
-                        <h4>${photo.placeName}</h4>
-                        <p class="photo-rating">${stars}</p>
+        if (item.type === 'video') {
+            // Render video item
+            return `
+                <div class="photo-item video-item" data-type="video">
+                    <video 
+                        src="${item.url}" 
+                        controls 
+                        preload="metadata"
+                        class="gallery-video"
+                    ></video>
+                    <div class="photo-overlay">
+                        <div class="photo-info">
+                            <h4>${item.placeName || 'Video'}</h4>
+                            <p class="photo-rating">${stars}</p>
+                            <span class="video-badge">🎬 Video</span>
+                        </div>
                     </div>
                 </div>
-                <div class="photo-desc-${index}" style="display: none;">
-                    <div class="lightbox-description">
-                        <h3>${photo.placeName}</h3>
-                        <p class="lightbox-meta">
-                            ${stars} ${photo.rating}/5 • ${tripDateFormatted}
-                        </p>
-                        ${photo.category ? `<p class="lightbox-category">📍 ${photo.category} - ${photo.subtype}</p>` : ''}
-                        ${photo.reviewText ? `<p class="lightbox-review">"${photo.reviewText}"</p>` : ''}
+            `;
+        } else {
+            // Render photo item
+            return `
+                <a href="${item.url}" 
+                   class="photo-item glightbox" 
+                   data-gallery="gallery"
+                   data-title="${item.placeName}"
+                   data-description="${item.reviewText || ''}"
+                   data-glightbox="description: .photo-desc-${index}">
+                    <img src="${item.url}" alt="${item.placeName}" loading="lazy">
+                    <div class="photo-overlay">
+                        <div class="photo-info">
+                            <h4>${item.placeName}</h4>
+                            <p class="photo-rating">${stars}</p>
+                        </div>
                     </div>
-                </div>
-            </a>
-        `;
+                    <div class="photo-desc-${index}" style="display: none;">
+                        <div class="lightbox-description">
+                            <h3>${item.placeName}</h3>
+                            <p class="lightbox-meta">
+                                ${stars} ${item.rating}/5 • ${tripDateFormatted}
+                            </p>
+                            ${item.category ? `<p class="lightbox-category">📍 ${item.category} - ${item.subtype}</p>` : ''}
+                            ${item.reviewText ? `<p class="lightbox-review">"${item.reviewText}"</p>` : ''}
+                        </div>
+                    </div>
+                </a>
+            `;
+        }
     }).join('');
     
     // Re-init lightbox
     initLightbox();
 }
 
-function renderStats(photos) {
+function renderStats(media) {
     const photoCount = document.getElementById('photoCount');
     const tripCount = document.getElementById('tripCount');
     const placeCount = document.getElementById('placeCount');
     
-    const uniqueTrips = new Set(photos.map(p => p.tripId).filter(Boolean));
-    const uniquePlaces = new Set(photos.map(p => p.ideaId).filter(Boolean));
+    const uniqueTrips = new Set(media.map(m => m.tripId).filter(Boolean));
+    const uniquePlaces = new Set(media.map(m => m.ideaId).filter(Boolean));
     
-    photoCount.innerHTML = `<strong>${photos.length}</strong> foto`;
+    const photoTotal = media.filter(m => m.type === 'photo').length;
+    const videoTotal = media.filter(m => m.type === 'video').length;
+    
+    photoCount.innerHTML = `<strong>${photoTotal}</strong> foto • <strong>${videoTotal}</strong> video`;
     tripCount.innerHTML = `<strong>${uniqueTrips.size}</strong> trip`;
     placeCount.innerHTML = `<strong>${uniquePlaces.size}</strong> tempat`;
 }
 
-function populateFilters(photos) {
+function populateFilters(media) {
     // Populate trip filter
     const tripFilter = document.getElementById('tripFilter');
     const uniqueTrips = {};
-    photos.forEach(p => {
-        if (p.tripId && p.tripDate) {
-            uniqueTrips[p.tripId] = {
-                date: p.tripDate,
-                day: p.tripDay
+    media.forEach(m => {
+        if (m.tripId && m.tripDate) {
+            uniqueTrips[m.tripId] = {
+                date: m.tripDate,
+                day: m.tripDay
             };
         }
     });
@@ -289,7 +347,7 @@ function populateFilters(photos) {
     
     // Populate category filter
     const categoryFilter = document.getElementById('categoryFilter');
-    const uniqueCategories = [...new Set(photos.map(p => p.category).filter(Boolean))];
+    const uniqueCategories = [...new Set(media.map(m => m.category).filter(Boolean))];
     uniqueCategories.sort().forEach(category => {
         const option = document.createElement('option');
         option.value = category;
@@ -301,7 +359,6 @@ function populateFilters(photos) {
 // ============================================================
 // LIGHTBOX
 // ============================================================
-
 function initLightbox() {
     if (lightbox) {
         lightbox.destroy();
@@ -322,7 +379,6 @@ function initLightbox() {
 // ============================================================
 // MAIN FUNCTION
 // ============================================================
-
 async function loadGallery() {
     const loadingEl = document.getElementById('loadingGallery');
     const contentEl = document.getElementById('galleryContent');
@@ -331,10 +387,10 @@ async function loadGallery() {
     loadingEl.style.display = 'flex';
     contentEl.style.display = 'none';
     
-    // Fetch photos
-    const photos = await fetchAllPhotos();
+    // Fetch media
+    const media = await fetchAllPhotos();
     
-    if (photos.length === 0) {
+    if (media.length === 0) {
         loadingEl.style.display = 'none';
         contentEl.style.display = 'block';
         document.getElementById('noPhotosMessage').style.display = 'flex';
@@ -342,7 +398,7 @@ async function loadGallery() {
     }
     
     // Populate filters
-    populateFilters(photos);
+    populateFilters(media);
     
     // Apply filters & render
     const filtered = applyFilters();
@@ -357,7 +413,6 @@ async function loadGallery() {
 // ============================================================
 // EVENT LISTENERS
 // ============================================================
-
 document.addEventListener('DOMContentLoaded', () => {
     // Load gallery
     loadGallery();

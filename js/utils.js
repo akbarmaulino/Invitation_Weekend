@@ -429,3 +429,133 @@ export function renderReviewerName(reviewerName) {
         </div>
     `;
 }
+
+// ============================================================
+// VIDEO HANDLING
+// ============================================================
+
+/**
+ * Upload single video ke Supabase Storage
+ * @param {File} file - Video file object
+ * @param {string} userId - User ID untuk folder path
+ * @param {string} subfolder - Optional subfolder (default: 'review')
+ * @returns {Promise<string|null>} Public URL atau null jika gagal
+ */
+export async function uploadVideo(file, userId = 'anon', subfolder = 'review') {
+    if (!file) return null;
+    
+    // Validasi file size (max 50MB)
+    const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+    if (file.size > maxSize) {
+        alert('Video terlalu besar! Maksimal 50MB.');
+        return null;
+    }
+    
+    // Validasi video type
+    const allowedTypes = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v'];
+    if (!allowedTypes.includes(file.type)) {
+        alert('Format video tidak didukung! Gunakan MP4, MOV, atau WEBM.');
+        return null;
+    }
+    
+    const folderPath = subfolder ? `${userId}/${subfolder}` : userId;
+    const path = `${folderPath}/${Date.now()}_${file.name}`;
+    
+    try {
+        const { error } = await supabase.storage
+            .from('trip-videos')
+            .upload(path, file, {
+                cacheControl: '3600',
+                upsert: false
+            });
+
+        if (error) throw error;
+        
+        const { data: publicUrlData } = supabase.storage
+            .from('trip-videos')
+            .getPublicUrl(path);
+
+        return publicUrlData.publicUrl;
+    } catch (error) {
+        console.error('Video upload error:', error);
+        alert('Gagal upload video: ' + error.message);
+        return null;
+    }
+}
+
+/**
+ * Render video player HTML
+ * @param {string|Array} videoUrls - Video URL atau array URLs
+ * @param {string} className - CSS class untuk video tag
+ * @returns {string} HTML string dengan video tags
+ */
+export function renderVideoUrls(videoUrls, className = 'review-video') {
+    let urls = videoUrls;
+    
+    // Konversi string tunggal menjadi array
+    if (typeof urls === 'string' && urls.length > 0) {
+        urls = [urls];
+    } else if (!Array.isArray(urls)) {
+        return '';
+    }
+    
+    if (urls.length === 0) {
+        return '';
+    }
+
+    let html = '<div class="review-videos-container">';
+    urls.forEach((url, index) => {
+        if (url && url !== '') {
+            html += `
+                <video 
+                    class="${className}" 
+                    controls 
+                    preload="metadata"
+                    playsinline
+                    data-video-index="${index}">
+                    <source src="${url}" type="video/mp4">
+                    <source src="${url}" type="video/quicktime">
+                    Browser Anda tidak support video player.
+                </video>
+            `;
+        }
+    });
+    html += '</div>';
+    return html;
+}
+
+/**
+ * Get video public URL dari storage path
+ * @param {string|Array} videoUrl - Video URL atau storage path
+ * @returns {string} Public URL yang valid atau empty string
+ */
+export function getPublicVideoUrl(videoUrl) {
+    let urlToProcess = videoUrl;
+    
+    // Handle array (ambil elemen pertama)
+    if (Array.isArray(videoUrl)) {
+        if (videoUrl.length === 0) return '';
+        urlToProcess = videoUrl[0];
+    }
+
+    // Handle null/undefined/empty
+    if (!urlToProcess || typeof urlToProcess !== 'string' || urlToProcess === '') {
+        return '';
+    }
+
+    // Kalau sudah URL public (http/https), langsung return
+    if (urlToProcess.startsWith('http')) {
+        return urlToProcess;
+    }
+    
+    // Konversi Supabase storage path ke public URL
+    try {
+        const { data } = supabase.storage
+            .from('trip-videos')
+            .getPublicUrl(urlToProcess);
+        return data.publicUrl || '';
+    } catch (e) {
+        console.error("Error getting video public URL:", e);
+        return '';
+    }
+}

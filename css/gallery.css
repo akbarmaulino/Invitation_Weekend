@@ -682,3 +682,78 @@
         border-width: 3px;
     }
 }
+
+
+/* ============================================================
+   VIDEO GALLERY STYLES
+   ============================================================ */
+
+.video-item {
+    position: relative;
+}
+
+.gallery-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+}
+
+.video-badge {
+    display: inline-block;
+    background: rgba(255, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    margin-top: 5px;
+    font-weight: 600;
+}
+
+.photo-item.video-item .photo-overlay {
+    pointer-events: none; /* Allow video controls to work */
+}
+
+.photo-item.video-item:hover .photo-overlay {
+    opacity: 1;
+}
+
+/* Video playback in grid */
+.gallery-video::-webkit-media-controls {
+    z-index: 10;
+}
+
+/* ============================================================
+   VIDEO GALLERY STYLES
+   ============================================================ */
+
+.video-item {
+    position: relative;
+}
+
+.gallery-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+    background: #000;
+}
+
+.video-badge {
+    display: inline-block;
+    background: rgba(255, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    margin-top: 5px;
+    font-weight: 600;
+}
+
+.photo-item.video-item .photo-overlay {
+    pointer-events: none;
+}
+
+.photo-item.video-item:hover .photo-overlay {
+    opacity: 1;
+}

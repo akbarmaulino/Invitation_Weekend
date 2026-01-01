@@ -384,3 +384,71 @@
         padding: 3px 8px;
     }
 }
+
+/* ============================================================
+   VIDEO PLAYER STYLES
+   ============================================================ */
+
+.review-videos-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.review-video {
+    width: 100%;
+    max-width: 400px;
+    max-height: 300px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: #000;
+    object-fit: contain;
+}
+
+.review-video:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* Video Preview di Form */
+#ideaReviewVideoPreview video,
+#reviewVideoPreview video {
+    max-width: 300px;
+    max-height: 200px;
+    border-radius: 8px;
+    margin-top: 10px;
+    background: #000;
+}
+
+/* Video dalam review item */
+.review-item .review-video {
+    margin-top: 10px;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .review-video {
+        max-width: 100%;
+        max-height: 250px;
+    }
+    
+    #ideaReviewVideoPreview video,
+    #reviewVideoPreview video {
+        max-width: 100%;
+        max-height: 180px;
+    }
+}
+
+/* Loading state untuk video */
+.review-video:not([src]) {
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.review-video:not([src])::after {
+    content: "Loading video...";
+    color: #999;
+}

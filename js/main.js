@@ -4,9 +4,12 @@ import {
     renderPhotoUrls,
     uploadImage,
     uploadImages,
+    uploadVideo,           // ✅ TAMBAH INI
+    renderVideoUrls,       // ✅ TAMBAH INI
+    getPublicVideoUrl,     // ✅ TAMBAH INI
     sortAlphabetically,
     formatUrl,
-    formatTanggalIndonesia, // ✅ TAMBAHKAN INI
+    formatTanggalIndonesia,
     convertToEmbedUrl,
     setupModalClose,
     showModal,
@@ -17,7 +20,9 @@ import {
 let currentUser = { id: 'anon' };
 
 
-
+const ideaReviewPhotoPreview = document.getElementById('ideaReviewPhotoPreview');
+const ideaReviewVideoInput = document.getElementById('ideaReviewVideoInput');      // ✅ TAMBAH INI
+const ideaReviewVideoPreview = document.getElementById('ideaReviewVideoPreview');  // ✅ TAMBAH INI
 const locationsListContainer = document.getElementById('locationsListContainer');
 const locationItemTemplate = document.getElementById('locationItemTemplate');
 const addLocationBtn = document.getElementById('addLocationBtn');
@@ -865,6 +870,7 @@ function renderIdeaDetailModal(ideaId) {
 
                 const reviewStars = '⭐'.repeat(review.rating || 0);
                 const reviewPhotoHtml = renderPhotoUrls(review.photo_url, 'review-photo-main');
+                const reviewVideoHtml = renderVideoUrls(review.video_url, 'review-video'); // ✅ TAMBAH INI
                 
                 // ✅ NEW: Render reviewer name
                 const reviewerNameHtml = review.reviewer_name 
@@ -885,6 +891,7 @@ function renderIdeaDetailModal(ideaId) {
                     ${tripDateHtml}
                     <p class="review-text">${review.review_text || '(Tidak ada komentar)'}</p>
                     ${reviewPhotoHtml}
+                    ${reviewVideoHtml}
                 `;
 
                 detailReviewList.appendChild(reviewItem);
@@ -2162,6 +2169,7 @@ function setupNavigationHandlers() {
     }
 }
 // Init
+// Init
 (async function init(){
     await fetchData(); 
     
@@ -2172,4 +2180,45 @@ function setupNavigationHandlers() {
     setupAccordionControls();
     restoreAccordionState();
     setupNavigationHandlers();
-})();
+    
+    // ✅ TAMBAHKAN CODE INI DI SINI (SEBELUM CLOSING })(); )
+    // Video preview handler
+    if (ideaReviewVideoInput && ideaReviewVideoPreview) {
+        ideaReviewVideoInput.addEventListener('change', (e) => {
+            ideaReviewVideoPreview.innerHTML = '';
+            
+            const file = e.target.files[0];
+            if (file) {
+                // Validate size
+                const maxSize = 50 * 1024 * 1024; // 50MB
+                if (file.size > maxSize) {
+                    alert('Video terlalu besar! Maksimal 50MB.');
+                    e.target.value = '';
+                    return;
+                }
+                
+                // Validate type
+                const allowedTypes = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Format video tidak didukung! Gunakan MP4, MOV, atau WEBM.');
+                    e.target.value = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const video = document.createElement('video');
+                    video.src = event.target.result;
+                    video.controls = true;
+                    video.style.maxWidth = '300px';
+                    video.style.maxHeight = '200px';
+                    video.style.borderRadius = '8px';
+                    video.style.marginTop = '10px';
+                    ideaReviewVideoPreview.appendChild(video);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+})(); // <-- INI TETAP ADA, JANGAN DIHAPUS

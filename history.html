@@ -156,7 +156,15 @@
                 <label for="reviewPhoto" style="margin-top: 10px;">📷 Foto (Opsional, Max 5):</label>
                 <input type="file" id="reviewPhoto" accept="image/*" multiple>
                 <div id="reviewPhotoPreview" class="photo-preview"></div>
-                
+
+                <!-- ✅ TAMBAH VIDEO UPLOAD SECTION - COPY PASTE INI -->
+                <label for="reviewVideo" style="margin-top: 15px;">🎬 Video (Opsional, Max 1):</label>
+                <input type="file" id="reviewVideo" accept="video/mp4,video/quicktime,video/webm">
+                <div id="reviewVideoPreview" class="photo-preview"></div>
+                <small style="color: var(--color-muted); display: block; margin-top: 5px;">
+                    💡 Maksimal 50MB, format MP4/MOV/WEBM
+                </small>
+
                 <p id="reviewStatus" class="status-message"></p>
                 
                 <div class="modal-actions">
