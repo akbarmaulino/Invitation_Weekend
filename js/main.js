@@ -1756,6 +1756,14 @@ activityArea.addEventListener('click', (e) => {
 
 
 function loadInitialState() {
+    const isEditMode = localStorage.getItem('editMode') === 'true';
+    const editTripId = localStorage.getItem('editTripId');
+    
+    if (isEditMode && editTripId) {
+        // Show edit mode indicator
+        showEditModeIndicator(editTripId);
+    }
+
     secretMessage.value = localStorage.getItem('secretMessage') || '';
     secretMessage.addEventListener('input', saveProgress);
     
@@ -1783,6 +1791,41 @@ function loadInitialState() {
     
     // Panggil saveProgress sekali untuk menginisialisasi hitungan
     saveProgress();
+}
+
+// ============================================================
+// EDIT MODE INDICATOR
+// ============================================================
+
+function showEditModeIndicator(tripId) {
+    // Create indicator banner
+    const indicator = document.createElement('div');
+    indicator.className = 'edit-mode-indicator';
+    indicator.id = 'editModeIndicator';
+    
+    indicator.innerHTML = `
+        <div class="indicator-content">
+            <span class="indicator-icon">✏️</span>
+            <div class="indicator-text">
+                <strong>Mode Edit Trip</strong>
+                <small>Anda sedang mengubah trip yang sudah ada. Tambah/kurangi aktivitas, lalu Generate ulang.</small>
+            </div>
+            <button class="btn-cancel-edit" id="cancelEditMode">❌ Batal Edit</button>
+        </div>
+    `;
+    
+    // Insert setelah header
+    const header = document.querySelector('header');
+    header.after(indicator);
+    
+    // Handler untuk cancel edit
+    document.getElementById('cancelEditMode').addEventListener('click', () => {
+        if (confirm('Batalkan edit dan kembali ke mode normal?')) {
+            localStorage.removeItem('editMode');
+            localStorage.removeItem('editTripId');
+            window.location.reload();
+        }
+    });
 }
 
 function populateIdeaSubtypeSelect(selectedCategory, filterCity = null) {
@@ -2077,6 +2120,8 @@ generateBtn.addEventListener('click', () => {
     localStorage.setItem('tripSelections', JSON.stringify(checked));
     localStorage.setItem('secretMessage', secretMessage.value);
 
+    // ✅ BARU: Jangan hapus editMode dan editTripId, biar summary.js tahu ini mode edit
+    
     window.location.href = 'summary.html';
 });
 
@@ -2174,6 +2219,11 @@ function setupNavigationHandlers() {
     await fetchData(); 
     
     loadInitialState();
+    const isEditMode = localStorage.getItem('editMode') === 'true';
+    if (isEditMode) {
+        generateBtn.innerHTML = '🔄 Update Trip (Generate Ulang)';
+        generateBtn.classList.add('edit-mode-button');
+    }
     startCountdown();
     
     // NEW: Setup accordion controls

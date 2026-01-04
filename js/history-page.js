@@ -187,6 +187,9 @@ function renderTimeline() {
                 </div>
                 <div class="trip-actions">
                     <span class="trip-status-badge ${badgeClass}">${badgeText}</span>
+                    <button class="btn secondary small btn-edit-trip" data-trip-id="${trip.id}">
+                        ✏️ Edit Trip
+                    </button>
                     <button class="btn secondary small btn-view-detail" data-trip-id="${trip.id}">
                         👁️ Detail
                     </button>
@@ -235,6 +238,14 @@ function renderTimeline() {
 }
 
 function setupTimelineEventListeners() {
+    // Edit Trip buttons - BARU!
+    document.querySelectorAll('.btn-edit-trip').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const tripId = e.currentTarget.dataset.tripId;
+            editTrip(tripId);
+        });
+    });
+    
     // View Detail buttons
     document.querySelectorAll('.btn-view-detail').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -469,6 +480,40 @@ function setupStarRating(initialRating) {
 // ============================================================
 // REGENERATE TICKET
 // ============================================================
+// ============================================================
+// EDIT TRIP - Load trip ke home page untuk di-edit
+// ============================================================
+
+function editTrip(tripId) {
+    const trip = allTrips.find(t => t.id == tripId);
+    if (!trip) {
+        alert('Trip tidak ditemukan!');
+        return;
+    }
+    
+    // Konfirmasi dulu
+    if (!confirm(`Edit trip tanggal ${formatTanggalIndonesia(trip.trip_date)}?\n\nAnda bisa menambah/mengurangi aktivitas.`)) {
+        return;
+    }
+    
+    // Convert trip data ke format localStorage
+    const selections = trip.selection_json.map(item => ({
+        ideaId: item.idea_id || `cat-${item.name}`,
+        name: item.name,
+        cat: item.category,
+        subtype: item.subtype
+    }));
+    
+    // Save ke localStorage dengan flag edit mode
+    localStorage.setItem('editMode', 'true');
+    localStorage.setItem('editTripId', tripId);
+    localStorage.setItem('tripDate', trip.trip_date);
+    localStorage.setItem('tripSelections', JSON.stringify(selections));
+    localStorage.setItem('secretMessage', trip.secret_message || '');
+    
+    // Redirect ke home page
+    window.location.href = 'index.html';
+}
 
 function regenerateTicket(tripId) {
     const trip = allTrips.find(t => t.id == tripId);
@@ -488,6 +533,7 @@ function regenerateTicket(tripId) {
     
     window.location.href = 'summary.html';
 }
+
 
 // ============================================================
 // EVENT LISTENERS
