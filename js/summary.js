@@ -19,6 +19,21 @@ const ticketDiv = document.getElementById('ticket');
  */
 async function saveTripHistory(tripDateString, selections, message) { 
     
+    // ✅ BARU: Check view only mode
+    const isViewOnly = localStorage.getItem('viewOnlyMode') === 'true';
+    
+    if (isViewOnly) {
+        console.log('👀 View Only Mode - Skip save to database');
+        localStorage.removeItem('viewOnlyMode');
+        localStorage.removeItem('existingTripId');
+        return; // ✅ Exit early, jangan save!
+    }
+    
+    // ✅ Detect edit mode
+    const isEditMode = localStorage.getItem('editMode') === 'true';
+    const editTripId = localStorage.getItem('editTripId');
+
+
     // Konversi string tanggal (YYYY-MM-DD) dari localStorage
     const tripDate = new Date(tripDateString);
     const dbDateFormat = tripDate.toISOString().split('T')[0]; // Format YYYY-MM-DD
@@ -37,6 +52,74 @@ async function saveTripHistory(tripDateString, selections, message) {
         category: s.cat,
         subtype: s.subtype
     }));
+
+    console.log('=== SAVE TRIP HISTORY DEBUG ===');
+    console.log('isEditMode:', isEditMode);
+    console.log('editTripId:', editTripId);
+    console.log('tripDetails:', tripDetails);
+    console.log('message:', message);
+
+    // ✅ UBAH: Jika edit mode, langsung update tanpa cek existing
+    if (isEditMode && editTripId) {
+    console.log('🔄 Masuk ke UPDATE mode');
+    console.log('Updating trip_id:', editTripId);
+    
+    // ✅ TAMBAH: Cek row exist dulu
+    const { data: checkData, error: checkError } = await supabase
+        .from('trip_history')
+        .select('id, trip_date, selection_json')
+        .eq('id', editTripId)
+        .single();
+    
+    console.log('Check existing trip:', { checkData, checkError });
+    
+    if (checkError || !checkData) {
+        console.error('❌ Trip tidak ditemukan di database!');
+        alert('❌ Trip tidak ditemukan! Kemungkinan sudah dihapus. Akan membuat trip baru.');
+        
+        // Clear edit flags dan fallback ke INSERT
+        localStorage.removeItem('editMode');
+        localStorage.removeItem('editTripId');
+        
+        // Lanjut ke INSERT (jangan return)
+    } else {
+        console.log('✅ Trip found, proceeding with update...');
+        console.log('Current data:', checkData.selection_json);
+        console.log('New data:', tripDetails);
+        
+        const { data: updateData, error: updateError } = await supabase
+            .from('trip_history')
+            .update({
+                selection_json: tripDetails,
+                secret_message: message
+            })
+            .eq('id', editTripId)
+            .select();
+        
+        console.log('Update result:', { data: updateData, error: updateError });
+        
+        if (updateError) {
+            console.error('❌ Error updating trip:', updateError);
+            alert('❌ Gagal update trip: ' + updateError.message);
+        } else if (updateData && updateData.length > 0) {
+            console.log('✅ Trip berhasil diupdate!');
+            console.log('Updated data:', updateData);
+            
+            // ✅ Set flag untuk reload history page
+            localStorage.setItem('tripUpdated', 'true');
+            localStorage.setItem('updatedTripId', editTripId);
+            
+            // Clear edit mode flags
+            localStorage.removeItem('editMode');
+            localStorage.removeItem('editTripId');
+        } else {
+            console.warn('⚠️ Update returned empty array');
+            alert('⚠️ Update mungkin tidak berhasil. Coba cek di History page.');
+        }
+        
+        return; // ✅ Exit setelah update
+    }
+}
 
     // Cek apakah trip dengan tanggal yang sama sudah ada di DB
     const { data: existingTrips, error: fetchError } = await supabase
@@ -137,9 +220,41 @@ function loadSummary() {
     `).join('');
 
     // KRITIS: Simpan ke Supabase saat halaman Summary di-load
+    // KRITIS: Simpan ke Supabase saat halaman Summary di-load
     saveTripHistory(tripDateString, tripSelections, secretMessage);
+    
+    // ✅ BARU: Show success banner jika edit mode
+    const isEditMode = localStorage.getItem('editMode') === 'true';
+    if (isEditMode) {
+        showSuccessBanner();
+    }
 }
 
+// ============================================================
+// SUCCESS BANNER untuk Edit Mode
+// ============================================================
+
+function showSuccessBanner() {
+    const banner = document.createElement('div');
+    banner.className = 'success-banner';
+    banner.innerHTML = `
+        <div class="banner-content">
+            <span class="banner-icon">✅</span>
+            <div class="banner-text">
+                <strong>Trip Berhasil Diupdate!</strong>
+                <small>Perubahan sudah disimpan ke riwayat trip Anda.</small>
+            </div>
+        </div>
+    `;
+    
+    document.body.prepend(banner);
+    
+    // Auto hide setelah 5 detik
+    setTimeout(() => {
+        banner.style.animation = 'slideOut 0.5s ease-out';
+        setTimeout(() => banner.remove(), 500);
+    }, 5000);
+}
 // --- FUNGSI SHARE & DOWNLOAD (Tidak ada perubahan signifikan) ---
 
 // Fungsi downloadCanvas dan shareCanvas

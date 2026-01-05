@@ -133,6 +133,37 @@ function renderStats(stats) {
     document.getElementById('uniquePlacesCount').textContent = stats.uniquePlaces;
 }
 
+// ============================================================
+// SUCCESS NOTIFICATION setelah update trip
+// ============================================================
+
+function showUpdateSuccessNotification() {
+    const notification = document.createElement('div');
+    notification.className = 'update-success-notification';
+    notification.innerHTML = `
+        <div class="notification-content">
+            <span class="notification-icon">✅</span>
+            <div class="notification-text">
+                <strong>Trip Berhasil Diupdate!</strong>
+                <small>Perubahan sudah tersimpan</small>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Show animation
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+    
+    // Auto hide after 4 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 500);
+    }, 4000);
+}
+
 function renderTimeline() {
     const timeline = document.getElementById('tripTimeline');
     const loadingEl = document.getElementById('loadingHistory');
@@ -178,6 +209,7 @@ function renderTimeline() {
         const card = document.createElement('div');
         card.className = 'trip-card';
         card.style.animationDelay = `${index * 0.1}s`;
+        card.dataset.tripId = trip.id;
         
         card.innerHTML = `
             <div class="trip-header">
@@ -187,6 +219,9 @@ function renderTimeline() {
                 </div>
                 <div class="trip-actions">
                     <span class="trip-status-badge ${badgeClass}">${badgeText}</span>
+                    <button class="btn secondary small btn-edit-trip" data-trip-id="${trip.id}">
+                        ✏️ Edit Trip
+                    </button>
                     <button class="btn secondary small btn-view-detail" data-trip-id="${trip.id}">
                         👁️ Detail
                     </button>
@@ -235,6 +270,14 @@ function renderTimeline() {
 }
 
 function setupTimelineEventListeners() {
+    // Edit Trip buttons - BARU!
+    document.querySelectorAll('.btn-edit-trip').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const tripId = e.currentTarget.dataset.tripId;
+            editTrip(tripId);
+        });
+    });
+    
     // View Detail buttons
     document.querySelectorAll('.btn-view-detail').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -469,6 +512,40 @@ function setupStarRating(initialRating) {
 // ============================================================
 // REGENERATE TICKET
 // ============================================================
+// ============================================================
+// EDIT TRIP - Load trip ke home page untuk di-edit
+// ============================================================
+
+function editTrip(tripId) {
+    const trip = allTrips.find(t => t.id == tripId);
+    if (!trip) {
+        alert('Trip tidak ditemukan!');
+        return;
+    }
+    
+    // Konfirmasi dulu
+    if (!confirm(`Edit trip tanggal ${formatTanggalIndonesia(trip.trip_date)}?\n\nAnda bisa menambah/mengurangi aktivitas.`)) {
+        return;
+    }
+    
+    // Convert trip data ke format localStorage
+    const selections = trip.selection_json.map(item => ({
+        ideaId: item.idea_id || `cat-${item.name}`,
+        name: item.name,
+        cat: item.category,
+        subtype: item.subtype
+    }));
+    
+    // Save ke localStorage dengan flag edit mode
+    localStorage.setItem('editMode', 'true');
+    localStorage.setItem('editTripId', tripId);
+    localStorage.setItem('tripDate', trip.trip_date);
+    localStorage.setItem('tripSelections', JSON.stringify(selections));
+    localStorage.setItem('secretMessage', trip.secret_message || '');
+    
+    // Redirect ke home page
+    window.location.href = 'index.html';
+}
 
 function regenerateTicket(tripId) {
     const trip = allTrips.find(t => t.id == tripId);
@@ -482,12 +559,17 @@ function regenerateTicket(tripId) {
         subtype: item.subtype
     }));
     
+    // ✅ TAMBAH: Set mode VIEW ONLY (jangan save ke DB lagi)
+    localStorage.setItem('viewOnlyMode', 'true'); // ✅ KUNCI: Flag view only
+    localStorage.setItem('existingTripId', tripId); // ✅ Save ID untuk reference
+    
     localStorage.setItem('tripDate', trip.trip_date);
     localStorage.setItem('tripSelections', JSON.stringify(selections));
     localStorage.setItem('secretMessage', trip.secret_message || '');
     
     window.location.href = 'summary.html';
 }
+
 
 // ============================================================
 // EVENT LISTENERS
@@ -505,6 +587,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cancelReview = document.getElementById('cancelReview');
     const reviewForm = document.getElementById('reviewForm');
     const reviewPhoto = document.getElementById('reviewPhoto');
+    const tripUpdated = localStorage.getItem('tripUpdated');
+    const updatedTripId = localStorage.getItem('updatedTripId');
     
     // Initial load
     const success = await fetchAllData();
@@ -512,6 +596,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         const stats = calculateStats();
         renderStats(stats);
         renderTimeline();
+    }
+    if (tripUpdated === 'true' && updatedTripId) {
+        // Show success notification
+        showUpdateSuccessNotification();
+        
+        // Scroll to updated trip (optional)
+        setTimeout(() => {
+            const updatedCard = document.querySelector(`.trip-card[data-trip-id="${updatedTripId}"]`);
+            if (updatedCard) {
+                updatedCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                updatedCard.classList.add('trip-updated-highlight');
+                
+                // Remove highlight after 3 seconds
+                setTimeout(() => {
+                    updatedCard.classList.remove('trip-updated-highlight');
+                }, 3000);
+            }
+        }, 500);
+        
+        // Clear flags
+        localStorage.removeItem('tripUpdated');
+        localStorage.removeItem('updatedTripId');
     }
     
     // Apply filter

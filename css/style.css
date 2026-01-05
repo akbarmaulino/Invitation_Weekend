@@ -32,13 +32,13 @@ header {
     background-color: var(--color-background-medium);
     padding: 20px;
     text-align: center;
-    /* [UPDATE MINOR UI]: Mengganti border tebal dengan shadow yang lebih lembut dan membuat sticky */
     box-shadow: 0 2px 8px var(--color-shadow-medium); 
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 100; /* ✅ Banner z-index: 1001, jadi ini di bawah */
     margin-bottom: 20px;
     border-radius: 0 0 12px 12px;
+    transition: top 0.3s ease; /* ✅ Smooth transition */
 }
 
 main {
@@ -2300,5 +2300,392 @@ details.city-details > summary::before {
     .accordion-hint {
         margin-left: 0;
         text-align: center;
+    }
+}
+
+
+body {
+    padding-top: 0;
+    transition: padding-top 0.3s ease; /* ✅ Smooth transition */
+}
+
+header {
+    transition: top 0.3s ease; /* ✅ Smooth transition */
+}
+
+
+
+/*==================================================
+  EDIT MODE INDICATOR & SUCCESS BANNER
+==================================================*/
+
+.edit-mode-indicator * {
+    margin: 0;
+    padding: 0;
+}
+
+.edit-mode-indicator {
+    background: linear-gradient(135deg, #fff9e6 0%, #ffc107 100%);
+    padding: 15px 20px;
+    text-align: center;
+    border-bottom: 4px solid #f57f17;
+    box-shadow: 0 4px 12px rgba(245, 127, 23, 0.3);
+    animation: slideInDown 0.5s ease-out;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 1001;
+    margin: 0; /* ✅ TAMBAH INI */
+}
+
+body.edit-mode-active {
+    padding-top: 0;
+}
+
+
+body.edit-mode-active main {
+    margin-top: 120px; /* Space untuk banner (sesuaikan dengan tinggi banner) */
+}
+
+
+body.edit-mode-active header {
+    position: sticky;
+    top: 110px; 
+    z-index: 100;
+}
+
+.indicator-content {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.indicator-icon {
+    font-size: 2em;
+    line-height: 1;
+}
+
+.indicator-text {
+    flex: 1;
+    text-align: left;
+}
+
+.indicator-text strong {
+    display: block;
+    font-size: 1.2em;
+    color: var(--color-primary);
+    margin-bottom: 5px;
+}
+
+.indicator-text small {
+    display: block;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.btn-cancel-edit {
+    background: white;
+    color: var(--color-error);
+    border: 2px solid var(--color-error);
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-cancel-edit:hover {
+    background: var(--color-error);
+    color: white;
+    transform: scale(1.05);
+}
+
+.edit-mode-button {
+    background: linear-gradient(135deg, #ff9800 0%, #ffa726 100%) !important;
+    animation: pulse 2s infinite;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { 
+        box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7);
+    }
+    50% { 
+        box-shadow: 0 0 0 15px rgba(255, 152, 0, 0);
+    }
+}
+
+/* Success Banner */
+.success-banner {
+    background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
+    padding: 20px;
+    text-align: center;
+    color: white;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+    animation: slideInDown 0.5s ease-out;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+}
+
+.banner-content {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
+.banner-icon {
+    font-size: 2em;
+    line-height: 1;
+}
+
+.banner-text strong {
+    display: block;
+    font-size: 1.2em;
+    margin-bottom: 3px;
+}
+
+.banner-text small {
+    display: block;
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+@keyframes slideOut {
+    to {
+        opacity: 0;
+        transform: translateY(-100%);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .indicator-content {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .indicator-text {
+        text-align: center;
+    }
+    
+    .btn-cancel-edit {
+        width: 100%;
+    }
+}
+
+
+/*==================================================
+  EDIT MODE INDICATOR - COMPACT VERSION
+==================================================*/
+
+.edit-mode-indicator-compact {
+    background: linear-gradient(135deg, #fff9e6 0%, #ffc107 100%);
+    padding: 12px 20px;
+    border-radius: 12px;
+    border: 2px solid #f57f17;
+    box-shadow: 0 4px 12px rgba(245, 127, 23, 0.2);
+    animation: slideInDown 0.5s ease-out;
+    margin: 20px 0;
+}
+
+.indicator-content-compact {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+.indicator-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.indicator-icon {
+    font-size: 1.5em;
+    line-height: 1;
+}
+
+.indicator-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.indicator-text strong {
+    font-size: 1em;
+    color: var(--color-primary);
+    line-height: 1.2;
+}
+
+.indicator-text small {
+    font-size: 0.85em;
+    color: #666;
+    line-height: 1.2;
+}
+
+.btn-cancel-edit-compact {
+    background: white;
+    color: var(--color-error);
+    border: 2px solid var(--color-error);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-cancel-edit-compact:hover {
+    background: var(--color-error);
+    color: white;
+    transform: scale(1.05);
+}
+
+/* ✅ HAPUS semua CSS body.edit-mode-active */
+/* Tidak perlu lagi karena banner sudah inline */
+
+/* Responsive */
+@media (max-width: 768px) {
+    .indicator-content-compact {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+    }
+    
+    .indicator-left {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .btn-cancel-edit-compact {
+        width: 100%;
+    }
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/*==================================================
+  UPDATE SUCCESS NOTIFICATION & HIGHLIGHT
+==================================================*/
+
+.update-success-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+    z-index: 9999;
+    opacity: 0;
+    transform: translateX(400px);
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.update-success-notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.notification-icon {
+    font-size: 1.8em;
+    line-height: 1;
+}
+
+.notification-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.notification-text strong {
+    font-size: 1em;
+    line-height: 1.2;
+}
+
+.notification-text small {
+    font-size: 0.85em;
+    opacity: 0.9;
+    line-height: 1.2;
+}
+
+/* Highlight untuk trip yang baru diupdate */
+.trip-updated-highlight {
+    animation: highlightPulse 1.5s ease-in-out 2;
+    border-color: #4caf50 !important;
+}
+
+@keyframes highlightPulse {
+    0%, 100% {
+        box-shadow: 0 4px 12px rgba(3, 37, 76, 0.08);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 30px rgba(76, 175, 80, 0.6);
+        transform: scale(1.02);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .update-success-notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        padding: 12px 16px;
+    }
+    
+    .notification-icon {
+        font-size: 1.5em;
+    }
+    
+    .notification-text strong {
+        font-size: 0.95em;
+    }
+    
+    .notification-text small {
+        font-size: 0.8em;
     }
 }
