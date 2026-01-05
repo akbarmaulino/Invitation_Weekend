@@ -19,8 +19,20 @@ const ticketDiv = document.getElementById('ticket');
  */
 async function saveTripHistory(tripDateString, selections, message) { 
     
+    // ✅ BARU: Check view only mode
+    const isViewOnly = localStorage.getItem('viewOnlyMode') === 'true';
+    
+    if (isViewOnly) {
+        console.log('👀 View Only Mode - Skip save to database');
+        localStorage.removeItem('viewOnlyMode');
+        localStorage.removeItem('existingTripId');
+        return; // ✅ Exit early, jangan save!
+    }
+    
+    // ✅ Detect edit mode
     const isEditMode = localStorage.getItem('editMode') === 'true';
     const editTripId = localStorage.getItem('editTripId');
+
 
     // Konversi string tanggal (YYYY-MM-DD) dari localStorage
     const tripDate = new Date(tripDateString);
@@ -41,28 +53,73 @@ async function saveTripHistory(tripDateString, selections, message) {
         subtype: s.subtype
     }));
 
+    console.log('=== SAVE TRIP HISTORY DEBUG ===');
+    console.log('isEditMode:', isEditMode);
+    console.log('editTripId:', editTripId);
+    console.log('tripDetails:', tripDetails);
+    console.log('message:', message);
+
+    // ✅ UBAH: Jika edit mode, langsung update tanpa cek existing
     if (isEditMode && editTripId) {
-        const { error: updateError } = await supabase
+    console.log('🔄 Masuk ke UPDATE mode');
+    console.log('Updating trip_id:', editTripId);
+    
+    // ✅ TAMBAH: Cek row exist dulu
+    const { data: checkData, error: checkError } = await supabase
+        .from('trip_history')
+        .select('id, trip_date, selection_json')
+        .eq('id', editTripId)
+        .single();
+    
+    console.log('Check existing trip:', { checkData, checkError });
+    
+    if (checkError || !checkData) {
+        console.error('❌ Trip tidak ditemukan di database!');
+        alert('❌ Trip tidak ditemukan! Kemungkinan sudah dihapus. Akan membuat trip baru.');
+        
+        // Clear edit flags dan fallback ke INSERT
+        localStorage.removeItem('editMode');
+        localStorage.removeItem('editTripId');
+        
+        // Lanjut ke INSERT (jangan return)
+    } else {
+        console.log('✅ Trip found, proceeding with update...');
+        console.log('Current data:', checkData.selection_json);
+        console.log('New data:', tripDetails);
+        
+        const { data: updateData, error: updateError } = await supabase
             .from('trip_history')
             .update({
                 selection_json: tripDetails,
-                secret_message: message,
-                updated_at: new Date().toISOString()
+                secret_message: message
             })
-            .eq('id', editTripId);
+            .eq('id', editTripId)
+            .select();
+        
+        console.log('Update result:', { data: updateData, error: updateError });
         
         if (updateError) {
-            console.error('Error updating trip:', updateError);
+            console.error('❌ Error updating trip:', updateError);
             alert('❌ Gagal update trip: ' + updateError.message);
-        } else {
+        } else if (updateData && updateData.length > 0) {
             console.log('✅ Trip berhasil diupdate!');
+            console.log('Updated data:', updateData);
+            
+            // ✅ Set flag untuk reload history page
+            localStorage.setItem('tripUpdated', 'true');
+            localStorage.setItem('updatedTripId', editTripId);
+            
             // Clear edit mode flags
             localStorage.removeItem('editMode');
             localStorage.removeItem('editTripId');
+        } else {
+            console.warn('⚠️ Update returned empty array');
+            alert('⚠️ Update mungkin tidak berhasil. Coba cek di History page.');
         }
         
-        return; // Exit function setelah update
+        return; // ✅ Exit setelah update
     }
+}
 
     // Cek apakah trip dengan tanggal yang sama sudah ada di DB
     const { data: existingTrips, error: fetchError } = await supabase

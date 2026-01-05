@@ -1798,34 +1798,53 @@ function loadInitialState() {
 // ============================================================
 
 function showEditModeIndicator(tripId) {
-    // Create indicator banner
+    // ✅ HAPUS class body (tidak perlu lagi)
+    // document.body.classList.add('edit-mode-active');
+    
+    // Create indicator banner (lebih compact)
     const indicator = document.createElement('div');
-    indicator.className = 'edit-mode-indicator';
+    indicator.className = 'edit-mode-indicator-compact';
     indicator.id = 'editModeIndicator';
     
     indicator.innerHTML = `
-        <div class="indicator-content">
-            <span class="indicator-icon">✏️</span>
-            <div class="indicator-text">
-                <strong>Mode Edit Trip</strong>
-                <small>Anda sedang mengubah trip yang sudah ada. Tambah/kurangi aktivitas, lalu Generate ulang.</small>
+        <div class="indicator-content-compact">
+            <div class="indicator-left">
+                <span class="indicator-icon">✏️</span>
+                <div class="indicator-text">
+                    <strong>Mode Edit Trip</strong>
+                    <small>Ubah aktivitas, lalu Generate ulang</small>
+                </div>
             </div>
-            <button class="btn-cancel-edit" id="cancelEditMode">❌ Batal Edit</button>
+            <button class="btn-cancel-edit-compact" id="cancelEditMode">❌ Batal</button>
         </div>
     `;
     
-    // Insert setelah header
-    const header = document.querySelector('header');
-    header.after(indicator);
+    // ✅ Insert SEBELUM "Selected Activities Panel" atau setelah "controls"
+    const controls = document.querySelector('.controls');
+    if (controls) {
+        controls.after(indicator);
+    } else {
+        // Fallback: insert di awal main
+        const main = document.querySelector('main');
+        main.prepend(indicator);
+    }
     
-    // Handler untuk cancel edit
+
+// Handler untuk cancel edit
     document.getElementById('cancelEditMode').addEventListener('click', () => {
         if (confirm('Batalkan edit dan kembali ke mode normal?')) {
             localStorage.removeItem('editMode');
             localStorage.removeItem('editTripId');
+            document.body.classList.remove('edit-mode-active');
             window.location.reload();
         }
     });
+    
+    // ✅ TAMBAH INI: Adjust body padding berdasarkan tinggi banner actual
+    setTimeout(() => {
+        const bannerHeight = indicator.offsetHeight;
+        document.body.style.paddingTop = `${bannerHeight}px`;
+    }, 100); // Tunggu 100ms untuk render selesai
 }
 
 function populateIdeaSubtypeSelect(selectedCategory, filterCity = null) {

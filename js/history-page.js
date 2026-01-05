@@ -133,6 +133,37 @@ function renderStats(stats) {
     document.getElementById('uniquePlacesCount').textContent = stats.uniquePlaces;
 }
 
+// ============================================================
+// SUCCESS NOTIFICATION setelah update trip
+// ============================================================
+
+function showUpdateSuccessNotification() {
+    const notification = document.createElement('div');
+    notification.className = 'update-success-notification';
+    notification.innerHTML = `
+        <div class="notification-content">
+            <span class="notification-icon">✅</span>
+            <div class="notification-text">
+                <strong>Trip Berhasil Diupdate!</strong>
+                <small>Perubahan sudah tersimpan</small>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Show animation
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+    
+    // Auto hide after 4 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 500);
+    }, 4000);
+}
+
 function renderTimeline() {
     const timeline = document.getElementById('tripTimeline');
     const loadingEl = document.getElementById('loadingHistory');
@@ -178,6 +209,7 @@ function renderTimeline() {
         const card = document.createElement('div');
         card.className = 'trip-card';
         card.style.animationDelay = `${index * 0.1}s`;
+        card.dataset.tripId = trip.id;
         
         card.innerHTML = `
             <div class="trip-header">
@@ -527,6 +559,10 @@ function regenerateTicket(tripId) {
         subtype: item.subtype
     }));
     
+    // ✅ TAMBAH: Set mode VIEW ONLY (jangan save ke DB lagi)
+    localStorage.setItem('viewOnlyMode', 'true'); // ✅ KUNCI: Flag view only
+    localStorage.setItem('existingTripId', tripId); // ✅ Save ID untuk reference
+    
     localStorage.setItem('tripDate', trip.trip_date);
     localStorage.setItem('tripSelections', JSON.stringify(selections));
     localStorage.setItem('secretMessage', trip.secret_message || '');
@@ -551,6 +587,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cancelReview = document.getElementById('cancelReview');
     const reviewForm = document.getElementById('reviewForm');
     const reviewPhoto = document.getElementById('reviewPhoto');
+    const tripUpdated = localStorage.getItem('tripUpdated');
+    const updatedTripId = localStorage.getItem('updatedTripId');
     
     // Initial load
     const success = await fetchAllData();
@@ -558,6 +596,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         const stats = calculateStats();
         renderStats(stats);
         renderTimeline();
+    }
+    if (tripUpdated === 'true' && updatedTripId) {
+        // Show success notification
+        showUpdateSuccessNotification();
+        
+        // Scroll to updated trip (optional)
+        setTimeout(() => {
+            const updatedCard = document.querySelector(`.trip-card[data-trip-id="${updatedTripId}"]`);
+            if (updatedCard) {
+                updatedCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                updatedCard.classList.add('trip-updated-highlight');
+                
+                // Remove highlight after 3 seconds
+                setTimeout(() => {
+                    updatedCard.classList.remove('trip-updated-highlight');
+                }, 3000);
+            }
+        }, 500);
+        
+        // Clear flags
+        localStorage.removeItem('tripUpdated');
+        localStorage.removeItem('updatedTripId');
     }
     
     // Apply filter
