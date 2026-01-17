@@ -1,0 +1,248 @@
+[33mcommit 0661342edbcb9ad6d8f3d0a2d01b1044abbf08b2[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mFeature-Invitation-Email[m[33m, [m[1;31morigin/Feature-Invitation-Email[m[33m)[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Sat Jan 17 07:42:26 2026 +0700
+
+    [Add] Feature Invitation Review
+
+[33mcommit f3f3a3f2ea749396846b2f96e8120d9dc72441e2[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m
+Merge: 821c477 cdea0e3
+Author: Yantrisnandra Akbar Maulino <88184936+akbarmaulino@users.noreply.github.com>
+Date:   Mon Jan 5 11:18:00 2026 +0700
+
+    Merge pull request #1 from akbarmaulino/History-Update
+    
+    [Add] History Fiture
+
+[33mcommit cdea0e3091784a8fb71d05e71d897b19a0353c13[m[33m ([m[1;31morigin/History-Update[m[33m)[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Mon Jan 5 10:49:44 2026 +0700
+
+    [Add] Feature History Final
+
+[33mcommit bc80d89b4589d3402b8755e4a2d485701559f608[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Mon Jan 5 00:55:27 2026 +0700
+
+    [Add] Feature Update History
+
+[33mcommit 821c4773eaf74fbe77d225c46b5b218c89778c50[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Thu Jan 1 17:22:25 2026 +0700
+
+    update vidio ui galery
+
+[33mcommit c214ca6d165bf6b912f55c11df0de9e92c27377a[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Thu Jan 1 12:27:59 2026 +0700
+
+    add Vidio Documentation
+
+[33mcommit 6833c0f29afde87c8be1f5fe2b1deb05df4c0f87[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Tue Nov 18 10:36:14 2025 +0700
+
+    fix bug close all dan add feature review name
+
+[33mcommit acaac54f2f69bc180d8d77330975ac5da256051d[m
+Author: Yantrisnandra Akbar Maulino <88184936+akbarmaulino@users.noreply.github.com>
+Date:   Fri Nov 14 10:36:40 2025 +0700
+
+    update naming
+
+[33mcommit cde5febef68282a8373d94da6851cc8f5b8f0de9[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Wed Nov 12 15:16:34 2025 +0700
+
+    final update
+
+[33mcommit 7372983d234e6add5b89be96e423c8d4aac5c23c[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Tue Nov 11 16:08:39 2025 +0700
+
+    update Bug
+
+[33mcommit 0c434eab975f97bd70e9f9f6d5280fcc8637a57f[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Tue Nov 11 11:05:19 2025 +0700
+
+    Add Big Fiture
+
+[33mcommit 71678a8d59bf67c27c12505aa16c40bb0fbe525e[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Mon Nov 10 15:41:16 2025 +0700
+
+    update Fitur Besar
+
+[33mcommit 6b358da5553b8d18aa6b11072144c4299a7d61e3[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Mon Nov 10 06:22:29 2025 +0700
+
+    generate recall
+
+[33mcommit 4fd64642936e6c752c04c1e609085d3fe603292d[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Sun Nov 9 22:09:44 2025 +0700
+
+    Update Fitur and Fix Bug
+
+[33mcommit df828bd7522c0d55ca8bc7f0a95ff3bd699056b9[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Fri Nov 7 17:56:09 2025 +0700
+
+    Update Fitur  Partial
+
+[33mcommit d126d7d3d911fc5eded3a13dca16f8e84b2194ee[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Thu Nov 6 19:33:52 2025 +0700
+
+     Update Fitur
+
+[33mcommit 09c2ed5b5b384030b119e3443894db58f7eabb40[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Thu Nov 6 10:03:31 2025 +0700
+
+    add Feature Multiple Location in One Place
+
+[33mcommit be996ac1cc8c8d28ceba1264a7a4e4729a24615a[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Wed Nov 5 16:25:39 2025 +0700
+
+    Update Bug Update
+
+[33mcommit 9004e00f6c199be54d1c36d32289d525967df4db[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Wed Nov 5 09:51:30 2025 +0700
+
+    add feature maps in detail
+
+[33mcommit 1956274b25a05332326ee5b86ea1afc3a633d754[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Wed Nov 5 08:00:33 2025 +0700
+
+    add feature delete and view list
+
+[33mcommit 4b86cef163926c23a6de3731a16bcab5c0bff404[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Tue Nov 4 16:32:05 2025 +0700
+
+    add Dropdown feature
+
+[33mcommit 832bf20f20fc4022221f7fdb66882b58e82d6e66[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Mon Oct 27 08:18:12 2025 +0700
+
+    update review and submit review and update json schema for documentation
+
+[33mcommit 83e6e59afe55a43d932a2df60544426e11131444[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Thu Oct 16 13:26:11 2025 +0700
+
+    fix multiple image review
+
+[33mcommit df756215c89689b1e76c7b528fed0eba11b9d543[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Thu Oct 16 11:05:04 2025 +0700
+
+    update multiple image review form
+
+[33mcommit 73046d20c72493e71eef5b39cd2f08029622dafb[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Wed Oct 15 19:25:30 2025 +0700
+
+    update main.js
+
+[33mcommit 20febe525bcbef47985514d32a9dc825bdba300a[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Wed Oct 15 11:36:13 2025 +0700
+
+    final v2
+
+[33mcommit 0497aa9a3a6440c8cf069ebe3b0a033e62355d87[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Wed Oct 15 11:01:52 2025 +0700
+
+    final
+
+[33mcommit e91de1ddc0c03ce80ed5ded9aca3f4a1753921b4[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Wed Oct 15 10:40:20 2025 +0700
+
+    update finalization
+
+[33mcommit c88318938a1aa19d31bcbc71b909083a1cb63acf[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Wed Oct 15 09:47:36 2025 +0700
+
+    update rating fix
+
+[33mcommit 267a714247fd08675b5acb0aae06cfa7970ae822[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Tue Oct 14 22:48:42 2025 +0700
+
+    rating
+
+[33mcommit 48830ef6d054d191087a4825e7b030a47c050a9e[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Tue Oct 14 22:34:44 2025 +0700
+
+    update new
+
+[33mcommit 69d59552e4fbbee979330c4d30a43624e6b56283[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Tue Oct 14 22:27:51 2025 +0700
+
+    update
+
+[33mcommit e8f90051ed82f917d67bf9fb288ef095f9f6660f[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Tue Oct 14 14:41:40 2025 +0700
+
+    push update
+
+[33mcommit d4e0e3f5286823920275c626ab234b9e3596b7ab[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Mon Oct 13 07:37:10 2025 +0700
+
+    upgrade UI
+
+[33mcommit 91ae601d9b0b1fdb7a7068fe190ea073560070c7[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Mon Oct 13 07:30:52 2025 +0700
+
+    add json schema
+
+[33mcommit 28fc56ae5c0bd4355f7614935f3379adbd43c1a6[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Mon Oct 13 07:25:56 2025 +0700
+
+    show rating di main page
+
+[33mcommit 1607c54f2ae5618af98a553036f44e1f8024d279[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Mon Oct 13 00:22:12 2025 +0700
+
+    Add Review Tiap Tempat
+
+[33mcommit a9604d984a989632b7cff272f428442d6902417b[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Sun Oct 12 03:41:06 2025 +0700
+
+    upgrade warna background fix
+
+[33mcommit d708b4a545a8574815899358e4f24fc7ae912e28[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Sat Oct 11 08:25:16 2025 +0700
+
+    commit new Feature and image
+
+[33mcommit 709024d9e029804a2b61541d14e5d7d0172e4546[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Sat Oct 11 06:19:32 2025 +0700
+
+    update auth
+
+[33mcommit 05e79060c8c7e48b4557f73a37d030f365179b6b[m
+Author: akbarmaulino <maulinoakbar8@gmail.com>
+Date:   Sat Oct 11 06:11:59 2025 +0700
+
+    first commit

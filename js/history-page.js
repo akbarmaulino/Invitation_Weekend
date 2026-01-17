@@ -109,12 +109,25 @@ function calculateStats() {
 
 function calculateTripProgress(trip) {
     if (!trip.selection_json || trip.selection_json.length === 0) {
-        return { total: 0, reviewed: 0, percentage: 0, status: 'empty' };
+        return { 
+            totalActivities: 0, 
+            reviewedActivities: 0, 
+            totalReviews: 0,
+            percentage: 0, 
+            status: 'empty' 
+        };
     }
     
     const totalActivities = trip.selection_json.length;
+    
+    // ✅ Hitung jumlah TOTAL REVIEWS di trip ini
+    const totalReviews = allReviews.filter(review => 
+        review.trip_id == trip.id
+    ).length;
+    
+    // ✅ Hitung jumlah ACTIVITIES yang sudah direview (minimal 1 review)
     const reviewedActivities = trip.selection_json.filter(activity => {
-        return allReviews.find(review => 
+        return allReviews.some(review => 
             review.trip_id == trip.id && 
             review.idea_id == activity.idea_id
         );
@@ -130,9 +143,10 @@ function calculateTripProgress(trip) {
     }
     
     return {
-        total: totalActivities,
-        reviewed: reviewedActivities,
-        percentage,
+        totalActivities,      // Total aktivitas
+        reviewedActivities,   // Aktivitas yang sudah direview
+        totalReviews,         // Total semua reviews
+        percentage,           // Persentase completion
         status
     };
 }
@@ -202,13 +216,13 @@ function renderTimeline() {
         // Badge status
         let badgeClass = 'badge-none';
         let badgeText = '📝 Belum Review';
-        
+
         if (progress.status === 'complete') {
             badgeClass = 'badge-complete';
-            badgeText = '✅ Lengkap';
+            badgeText = `✅ Lengkap (${progress.totalReviews} reviews)`;  // ✅ Show review count
         } else if (progress.status === 'partial') {
             badgeClass = 'badge-partial';
-            badgeText = `⏳ ${progress.reviewed}/${progress.total}`;
+            badgeText = `⏳ ${progress.reviewedActivities}/${progress.totalActivities} (${progress.totalReviews} reviews)`;  // ✅ Show both
         }
         
         // Activities preview (first 5)
@@ -250,23 +264,27 @@ function renderTimeline() {
             
             <div class="trip-summary">
                 <div class="summary-item">
-                    <span class="item-value">${progress.total}</span>
+                    <span class="item-value">${progress.totalActivities}</span>
                     <span class="item-label">Aktivitas</span>
                 </div>
                 <div class="summary-item">
-                    <span class="item-value">${progress.reviewed}</span>
+                    <span class="item-value">${progress.totalReviews}</span>
                     <span class="item-label">Reviews</span>
                 </div>
                 <div class="summary-item">
+                    <span class="item-value">${progress.reviewedActivities}/${progress.totalActivities}</span>
+                    <span class="item-label">Reviewed</span>
+                </div>
+                <div class="summary-item">
                     <span class="item-value">${progress.percentage}%</span>
-                    <span class="item-label">Progress</span>
+                    <span class="item-label">Complete</span>
                 </div>
             </div>
             
             <div class="review-progress">
                 <div class="progress-label">
-                    <span>Review Progress</span>
-                    <span>${progress.reviewed} / ${progress.total}</span>
+                    <span>Activities Reviewed</span>
+                    <span>${progress.reviewedActivities} / ${progress.totalActivities}</span>
                 </div>
                 <div class="progress-bar-container">
                     <div class="progress-bar-fill" style="width: ${progress.percentage}%"></div>
@@ -342,7 +360,8 @@ function showTripDetail(tripId) {
     activitiesList.innerHTML = '';
     
     trip.selection_json.forEach(activity => {
-        const review = allReviews.find(r => 
+        // ✅ FIX: Get ALL reviews untuk activity ini di trip ini
+        const reviewsForActivity = allReviews.filter(r => 
             r.trip_id == tripId && 
             r.idea_id == activity.idea_id
         );
@@ -350,26 +369,41 @@ function showTripDetail(tripId) {
         const item = document.createElement('div');
         item.className = 'activity-detail-item';
         
-        const reviewSection = review ? `
-            <div class="review-section">
-                ${renderReviewerName(review.reviewer_name)}
-                <div class="review-rating">${'⭐'.repeat(review.rating || 0)}</div>
-                <p class="review-text-content">${review.review_text || '(Tidak ada komentar)'}</p>
-                ${renderPhotoUrls(review.photo_url, 'review-photo')}
-                ${renderVideoUrls(review.video_url, 'review-video')}
-                <button class="btn secondary small btn-edit-review" 
-                        data-idea-id="${activity.idea_id}" 
-                        data-trip-id="${tripId}"
-                        data-idea-name="${activity.name}">
-                    ✏️ Edit Review
-                </button>
-            </div>
-        ` : `
+        // ✅ NEW: Render SEMUA reviews
+        let reviewsHtml = '';
+        
+        if (reviewsForActivity.length > 0) {
+            reviewsHtml = '<div class="all-reviews-section">';
+            
+            reviewsForActivity.forEach(review => {
+                reviewsHtml += `
+                    <div class="review-section">
+                        ${renderReviewerName(review.reviewer_name)}
+                        <div class="review-rating">${'⭐'.repeat(review.rating || 0)}</div>
+                        <p class="review-text-content">${review.review_text || '(Tidak ada komentar)'}</p>
+                        ${renderPhotoUrls(review.photo_url, 'review-photo')}
+                        ${renderVideoUrls(review.video_url, 'review-video')}
+                        <button class="btn secondary small btn-edit-review" 
+                                data-idea-id="${activity.idea_id}" 
+                                data-trip-id="${tripId}"
+                                data-idea-name="${activity.name}"
+                                data-reviewer-name="${review.reviewer_name}">
+                            ✏️ Edit Review Ini
+                        </button>
+                    </div>
+                `;
+            });
+            
+            reviewsHtml += '</div>';
+        }
+        
+        // Button untuk tambah review baru
+        const addReviewBtn = `
             <button class="btn primary small btn-add-review" 
                     data-idea-id="${activity.idea_id}" 
                     data-trip-id="${tripId}"
                     data-idea-name="${activity.name}">
-                ⭐ Beri Review
+                ⭐ Tambah Review
             </button>
         `;
         
@@ -380,7 +414,9 @@ function showTripDetail(tripId) {
                     <div class="activity-category">${activity.category} / ${activity.subtype}</div>
                 </div>
             </div>
-            ${reviewSection}
+            ${reviewsHtml}
+            ${reviewsForActivity.length === 0 ? '<p style="color: var(--color-muted); margin: 10px 0;">Belum ada review</p>' : ''}
+            ${addReviewBtn}
         `;
         
         activitiesList.appendChild(item);
@@ -388,6 +424,32 @@ function showTripDetail(tripId) {
     
     // Setup review buttons
     setupReviewButtons();
+    
+    // ✅ Setup edit review buttons (untuk edit review spesifik per reviewer)
+    document.querySelectorAll('.btn-edit-review').forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const ideaId = e.currentTarget.dataset.ideaId;
+            const ideaName = e.currentTarget.dataset.ideaName;
+            const tripId = e.currentTarget.dataset.tripId;
+            const reviewerName = e.currentTarget.dataset.reviewerName;
+            
+            console.log('✏️ Edit review:', { ideaId, tripId, reviewerName });
+            
+            // Find specific review
+            const existingReview = allReviews.find(r => 
+                r.trip_id == tripId && 
+                r.idea_id == ideaId && 
+                r.reviewer_name == reviewerName
+            );
+            
+            if (existingReview) {
+                showReviewModal(ideaId, tripId, ideaName, existingReview);
+            } else {
+                console.error('Review not found!', { ideaId, tripId, reviewerName });
+            }
+        });
+    });
     
     showModal(modal);
 }
@@ -860,6 +922,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // Submit review
+    // Submit review
     reviewForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -888,19 +951,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         statusMsg.textContent = '⏳ Menyimpan review...';
         submitBtn.disabled = true;
         
-        // Check existing review once
-        const existingReview = allReviews.find(r => 
-            r.trip_id == tripId && 
-            r.idea_id == ideaId
-        );
-        
         // Upload photos
         let photoUrls = [];
         if (files.length > 0) {
             photoUrls = await uploadImages(files, currentUser.id, 'review');
-        } else if (existingReview?.photo_url) {
-            // Keep old photos if no new upload
-            photoUrls = existingReview.photo_url;
+        } else {
+            // Keep old photos if exists
+            const existingReview = allReviews.find(r => 
+                r.trip_id == tripId && 
+                r.idea_id == ideaId &&
+                r.reviewer_name == reviewerName
+            );
+            if (existingReview?.photo_url) {
+                photoUrls = existingReview.photo_url;
+            }
         }
         
         // Upload video
@@ -916,6 +980,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             
             // Delete old video if exists
+            const existingReview = allReviews.find(r => 
+                r.trip_id == tripId && 
+                r.idea_id == ideaId &&
+                r.reviewer_name == reviewerName
+            );
+            
             if (existingReview?.video_url && typeof existingReview.video_url === 'string' && !existingReview.video_url.startsWith('http')) {
                 try {
                     await supabase.storage
@@ -925,9 +995,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     console.warn('Failed to delete old video:', e);
                 }
             }
-        } else if (existingReview?.video_url) {
-            // Keep old video if no new upload
-            videoUrl = existingReview.video_url;
+        } else {
+            // Keep old video if exists
+            const existingReview = allReviews.find(r => 
+                r.trip_id == tripId && 
+                r.idea_id == ideaId &&
+                r.reviewer_name == reviewerName
+            );
+            if (existingReview?.video_url) {
+                videoUrl = existingReview.video_url;
+            }
         }
         
         const reviewData = {
@@ -943,10 +1020,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
         
         try {
+            // ✅ FIX: Correct onConflict dengan reviewer_name
             const { error } = await supabase
                 .from('idea_reviews')
                 .upsert([reviewData], { 
-                    onConflict: 'idea_id, trip_id',
+                    onConflict: 'idea_id,trip_id,reviewer_name',  // ✅ FIXED!
                     ignoreDuplicates: false 
                 });
             

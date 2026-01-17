@@ -262,12 +262,18 @@ async function showTripDetails(tripId) {
     // 2. Filter reviews untuk trip ini
     const reviewsForThisTrip = allReviewsCache.filter(r => r.trip_id == tripId);
     
-    trip.selection_json.forEach(idea => {
-        const currentTripReview = reviewsForThisTrip.find(r => r.idea_id == idea.idea_id) || null;
-        const allIdeaReviews = allReviewsCache.filter(r => r.idea_id == idea.idea_id);
-        const ideaDetailHtml = renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews);
-        historyDetailList.innerHTML += ideaDetailHtml;
-    });
+// ✅ FIX: Build HTML array dulu, baru inject sekali
+const ideaDetailsArray = [];
+
+trip.selection_json.forEach(idea => {
+    const currentTripReview = reviewsForThisTrip.find(r => r.idea_id == idea.idea_id) || null;
+    const allIdeaReviews = allReviewsCache.filter(r => r.idea_id == idea.idea_id);
+    const ideaDetailHtml = renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews);
+    ideaDetailsArray.push(ideaDetailHtml);
+});
+
+// Inject semua sekaligus
+historyDetailList.innerHTML = ideaDetailsArray.join('');
     
     // Setup event listeners untuk tombol review
     document.querySelectorAll('.review-btn-handler').forEach(button => {
@@ -275,8 +281,29 @@ async function showTripDetails(tripId) {
             const ideaId = e.currentTarget.dataset.ideaId;
             const ideaName = e.currentTarget.dataset.ideaName;
             const tripId = e.currentTarget.dataset.tripId;
-            const existingReview = reviewsForThisTrip.find(r => r.idea_id == ideaId);
-            showReviewModal(tripId, ideaId, ideaName, existingReview);
+            
+            // ✅ NEW: Tidak auto-load existing review, biar user pilih nama dulu
+            showReviewModal(ideaId, tripId, ideaName, null);
+        });
+    });
+
+    // ✅ NEW: Handler untuk edit review spesifik
+    document.querySelectorAll('.btn-edit-review').forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const ideaId = e.currentTarget.dataset.ideaId;
+            const ideaName = e.currentTarget.dataset.ideaName;
+            const tripId = e.currentTarget.dataset.tripId;
+            const reviewerName = e.currentTarget.dataset.reviewerName;
+            
+            // Find specific review
+            const existingReview = allReviews.find(r => 
+                r.trip_id == tripId && 
+                r.idea_id == ideaId && 
+                r.reviewer_name == reviewerName
+            );
+            
+            showReviewModal(ideaId, tripId, ideaName, existingReview);
         });
     });
     const { data: freshReviews, error: reviewError } = await supabase
@@ -290,41 +317,68 @@ async function showTripDetails(tripId) {
 }
 
 function renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews) {
-    const isReviewedInThisTrip = currentTripReview !== null;    
+    // Filter reviews untuk idea ini di trip ini
+    const reviewsForThisIdeaInTrip = allReviews.filter(r => 
+        r.trip_id == tripId && 
+        r.idea_id == idea.idea_id
+    );
+    
+    // ✅ DEBUG LOG
+    console.log('🔍 Rendering idea:', idea.name);
+    console.log('📝 Reviews for this idea in trip:', reviewsForThisIdeaInTrip);
+    console.log('📊 Count:', reviewsForThisIdeaInTrip.length);
+    
+    const hasAnyReview = reviewsForThisIdeaInTrip.length > 0;
+    
+    // Calculate average rating dari semua reviews
     const { average, count } = calculateAverageRating(allIdeaReviews);
     const globalRatingHtml = renderStars(average);
-
-    const reviewPhotoHtml = isReviewedInThisTrip ? renderPhotoUrls(currentTripReview.photo_url) : '';
-    console.log('🔍 Rendering idea:', idea.name);
-    console.log('📝 Current trip review:', currentTripReview);
-    console.log('📚 All idea reviews:', allIdeaReviews);
     
-    const reviewInTripHtml = renderStars(currentTripReview?.rating || 0, false);
-    const buttonText = isReviewedInThisTrip ? 'Ubah Review Trip ⭐' : 'Beri Review Trip ⭐';
-    // ✅ FIX: Render reviewer name di Trip Detail
-    const reviewerNameHtml = isReviewedInThisTrip && currentTripReview.reviewer_name 
-        ? `<div style="
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 4px 10px;
-            background: linear-gradient(135deg, #e1f3ff 0%, #c4e8ff 100%);
-            border-radius: 12px;
-            font-size: 0.85em;
-            font-weight: 600;
-            color: var(--color-primary);
-            margin-bottom: 8px;
-            box-shadow: 0 2px 4px rgba(3, 37, 76, 0.1);
-        ">
-            <span style="font-size: 1.1em;">👤</span>
-            ${currentTripReview.reviewer_name}
-        </div>`
-        : '';
+    // Button text
+    const buttonText = '⭐ Beri/Edit Review';
+    
+    // ✅ NEW: Render SEMUA reviews untuk aktivitas ini
+    let allReviewsHtml = '';
+    
+    if (hasAnyReview) {
+        allReviewsHtml = `
+            <div class="all-reviews-section">
+                <h5 style="margin-top: 20px; margin-bottom: 10px; color: var(--color-primary);">
+                    👥 Semua Review untuk ${idea.name}:
+                </h5>
+        `;
+        
+        reviewsForThisIdeaInTrip.forEach(review => {
+            const reviewerNameHtml = renderReviewerName(review.reviewer_name);
+            const reviewStarsHtml = renderStars(review.rating, false);
+            const reviewPhotoHtml = renderPhotoUrls(review.photo_url, 'review-photo');
+            const reviewVideoHtml = renderVideoUrls(review.video_url, 'review-video');
+            
+            allReviewsHtml += `
+                <div class="review-item-card">
+                    ${reviewerNameHtml}
+                    <div class="review-rating">${reviewStarsHtml}</div>
+                    <p class="review-text-content">${review.review_text || '(Tidak ada komentar)'}</p>
+                    ${reviewPhotoHtml}
+                    ${reviewVideoHtml}
+                    <button class="btn secondary small btn-edit-review" 
+                            data-idea-id="${idea.idea_id}" 
+                            data-trip-id="${tripId}"
+                            data-idea-name="${idea.name}"
+                            data-reviewer-name="${review.reviewer_name}">
+                        ✏️ Edit Review Ini
+                    </button>
+                </div>
+            `;
+        });
+        
+        allReviewsHtml += '</div>';
+    }
 
     return `
         <div class="idea-detail-item">
             <div class="idea-header">
-                <div class="idea-icon">==========================================</div>
+                <div class="idea-icon">📍</div>
                 <div>
                     <h4>${idea.name}</h4>
                     <p class="idea-subtitle">${idea.category} / ${idea.subtype}</p>
@@ -333,8 +387,8 @@ function renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews) {
 
             <div class="review-global-summary">
                 <p><strong>Rata-Rata Global:</strong> ${globalRatingHtml} (${average} dari ${count} ulasan)</p>
-                <p><strong>Ulasan Trip Ini:</strong> 
-                    ${isReviewedInThisTrip ? reviewInTripHtml : 'Belum diulas di trip ini.'}
+                <p><strong>Review di Trip Ini:</strong> 
+                    ${hasAnyReview ? `${reviewsForThisIdeaInTrip.length} review` : 'Belum ada review'}
                 </p>
             </div>
 
@@ -345,13 +399,7 @@ function renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews) {
                 ${buttonText}
             </button>
 
-            ${isReviewedInThisTrip ? `
-                <div class="review-content">
-                    ${reviewerNameHtml}
-                    <p><strong>Review Anda di Trip Ini:</strong> ${currentTripReview.review_text || '-'}</p>
-                    ${reviewPhotoHtml} 
-                </div>
-            ` : ''}
+            ${allReviewsHtml}
         </div>
     `;
 }

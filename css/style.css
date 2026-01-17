@@ -2894,3 +2894,38 @@ body.edit-mode-active header {
     text-align: center;
     margin-top: 30px;
 }
+
+
+/* All Reviews Section */
+.all-reviews-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid #e0e0e0;
+}
+
+.review-item-card {
+    background: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.review-item-card:last-child {
+    margin-bottom: 0;
+}
+
+.review-rating {
+    margin: 10px 0;
+    font-size: 1.2em;
+}
+
+.review-text-content {
+    margin: 10px 0;
+    color: #555;
+    font-style: italic;
+}
+
+.review-item-card .btn-edit-review {
+    margin-top: 10px;
+}
