@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Undangan Review Trip - TripLove ❤️</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>❤️</text></svg>">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/review.css">
+</head>
+<body>
+
+    <header>
+        <div class="header-container">
+            <h1>TripLove ❤️</h1>
+        </div>
+    </header>
+
+    <main class="container invitation-page">
+        
+        <!-- Loading State -->
+        <div id="loadingInvitation" class="loading-container">
+            <div class="loader"></div>
+            <p>Memvalidasi undangan...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="invitationError" class="error-state" style="display: none;">
+            <div class="error-icon">❌</div>
+            <h2 id="errorTitle">Link Tidak Valid</h2>
+            <p id="errorMessage">Link undangan tidak ditemukan atau sudah kadaluarsa.</p>
+            <a href="index.html" class="btn primary">🏠 Kembali ke Home</a>
+        </div>
+
+        <!-- Success State - Invitation Details -->
+        <div id="invitationDetails" style="display: none;">
+            
+            <!-- Invitation Header -->
+            <div class="invitation-header">
+                <div class="invitation-icon">💌</div>
+                <h2>
+                    <span id="inviterNameDisplay">Seseorang</span> mengundang kamu untuk review
+                </h2>
+                <h3 id="tripTitleDisplay">Trip [Tanggal]</h3>
+                
+                <div class="invitation-message" id="invitationMessageDisplay" style="display: none;">
+                    <p></p>
+                </div>
+            </div>
+
+            <!-- Trip Info -->
+            <div class="trip-info-card">
+                <div class="trip-info-row">
+                    <span class="trip-info-label">📅 Tanggal:</span>
+                    <span id="tripDateDisplay">-</span>
+                </div>
+                <div class="trip-info-row">
+                    <span class="trip-info-label">🎫 Aktivitas:</span>
+                    <span id="tripActivitiesCount">0 aktivitas</span>
+                </div>
+            </div>
+
+            <!-- Activities List -->
+            <div class="activities-to-review">
+                <h4>📝 Aktivitas yang perlu direview:</h4>
+                <div id="activitiesList"></div>
+            </div>
+
+            <!-- Reviewer Name Input -->
+            <div class="reviewer-section">
+                <label for="reviewerNameInvitation">👤 Nama Kamu:</label>
+                <input 
+                    type="text" 
+                    id="reviewerNameInvitation" 
+                    placeholder="Masukkan nama kamu (misal: Lino, Cia)" 
+                    maxlength="50"
+                    required
+                >
+                <small style="color: var(--color-muted); display: block; margin-top: 5px;">
+                    💡 Nama ini akan muncul di review kamu
+                </small>
+            </div>
+
+            <!-- Action Button -->
+            <button id="startReviewBtn" class="btn primary full-width">
+                ✨ Mulai Review
+            </button>
+
+        </div>
+
+        <!-- Review Modal (untuk review satu-satu) -->
+        <div id="reviewActivityModal" class="modal hidden">
+            <div class="modal-content">
+                <button class="close-btn" id="closeReviewActivity">&times;</button>
+                <h3>⭐ Review: <span id="activityNameDisplay">Nama Aktivitas</span></h3>
+                
+                <form id="activityReviewForm">
+                    <input type="hidden" id="currentIdeaId">
+                    <input type="hidden" id="currentTripId">
+                    
+                    <label>Rating Kamu:</label>
+                    <div id="activityStarRating" class="star-rating">
+                        <!-- Stars akan dirender via JS -->
+                    </div>
+                    
+                    <label for="activityReviewText" style="margin-top: 15px;">Ulasan (Opsional):</label>
+                    <textarea 
+                        id="activityReviewText" 
+                        placeholder="Bagaimana pengalaman kamu?" 
+                        maxlength="300"
+                    ></textarea>
+                    
+                    <label for="activityReviewPhoto" style="margin-top: 10px;">📷 Foto (Opsional, Max 5):</label>
+                    <input type="file" id="activityReviewPhoto" accept="image/*" multiple>
+                    <div id="activityReviewPhotoPreview" class="photo-preview"></div>
+
+                    <label for="activityReviewVideo" style="margin-top: 15px;">🎬 Video (Opsional, Max 1):</label>
+                    <input type="file" id="activityReviewVideo" accept="video/mp4,video/quicktime,video/webm">
+                    <div id="activityReviewVideoPreview" class="photo-preview"></div>
+                    <small style="color: var(--color-muted); display: block; margin-top: 5px;">
+                        💡 Maksimal 50MB, format MP4/MOV/WEBM
+                    </small>
+
+                    <p id="activityReviewStatus" class="status-message"></p>
+                    
+                    <div class="modal-actions">
+                        <button type="submit" class="btn primary">✅ Simpan Review</button>
+                        <button type="button" id="skipActivity" class="btn secondary">⏭️ Skip</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Completion Screen -->
+        <div id="completionScreen" style="display: none;">
+            <div class="completion-header">
+                <div class="completion-icon">🎉</div>
+                <h2>Terima Kasih!</h2>
+                <p>Review kamu sudah tersimpan</p>
+            </div>
+
+            <div class="completion-summary">
+                <h4>📊 Summary Review Kamu:</h4>
+                <div id="completionSummary"></div>
+            </div>
+
+            <div class="completion-actions">
+                <a href="index.html" class="btn primary">🏠 Kembali ke Home</a>
+            </div>
+        </div>
+
+    </main>
+
+    <script type="module" src="js/review-invitation.js"></script>
+</body>
+</html>

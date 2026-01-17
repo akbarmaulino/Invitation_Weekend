@@ -20,6 +20,12 @@ import {
     renderReviewerName
 } from './utils.js';
 
+import { 
+    createTripInvitation, 
+    getTripInvitationStats 
+} from './invitation-utils.js';
+
+
 let reviewerNames = [];
 let currentUser = { id: 'anon' };
 let allTrips = [];
@@ -27,6 +33,12 @@ let allReviews = [];
 let allIdeas = [];
 let currentRating = 0;
 let selectedTripId = null;
+
+
+let invitationModal, invitationForm, inviterName, invitedEmail, 
+    invitationMessage, maxUses, invitationTripId, invitationResult, 
+    generatedInvitationUrl, invitationStatus, closeInvitationModal, 
+    cancelInvitation, generateInvitationBtn, copyInvitationBtn;
 
 // ============================================================
 // DATA FETCHING
@@ -48,11 +60,13 @@ async function fetchAllData(startDate = null, endDate = null) {
         if (tripsError) throw tripsError;
         allTrips = trips || [];
         
+        const tripIds = allTrips.map(trip => trip.id);
+
         // Fetch all reviews
         const { data: reviews, error: reviewsError } = await supabase
             .from('idea_reviews')
             .select('*')
-            .eq('user_id', currentUser.id);
+            .in('trip_id', tripIds);
         if (reviewsError) throw reviewsError;
         allReviews = reviews || [];
         
@@ -219,6 +233,9 @@ function renderTimeline() {
                 </div>
                 <div class="trip-actions">
                     <span class="trip-status-badge ${badgeClass}">${badgeText}</span>
+                    <button class="btn secondary small btn-invite-friend" data-trip-id="${trip.id}">
+                        ✉️ Undang Teman
+                    </button>
                     <button class="btn secondary small btn-edit-trip" data-trip-id="${trip.id}">
                         ✏️ Edit Trip
                     </button>
@@ -270,7 +287,7 @@ function renderTimeline() {
 }
 
 function setupTimelineEventListeners() {
-    // Edit Trip buttons - BARU!
+    // Edit Trip buttons
     document.querySelectorAll('.btn-edit-trip').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const tripId = e.currentTarget.dataset.tripId;
@@ -291,6 +308,14 @@ function setupTimelineEventListeners() {
         btn.addEventListener('click', (e) => {
             const tripId = e.currentTarget.dataset.tripId;
             regenerateTicket(tripId);
+        });
+    });
+    
+    // ✅ NEW: Invite Friend buttons
+    document.querySelectorAll('.btn-invite-friend').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const tripId = e.currentTarget.dataset.tripId;
+            showInvitationModal(tripId);
         });
     });
 }
@@ -575,6 +600,82 @@ function regenerateTicket(tripId) {
 // EVENT LISTENERS
 // ============================================================
 
+// ============================================================
+// INVITATION MODAL
+// ============================================================
+
+function showInvitationModal(tripId) {
+    const trip = allTrips.find(t => t.id == tripId);
+    if (!trip) return;
+    
+    // Reset form
+    if (invitationForm) invitationForm.reset();
+    if (invitationResult) invitationResult.style.display = 'none';
+    if (invitationStatus) invitationStatus.textContent = '';
+    
+    // Set trip ID
+    if (invitationTripId) invitationTripId.value = tripId;
+    
+    // Pre-fill inviter name dari localStorage jika ada
+    const lastInviterName = localStorage.getItem('lastInviterName');
+    if (lastInviterName && inviterName) {
+        inviterName.value = lastInviterName;
+    }
+    
+    showModal(invitationModal);
+}
+
+async function handleInvitationSubmit(e) {
+    e.preventDefault();
+    
+    const tripId = invitationTripId.value;
+    const name = inviterName.value.trim();
+    const email = invitedEmail.value.trim() || null;
+    const message = invitationMessage.value.trim() || null;
+    const uses = parseInt(maxUses.value);
+    
+    if (!name) {
+        invitationStatus.textContent = '⚠️ Nama kamu harus diisi!';
+        return;
+    }
+    
+    // Save inviter name untuk next time
+    localStorage.setItem('lastInviterName', name);
+    
+    // Disable button
+    generateInvitationBtn.disabled = true;
+    generateInvitationBtn.textContent = '⏳ Membuat link...';
+    invitationStatus.textContent = '';
+    
+    // Create invitation
+    const result = await createTripInvitation({
+        tripId: tripId,
+        inviterName: name,
+        invitedEmail: email,
+        message: message,
+        maxUses: uses
+    });
+    
+    if (result.success) {
+        // Show success result
+        invitationResult.style.display = 'block';
+        generatedInvitationUrl.value = result.invitationUrl;
+        
+        invitationStatus.textContent = '';
+        
+        // Auto-select URL for easy copy
+        generatedInvitationUrl.select();
+        
+        // Change button text
+        generateInvitationBtn.textContent = '✅ Link Berhasil Dibuat!';
+        
+    } else {
+        invitationStatus.textContent = '❌ Gagal membuat link: ' + result.error;
+        generateInvitationBtn.disabled = false;
+        generateInvitationBtn.textContent = '🔗 Generate Link Undangan';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const applyFilterBtn = document.getElementById('applyFilterBtn');
     const resetFilterBtn = document.getElementById('resetFilterBtn');
@@ -589,6 +690,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const reviewPhoto = document.getElementById('reviewPhoto');
     const tripUpdated = localStorage.getItem('tripUpdated');
     const updatedTripId = localStorage.getItem('updatedTripId');
+    invitationModal = document.getElementById('invitationModal');
+    invitationForm = document.getElementById('invitationForm');
+    inviterName = document.getElementById('inviterName');
+    invitedEmail = document.getElementById('invitedEmail');
+    invitationMessage = document.getElementById('invitationMessage');
+    maxUses = document.getElementById('maxUses');
+    invitationTripId = document.getElementById('invitationTripId');
+    invitationResult = document.getElementById('invitationResult');
+    generatedInvitationUrl = document.getElementById('generatedInvitationUrl');
+    invitationStatus = document.getElementById('invitationStatus');
+    closeInvitationModal = document.getElementById('closeInvitationModal');
+    cancelInvitation = document.getElementById('cancelInvitation');
+    generateInvitationBtn = document.getElementById('generateInvitationBtn');
+    copyInvitationBtn = document.getElementById('copyInvitationBtn');
     
     // Initial load
     const success = await fetchAllData();
@@ -857,4 +972,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             submitBtn.disabled = false;
         }
     });
+    // ✅ NEW: Invitation modal events
+    if (closeInvitationModal) {
+        closeInvitationModal.addEventListener('click', () => {
+            hideModal(invitationModal);
+        });
+    }
+    
+    if (cancelInvitation) {
+        cancelInvitation.addEventListener('click', () => {
+            hideModal(invitationModal);
+        });
+    }
+    
+    if (invitationForm) {
+        invitationForm.addEventListener('submit', handleInvitationSubmit);
+    }
+    
+    if (copyInvitationBtn) {
+        copyInvitationBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(generatedInvitationUrl.value);
+                copyInvitationBtn.textContent = '✅ Copied!';
+                
+                setTimeout(() => {
+                    copyInvitationBtn.textContent = '📋 Copy';
+                }, 2000);
+            } catch (err) {
+                alert('Gagal copy. Silakan copy manual dengan Ctrl+C');
+            }
+        });
+    }
 });

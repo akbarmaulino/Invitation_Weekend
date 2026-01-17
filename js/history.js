@@ -279,18 +279,28 @@ async function showTripDetails(tripId) {
             showReviewModal(tripId, ideaId, ideaName, existingReview);
         });
     });
+    const { data: freshReviews, error: reviewError } = await supabase
+        .from('idea_reviews')
+        .select('*');
+        
+    if (!reviewError) {
+        allReviews = freshReviews || [];
+        console.log('✅ Reviews refreshed:', allReviews.length);
+    }
 }
 
 function renderIdeaDetail(tripId, idea, currentTripReview, allIdeaReviews) {
-    const isReviewedInThisTrip = currentTripReview !== null;
-    const reviewInTripHtml = renderStars(currentTripReview?.rating || 0, false);
-    const buttonText = isReviewedInThisTrip ? 'Ubah Review Trip ⭐' : 'Beri Review Trip ⭐';
-    
+    const isReviewedInThisTrip = currentTripReview !== null;    
     const { average, count } = calculateAverageRating(allIdeaReviews);
     const globalRatingHtml = renderStars(average);
 
     const reviewPhotoHtml = isReviewedInThisTrip ? renderPhotoUrls(currentTripReview.photo_url) : '';
+    console.log('🔍 Rendering idea:', idea.name);
+    console.log('📝 Current trip review:', currentTripReview);
+    console.log('📚 All idea reviews:', allIdeaReviews);
     
+    const reviewInTripHtml = renderStars(currentTripReview?.rating || 0, false);
+    const buttonText = isReviewedInThisTrip ? 'Ubah Review Trip ⭐' : 'Beri Review Trip ⭐';
     // ✅ FIX: Render reviewer name di Trip Detail
     const reviewerNameHtml = isReviewedInThisTrip && currentTripReview.reviewer_name 
         ? `<div style="
