@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Invitation Utils</title>
+</head>
+<body>
+    <h1>Test Invitation System</h1>
+    
+    <div id="results"></div>
+    
+    <script type="module">
+        import { 
+            createTripInvitation, 
+            validateInvitationToken,
+            getTripInvitationStats
+        } from './js/invitation-utils.js';
+        
+        const results = document.getElementById('results');
+        
+        async function runTests() {
+            results.innerHTML = '<p>Running tests...</p>';
+            
+            // Test 1: Create invitation
+            results.innerHTML += '<h3>Test 1: Create Invitation</h3>';
+            
+            // GANTI DENGAN TRIP_ID YANG REAL DARI DATABASE KAMU
+            const testTripId = 'e0db8f79-80b7-47f3-a6eb-c5f09da8ccc8'; 
+            
+            const createResult = await createTripInvitation({
+                tripId: testTripId,
+                inviterName: 'Ciaaa',
+                invitedEmail: 'test@example.com',
+                message: 'Yuk review trip kita!',
+                maxUses: 1
+            });
+            
+            results.innerHTML += `<pre>${JSON.stringify(createResult, null, 2)}</pre>`;
+            
+            if (createResult.success) {
+                // Test 2: Validate token
+                results.innerHTML += '<h3>Test 2: Validate Token</h3>';
+                
+                const validateResult = await validateInvitationToken(createResult.token);
+                results.innerHTML += `<pre>${JSON.stringify(validateResult, null, 2)}</pre>`;
+                
+                // Test 3: Get stats
+                results.innerHTML += '<h3>Test 3: Get Stats</h3>';
+                
+                const stats = await getTripInvitationStats(testTripId);
+                results.innerHTML += `<pre>${JSON.stringify(stats, null, 2)}</pre>`;
+            }
+            
+            results.innerHTML += '<p>✅ Tests completed!</p>';
+        }
+        
+        runTests();
+    </script>
+</body>
+</html>

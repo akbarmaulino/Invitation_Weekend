@@ -2689,3 +2689,243 @@ body.edit-mode-active header {
         font-size: 0.8em;
     }
 }
+
+/* ============================================================
+   INVITATION PAGE STYLES
+   ============================================================ */
+
+.invitation-page {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.invitation-header {
+    text-align: center;
+    padding: 30px 20px;
+    background: linear-gradient(135deg, #e1f3ff 0%, #c4e8ff 100%);
+    border-radius: 12px;
+    margin-bottom: 30px;
+}
+
+.invitation-icon {
+    font-size: 4em;
+    margin-bottom: 15px;
+}
+
+.invitation-header h2 {
+    font-size: 1.4em;
+    color: var(--color-primary);
+    margin-bottom: 10px;
+}
+
+.invitation-header h3 {
+    font-size: 1.2em;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.invitation-message {
+    margin-top: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    border-left: 4px solid var(--color-primary);
+}
+
+.invitation-message p {
+    font-style: italic;
+    color: #555;
+    margin: 0;
+}
+
+.trip-info-card {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.trip-info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.trip-info-row:last-child {
+    border-bottom: none;
+}
+
+.trip-info-label {
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.activities-to-review {
+    margin-bottom: 30px;
+}
+
+.activities-to-review h4 {
+    margin-bottom: 15px;
+    color: var(--color-primary);
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.activity-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 35px;
+    height: 35px;
+    background: var(--color-primary);
+    color: white;
+    border-radius: 50%;
+    font-weight: bold;
+}
+
+.activity-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.activity-name {
+    font-weight: 600;
+    font-size: 1.05em;
+    margin-bottom: 5px;
+}
+
+.activity-category {
+    font-size: 0.9em;
+    color: var(--color-muted);
+}
+
+.reviewer-section {
+    margin-bottom: 30px;
+}
+
+.reviewer-section label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--color-primary);
+}
+
+.error-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.error-icon {
+    font-size: 5em;
+    margin-bottom: 20px;
+}
+
+.error-state h2 {
+    color: var(--color-error);
+    margin-bottom: 15px;
+}
+
+.error-state p {
+    color: #666;
+    margin-bottom: 30px;
+}
+
+.completion-header {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.completion-icon {
+    font-size: 5em;
+    margin-bottom: 20px;
+}
+
+.completion-header h2 {
+    font-size: 2em;
+    color: var(--color-success);
+    margin-bottom: 10px;
+}
+
+.completion-summary {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 30px 0;
+}
+
+.completion-summary h4 {
+    margin-bottom: 15px;
+    color: var(--color-primary);
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #f9f9f9;
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
+.summary-name {
+    font-weight: 600;
+}
+
+.summary-rating {
+    font-size: 1.1em;
+}
+
+.completion-actions {
+    text-align: center;
+    margin-top: 30px;
+}
+
+
+/* All Reviews Section */
+.all-reviews-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid #e0e0e0;
+}
+
+.review-item-card {
+    background: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.review-item-card:last-child {
+    margin-bottom: 0;
+}
+
+.review-rating {
+    margin: 10px 0;
+    font-size: 1.2em;
+}
+
+.review-text-content {
+    margin: 10px 0;
+    color: #555;
+    font-style: italic;
+}
+
+.review-item-card .btn-edit-review {
+    margin-top: 10px;
+}

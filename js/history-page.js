@@ -20,6 +20,12 @@ import {
     renderReviewerName
 } from './utils.js';
 
+import { 
+    createTripInvitation, 
+    getTripInvitationStats 
+} from './invitation-utils.js';
+
+
 let reviewerNames = [];
 let currentUser = { id: 'anon' };
 let allTrips = [];
@@ -27,6 +33,12 @@ let allReviews = [];
 let allIdeas = [];
 let currentRating = 0;
 let selectedTripId = null;
+
+
+let invitationModal, invitationForm, inviterName, invitedEmail, 
+    invitationMessage, maxUses, invitationTripId, invitationResult, 
+    generatedInvitationUrl, invitationStatus, closeInvitationModal, 
+    cancelInvitation, generateInvitationBtn, copyInvitationBtn;
 
 // ============================================================
 // DATA FETCHING
@@ -48,13 +60,30 @@ async function fetchAllData(startDate = null, endDate = null) {
         if (tripsError) throw tripsError;
         allTrips = trips || [];
         
-        // Fetch all reviews
+        // ✅ CRITICAL: Get trip IDs untuk filter reviews
+        const tripIds = allTrips.map(trip => trip.id);
+        
+        console.log('✅ Trips loaded:', {
+            count: allTrips.length,
+            tripIds: tripIds
+        });
+
+        // ✅ CRITICAL: Fetch reviews HANYA untuk trips yang di-load
         const { data: reviews, error: reviewsError } = await supabase
             .from('idea_reviews')
             .select('*')
-            .eq('user_id', currentUser.id);
+            .in('trip_id', tripIds);  // ✅ MUST HAVE THIS FILTER!
+            
         if (reviewsError) throw reviewsError;
         allReviews = reviews || [];
+        
+        console.log('✅ Reviews loaded:', {
+            count: allReviews.length,
+            reviewsByTrip: allReviews.reduce((acc, r) => {
+                acc[r.trip_id] = (acc[r.trip_id] || 0) + 1;
+                return acc;
+            }, {})
+        });
         
         // Fetch ideas for names
         const { data: ideas, error: ideasError } = await supabase
@@ -62,7 +91,7 @@ async function fetchAllData(startDate = null, endDate = null) {
             .select('id, idea_name');
         if (ideasError) throw ideasError;
         allIdeas = ideas || [];
-        
+        await autoCleanAllOrphanedReviews();
         return true;
     } catch (error) {
         console.error('Error fetching data:', error);
@@ -93,15 +122,141 @@ function calculateStats() {
     };
 }
 
+// ✅ NEW: Function to clean orphaned reviews
+// ============================================================
+// CLEAN ORPHANED REVIEWS
+// ============================================================
+
+/**
+ * Clean orphaned reviews for a specific trip
+ * Orphaned = reviews untuk activities yang sudah tidak ada di trip
+ */
+async function cleanOrphanedReviews(tripId) {
+    try {
+        const trip = allTrips.find(t => t.id == tripId);
+        if (!trip) {
+            console.warn('Trip not found:', tripId);
+            return;
+        }
+        
+        // Get valid idea_ids dari trip ini
+        const validIdeaIds = trip.selection_json
+            .map(activity => activity.idea_id)
+            .filter(Boolean); // Remove null/undefined
+        
+        // Find orphaned reviews (reviews yang idea_id-nya tidak ada di validIdeaIds)
+        const orphanedReviews = allReviews.filter(review => 
+            review.trip_id == tripId && 
+            !validIdeaIds.includes(review.idea_id)
+        );
+        
+        if (orphanedReviews.length === 0) {
+            console.log('✅ No orphaned reviews for trip:', tripId);
+            return;
+        }
+        
+        console.log(`🧹 Found ${orphanedReviews.length} orphaned reviews for trip ${tripId}:`, 
+            orphanedReviews.map(r => ({ 
+                reviewer: r.reviewer_name, 
+                idea_id: r.idea_id 
+            }))
+        );
+        
+        // Delete orphaned reviews from database
+        const orphanedIds = orphanedReviews.map(r => r.id);
+        
+        const { error } = await supabase
+            .from('idea_reviews')
+            .delete()
+            .in('id', orphanedIds);
+        
+        if (error) throw error;
+        
+        console.log('✅ Successfully deleted orphaned reviews');
+        
+        // Update local cache
+        allReviews = allReviews.filter(r => !orphanedIds.includes(r.id));
+        
+    } catch (error) {
+        console.error('❌ Error cleaning orphaned reviews:', error);
+    }
+}
+
+/**
+ * Auto-clean orphaned reviews for ALL trips
+ * Called on page load
+ */
+async function autoCleanAllOrphanedReviews() {
+    try {
+        let totalOrphaned = 0;
+        
+        // Check each trip
+        for (const trip of allTrips) {
+            const validIdeaIds = trip.selection_json
+                .map(activity => activity.idea_id)
+                .filter(Boolean);
+            
+            // Find orphaned reviews for this trip
+            const orphaned = allReviews.filter(review => 
+                review.trip_id == trip.id && 
+                !validIdeaIds.includes(review.idea_id)
+            );
+            
+            if (orphaned.length > 0) {
+                console.log(`🧹 Trip ${formatTanggalIndonesia(trip.trip_date)}: ${orphaned.length} orphaned reviews`);
+                totalOrphaned += orphaned.length;
+            }
+        }
+        
+        if (totalOrphaned === 0) {
+            console.log('✅ No orphaned reviews found');
+            return;
+        }
+        
+        console.log(`🧹 Total orphaned reviews found: ${totalOrphaned}`);
+        console.log('🧹 Cleaning...');
+        
+        // Clean each trip
+        for (const trip of allTrips) {
+            await cleanOrphanedReviews(trip.id);
+        }
+        
+        console.log('✅ All orphaned reviews cleaned');
+        
+    } catch (error) {
+        console.error('❌ Error auto-cleaning orphaned reviews:', error);
+    }
+}
+
 function calculateTripProgress(trip) {
     if (!trip.selection_json || trip.selection_json.length === 0) {
-        return { total: 0, reviewed: 0, percentage: 0, status: 'empty' };
+        return { 
+            totalActivities: 0, 
+            reviewedActivities: 0, 
+            totalReviews: 0,
+            percentage: 0, 
+            status: 'empty' 
+        };
     }
     
     const totalActivities = trip.selection_json.length;
+    
+    // ✅ Get valid idea_ids dari trip ini
+    const validIdeaIds = trip.selection_json
+        .map(activity => activity.idea_id)
+        .filter(Boolean);
+    
+    // ✅ Count ONLY reviews yang match dengan valid activities
+    const validReviews = allReviews.filter(review => 
+        review.trip_id == trip.id && 
+        validIdeaIds.includes(review.idea_id)
+    );
+    
+    const totalReviews = validReviews.length;
+    
+    // ✅ Activities yang sudah direview (minimal 1 valid review)
     const reviewedActivities = trip.selection_json.filter(activity => {
-        return allReviews.find(review => 
-            review.trip_id == trip.id && 
+        return validReviews.some(review => 
             review.idea_id == activity.idea_id
         );
     }).length;
@@ -116,13 +271,13 @@ function calculateTripProgress(trip) {
     }
     
     return {
-        total: totalActivities,
-        reviewed: reviewedActivities,
+        totalActivities,
+        reviewedActivities,
+        totalReviews,  // ✅ Only valid reviews counted
         percentage,
         status
     };
 }
-
 // ============================================================
 // RENDERING
 // ============================================================
@@ -188,13 +343,16 @@ function renderTimeline() {
         // Badge status
         let badgeClass = 'badge-none';
         let badgeText = '📝 Belum Review';
-        
+
         if (progress.status === 'complete') {
             badgeClass = 'badge-complete';
-            badgeText = '✅ Lengkap';
+            badgeText = `✅ Lengkap (${progress.totalReviews} reviews)`;  // ✅ Show review count
         } else if (progress.status === 'partial') {
             badgeClass = 'badge-partial';
-            badgeText = `⏳ ${progress.reviewed}/${progress.total}`;
+            badgeText = `⏳ ${progress.reviewedActivities}/${progress.totalActivities} (${progress.totalReviews} reviews)`;  // ✅ Show both
+        } else if (progress.status === 'orphaned') {
+            badgeClass = 'badge-warning';
+            badgeText = `⚠️ ${progress.totalReviews} review tidak terhubung`;
         }
         
         // Activities preview (first 5)
@@ -219,6 +377,9 @@ function renderTimeline() {
                 </div>
                 <div class="trip-actions">
                     <span class="trip-status-badge ${badgeClass}">${badgeText}</span>
+                    <button class="btn secondary small btn-invite-friend" data-trip-id="${trip.id}">
+                        ✉️ Undang Teman
+                    </button>
                     <button class="btn secondary small btn-edit-trip" data-trip-id="${trip.id}">
                         ✏️ Edit Trip
                     </button>
@@ -233,23 +394,27 @@ function renderTimeline() {
             
             <div class="trip-summary">
                 <div class="summary-item">
-                    <span class="item-value">${progress.total}</span>
+                    <span class="item-value">${progress.totalActivities}</span>
                     <span class="item-label">Aktivitas</span>
                 </div>
                 <div class="summary-item">
-                    <span class="item-value">${progress.reviewed}</span>
+                    <span class="item-value">${progress.totalReviews}</span>
                     <span class="item-label">Reviews</span>
                 </div>
                 <div class="summary-item">
+                    <span class="item-value">${progress.reviewedActivities}/${progress.totalActivities}</span>
+                    <span class="item-label">Reviewed</span>
+                </div>
+                <div class="summary-item">
                     <span class="item-value">${progress.percentage}%</span>
-                    <span class="item-label">Progress</span>
+                    <span class="item-label">Complete</span>
                 </div>
             </div>
             
             <div class="review-progress">
                 <div class="progress-label">
-                    <span>Review Progress</span>
-                    <span>${progress.reviewed} / ${progress.total}</span>
+                    <span>Activities Reviewed</span>
+                    <span>${progress.reviewedActivities} / ${progress.totalActivities}</span>
                 </div>
                 <div class="progress-bar-container">
                     <div class="progress-bar-fill" style="width: ${progress.percentage}%"></div>
@@ -270,7 +435,7 @@ function renderTimeline() {
 }
 
 function setupTimelineEventListeners() {
-    // Edit Trip buttons - BARU!
+    // Edit Trip buttons
     document.querySelectorAll('.btn-edit-trip').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const tripId = e.currentTarget.dataset.tripId;
@@ -291,6 +456,14 @@ function setupTimelineEventListeners() {
         btn.addEventListener('click', (e) => {
             const tripId = e.currentTarget.dataset.tripId;
             regenerateTicket(tripId);
+        });
+    });
+    
+    // ✅ NEW: Invite Friend buttons
+    document.querySelectorAll('.btn-invite-friend').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const tripId = e.currentTarget.dataset.tripId;
+            showInvitationModal(tripId);
         });
     });
 }
@@ -317,7 +490,8 @@ function showTripDetail(tripId) {
     activitiesList.innerHTML = '';
     
     trip.selection_json.forEach(activity => {
-        const review = allReviews.find(r => 
+        // ✅ FIX: Get ALL reviews untuk activity ini di trip ini
+        const reviewsForActivity = allReviews.filter(r => 
             r.trip_id == tripId && 
             r.idea_id == activity.idea_id
         );
@@ -325,26 +499,41 @@ function showTripDetail(tripId) {
         const item = document.createElement('div');
         item.className = 'activity-detail-item';
         
-        const reviewSection = review ? `
-            <div class="review-section">
-                ${renderReviewerName(review.reviewer_name)}
-                <div class="review-rating">${'⭐'.repeat(review.rating || 0)}</div>
-                <p class="review-text-content">${review.review_text || '(Tidak ada komentar)'}</p>
-                ${renderPhotoUrls(review.photo_url, 'review-photo')}
-                ${renderVideoUrls(review.video_url, 'review-video')}
-                <button class="btn secondary small btn-edit-review" 
-                        data-idea-id="${activity.idea_id}" 
-                        data-trip-id="${tripId}"
-                        data-idea-name="${activity.name}">
-                    ✏️ Edit Review
-                </button>
-            </div>
-        ` : `
+        // ✅ NEW: Render SEMUA reviews
+        let reviewsHtml = '';
+        
+        if (reviewsForActivity.length > 0) {
+            reviewsHtml = '<div class="all-reviews-section">';
+            
+            reviewsForActivity.forEach(review => {
+                reviewsHtml += `
+                    <div class="review-section">
+                        ${renderReviewerName(review.reviewer_name)}
+                        <div class="review-rating">${'⭐'.repeat(review.rating || 0)}</div>
+                        <p class="review-text-content">${review.review_text || '(Tidak ada komentar)'}</p>
+                        ${renderPhotoUrls(review.photo_url, 'review-photo')}
+                        ${renderVideoUrls(review.video_url, 'review-video')}
+                        <button class="btn secondary small btn-edit-review" 
+                                data-idea-id="${activity.idea_id}" 
+                                data-trip-id="${tripId}"
+                                data-idea-name="${activity.name}"
+                                data-reviewer-name="${review.reviewer_name}">
+                            ✏️ Edit Review Ini
+                        </button>
+                    </div>
+                `;
+            });
+            
+            reviewsHtml += '</div>';
+        }
+        
+        // Button untuk tambah review baru
+        const addReviewBtn = `
             <button class="btn primary small btn-add-review" 
                     data-idea-id="${activity.idea_id}" 
                     data-trip-id="${tripId}"
                     data-idea-name="${activity.name}">
-                ⭐ Beri Review
+                ⭐ Tambah Review
             </button>
         `;
         
@@ -355,7 +544,9 @@ function showTripDetail(tripId) {
                     <div class="activity-category">${activity.category} / ${activity.subtype}</div>
                 </div>
             </div>
-            ${reviewSection}
+            ${reviewsHtml}
+            ${reviewsForActivity.length === 0 ? '<p style="color: var(--color-muted); margin: 10px 0;">Belum ada review</p>' : ''}
+            ${addReviewBtn}
         `;
         
         activitiesList.appendChild(item);
@@ -363,6 +554,32 @@ function showTripDetail(tripId) {
     
     // Setup review buttons
     setupReviewButtons();
+    
+    // ✅ Setup edit review buttons (untuk edit review spesifik per reviewer)
+    document.querySelectorAll('.btn-edit-review').forEach(button => {
+        button.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const ideaId = e.currentTarget.dataset.ideaId;
+            const ideaName = e.currentTarget.dataset.ideaName;
+            const tripId = e.currentTarget.dataset.tripId;
+            const reviewerName = e.currentTarget.dataset.reviewerName;
+            
+            console.log('✏️ Edit review:', { ideaId, tripId, reviewerName });
+            
+            // Find specific review
+            const existingReview = allReviews.find(r => 
+                r.trip_id == tripId && 
+                r.idea_id == ideaId && 
+                r.reviewer_name == reviewerName
+            );
+            
+            if (existingReview) {
+                showReviewModal(ideaId, tripId, ideaName, existingReview);
+            } else {
+                console.error('Review not found!', { ideaId, tripId, reviewerName });
+            }
+        });
+    });
     
     showModal(modal);
 }
@@ -575,6 +792,82 @@ function regenerateTicket(tripId) {
 // EVENT LISTENERS
 // ============================================================
 
+// ============================================================
+// INVITATION MODAL
+// ============================================================
+
+function showInvitationModal(tripId) {
+    const trip = allTrips.find(t => t.id == tripId);
+    if (!trip) return;
+    
+    // Reset form
+    if (invitationForm) invitationForm.reset();
+    if (invitationResult) invitationResult.style.display = 'none';
+    if (invitationStatus) invitationStatus.textContent = '';
+    
+    // Set trip ID
+    if (invitationTripId) invitationTripId.value = tripId;
+    
+    // Pre-fill inviter name dari localStorage jika ada
+    const lastInviterName = localStorage.getItem('lastInviterName');
+    if (lastInviterName && inviterName) {
+        inviterName.value = lastInviterName;
+    }
+    
+    showModal(invitationModal);
+}
+
+async function handleInvitationSubmit(e) {
+    e.preventDefault();
+    
+    const tripId = invitationTripId.value;
+    const name = inviterName.value.trim();
+    const email = invitedEmail.value.trim() || null;
+    const message = invitationMessage.value.trim() || null;
+    const uses = parseInt(maxUses.value);
+    
+    if (!name) {
+        invitationStatus.textContent = '⚠️ Nama kamu harus diisi!';
+        return;
+    }
+    
+    // Save inviter name untuk next time
+    localStorage.setItem('lastInviterName', name);
+    
+    // Disable button
+    generateInvitationBtn.disabled = true;
+    generateInvitationBtn.textContent = '⏳ Membuat link...';
+    invitationStatus.textContent = '';
+    
+    // Create invitation
+    const result = await createTripInvitation({
+        tripId: tripId,
+        inviterName: name,
+        invitedEmail: email,
+        message: message,
+        maxUses: uses
+    });
+    
+    if (result.success) {
+        // Show success result
+        invitationResult.style.display = 'block';
+        generatedInvitationUrl.value = result.invitationUrl;
+        
+        invitationStatus.textContent = '';
+        
+        // Auto-select URL for easy copy
+        generatedInvitationUrl.select();
+        
+        // Change button text
+        generateInvitationBtn.textContent = '✅ Link Berhasil Dibuat!';
+        
+    } else {
+        invitationStatus.textContent = '❌ Gagal membuat link: ' + result.error;
+        generateInvitationBtn.disabled = false;
+        generateInvitationBtn.textContent = '🔗 Generate Link Undangan';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const applyFilterBtn = document.getElementById('applyFilterBtn');
     const resetFilterBtn = document.getElementById('resetFilterBtn');
@@ -589,6 +882,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const reviewPhoto = document.getElementById('reviewPhoto');
     const tripUpdated = localStorage.getItem('tripUpdated');
     const updatedTripId = localStorage.getItem('updatedTripId');
+    invitationModal = document.getElementById('invitationModal');
+    invitationForm = document.getElementById('invitationForm');
+    inviterName = document.getElementById('inviterName');
+    invitedEmail = document.getElementById('invitedEmail');
+    invitationMessage = document.getElementById('invitationMessage');
+    maxUses = document.getElementById('maxUses');
+    invitationTripId = document.getElementById('invitationTripId');
+    invitationResult = document.getElementById('invitationResult');
+    generatedInvitationUrl = document.getElementById('generatedInvitationUrl');
+    invitationStatus = document.getElementById('invitationStatus');
+    closeInvitationModal = document.getElementById('closeInvitationModal');
+    cancelInvitation = document.getElementById('cancelInvitation');
+    generateInvitationBtn = document.getElementById('generateInvitationBtn');
+    copyInvitationBtn = document.getElementById('copyInvitationBtn');
     
     // Initial load
     const success = await fetchAllData();
@@ -597,6 +904,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderStats(stats);
         renderTimeline();
     }
+
+    const cleanOrphanedBtn = document.getElementById('cleanOrphanedBtn');
+if (cleanOrphanedBtn) {
+    cleanOrphanedBtn.addEventListener('click', async () => {
+        if (confirm('🧹 Clean orphaned reviews?\n\nIni akan hapus review untuk aktivitas yang sudah tidak ada di trip.')) {
+            cleanOrphanedBtn.disabled = true;
+            cleanOrphanedBtn.textContent = '⏳ Cleaning...';
+            
+            await autoCleanAllOrphanedReviews();
+            
+            // Reload data
+            const success = await fetchAllData();
+            if (success) {
+                const stats = calculateStats();
+                renderStats(stats);
+                renderTimeline();
+            }
+            
+            cleanOrphanedBtn.disabled = false;
+            cleanOrphanedBtn.textContent = '🧹 Clean Orphaned';
+            
+            alert('✅ Cleanup completed!');
+        }
+    });
+}
+    
     if (tripUpdated === 'true' && updatedTripId) {
         // Show success notification
         showUpdateSuccessNotification();
@@ -745,6 +1078,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // Submit review
+    // Submit review
     reviewForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -773,19 +1107,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         statusMsg.textContent = '⏳ Menyimpan review...';
         submitBtn.disabled = true;
         
-        // Check existing review once
-        const existingReview = allReviews.find(r => 
-            r.trip_id == tripId && 
-            r.idea_id == ideaId
-        );
-        
         // Upload photos
         let photoUrls = [];
         if (files.length > 0) {
             photoUrls = await uploadImages(files, currentUser.id, 'review');
-        } else if (existingReview?.photo_url) {
-            // Keep old photos if no new upload
-            photoUrls = existingReview.photo_url;
+        } else {
+            // Keep old photos if exists
+            const existingReview = allReviews.find(r => 
+                r.trip_id == tripId && 
+                r.idea_id == ideaId &&
+                r.reviewer_name == reviewerName
+            );
+            if (existingReview?.photo_url) {
+                photoUrls = existingReview.photo_url;
+            }
         }
         
         // Upload video
@@ -801,6 +1136,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             
             // Delete old video if exists
+            const existingReview = allReviews.find(r => 
+                r.trip_id == tripId && 
+                r.idea_id == ideaId &&
+                r.reviewer_name == reviewerName
+            );
+            
             if (existingReview?.video_url && typeof existingReview.video_url === 'string' && !existingReview.video_url.startsWith('http')) {
                 try {
                     await supabase.storage
@@ -810,9 +1151,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     console.warn('Failed to delete old video:', e);
                 }
             }
-        } else if (existingReview?.video_url) {
-            // Keep old video if no new upload
-            videoUrl = existingReview.video_url;
+        } else {
+            // Keep old video if exists
+            const existingReview = allReviews.find(r => 
+                r.trip_id == tripId && 
+                r.idea_id == ideaId &&
+                r.reviewer_name == reviewerName
+            );
+            if (existingReview?.video_url) {
+                videoUrl = existingReview.video_url;
+            }
         }
         
         const reviewData = {
@@ -828,10 +1176,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
         
         try {
+            // ✅ FIX: Correct onConflict dengan reviewer_name
             const { error } = await supabase
                 .from('idea_reviews')
                 .upsert([reviewData], { 
-                    onConflict: 'idea_id, trip_id',
+                    onConflict: 'idea_id,trip_id,reviewer_name',  // ✅ FIXED!
                     ignoreDuplicates: false 
                 });
             
@@ -857,4 +1206,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             submitBtn.disabled = false;
         }
     });
+    // ✅ NEW: Invitation modal events
+    if (closeInvitationModal) {
+        closeInvitationModal.addEventListener('click', () => {
+            hideModal(invitationModal);
+        });
+    }
+    
+    if (cancelInvitation) {
+        cancelInvitation.addEventListener('click', () => {
+            hideModal(invitationModal);
+        });
+    }
+    
+    if (invitationForm) {
+        invitationForm.addEventListener('submit', handleInvitationSubmit);
+    }
+    
+    if (copyInvitationBtn) {
+        copyInvitationBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(generatedInvitationUrl.value);
+                copyInvitationBtn.textContent = '✅ Copied!';
+                
+                setTimeout(() => {
+                    copyInvitationBtn.textContent = '📋 Copy';
+                }, 2000);
+            } catch (err) {
+                alert('Gagal copy. Silakan copy manual dengan Ctrl+C');
+            }
+        });
+    }
 });
