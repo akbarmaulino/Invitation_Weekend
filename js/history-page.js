@@ -60,15 +60,30 @@ async function fetchAllData(startDate = null, endDate = null) {
         if (tripsError) throw tripsError;
         allTrips = trips || [];
         
+        // ✅ CRITICAL: Get trip IDs untuk filter reviews
         const tripIds = allTrips.map(trip => trip.id);
+        
+        console.log('✅ Trips loaded:', {
+            count: allTrips.length,
+            tripIds: tripIds
+        });
 
-        // Fetch all reviews
+        // ✅ CRITICAL: Fetch reviews HANYA untuk trips yang di-load
         const { data: reviews, error: reviewsError } = await supabase
             .from('idea_reviews')
             .select('*')
-            .in('trip_id', tripIds);
+            .in('trip_id', tripIds);  // ✅ MUST HAVE THIS FILTER!
+            
         if (reviewsError) throw reviewsError;
         allReviews = reviews || [];
+        
+        console.log('✅ Reviews loaded:', {
+            count: allReviews.length,
+            reviewsByTrip: allReviews.reduce((acc, r) => {
+                acc[r.trip_id] = (acc[r.trip_id] || 0) + 1;
+                return acc;
+            }, {})
+        });
         
         // Fetch ideas for names
         const { data: ideas, error: ideasError } = await supabase
@@ -125,7 +140,7 @@ function calculateTripProgress(trip) {
         review.trip_id == trip.id
     ).length;
     
-    // ✅ Hitung jumlah ACTIVITIES yang sudah direview (minimal 1 review)
+    // ✅ Hitung jumlah ACTIVITIES yang sudah direview (STRICT MATCH)
     const reviewedActivities = trip.selection_json.filter(activity => {
         return allReviews.some(review => 
             review.trip_id == trip.id && 
@@ -133,20 +148,26 @@ function calculateTripProgress(trip) {
         );
     }).length;
     
-    const percentage = Math.round((reviewedActivities / totalActivities) * 100);
-    
+    // ✅ FALLBACK: Kalau ada reviews tapi reviewedActivities = 0, 
+    // berarti ada data mismatch (trip edited setelah review dibuat)
+    let adjustedPercentage = 0;
     let status = 'none';
-    if (reviewedActivities === totalActivities) {
-        status = 'complete';
-    } else if (reviewedActivities > 0) {
-        status = 'partial';
+    
+    if (reviewedActivities > 0) {
+        adjustedPercentage = Math.round((reviewedActivities / totalActivities) * 100);
+        status = reviewedActivities === totalActivities ? 'complete' : 'partial';
+    } else if (totalReviews > 0) {
+        // Ada reviews tapi tidak match dengan activities
+        // Set status sebagai 'orphaned' atau 'partial' dengan warning
+        adjustedPercentage = 0;
+        status = 'orphaned'; // ✅ NEW status
     }
     
     return {
-        totalActivities,      // Total aktivitas
-        reviewedActivities,   // Aktivitas yang sudah direview
-        totalReviews,         // Total semua reviews
-        percentage,           // Persentase completion
+        totalActivities,
+        reviewedActivities,
+        totalReviews,
+        percentage: adjustedPercentage,
         status
     };
 }
@@ -223,6 +244,9 @@ function renderTimeline() {
         } else if (progress.status === 'partial') {
             badgeClass = 'badge-partial';
             badgeText = `⏳ ${progress.reviewedActivities}/${progress.totalActivities} (${progress.totalReviews} reviews)`;  // ✅ Show both
+        } else if (progress.status === 'orphaned') {
+            badgeClass = 'badge-warning';
+            badgeText = `⚠️ ${progress.totalReviews} review tidak terhubung`;
         }
         
         // Activities preview (first 5)
