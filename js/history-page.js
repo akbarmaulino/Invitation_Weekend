@@ -91,7 +91,7 @@ async function fetchAllData(startDate = null, endDate = null) {
             .select('id, idea_name');
         if (ideasError) throw ideasError;
         allIdeas = ideas || [];
-        
+        await autoCleanAllOrphanedReviews();
         return true;
     } catch (error) {
         console.error('Error fetching data:', error);
@@ -122,6 +122,112 @@ function calculateStats() {
     };
 }
 
+// ✅ NEW: Function to clean orphaned reviews
+// ============================================================
+// CLEAN ORPHANED REVIEWS
+// ============================================================
+
+/**
+ * Clean orphaned reviews for a specific trip
+ * Orphaned = reviews untuk activities yang sudah tidak ada di trip
+ */
+async function cleanOrphanedReviews(tripId) {
+    try {
+        const trip = allTrips.find(t => t.id == tripId);
+        if (!trip) {
+            console.warn('Trip not found:', tripId);
+            return;
+        }
+        
+        // Get valid idea_ids dari trip ini
+        const validIdeaIds = trip.selection_json
+            .map(activity => activity.idea_id)
+            .filter(Boolean); // Remove null/undefined
+        
+        // Find orphaned reviews (reviews yang idea_id-nya tidak ada di validIdeaIds)
+        const orphanedReviews = allReviews.filter(review => 
+            review.trip_id == tripId && 
+            !validIdeaIds.includes(review.idea_id)
+        );
+        
+        if (orphanedReviews.length === 0) {
+            console.log('✅ No orphaned reviews for trip:', tripId);
+            return;
+        }
+        
+        console.log(`🧹 Found ${orphanedReviews.length} orphaned reviews for trip ${tripId}:`, 
+            orphanedReviews.map(r => ({ 
+                reviewer: r.reviewer_name, 
+                idea_id: r.idea_id 
+            }))
+        );
+        
+        // Delete orphaned reviews from database
+        const orphanedIds = orphanedReviews.map(r => r.id);
+        
+        const { error } = await supabase
+            .from('idea_reviews')
+            .delete()
+            .in('id', orphanedIds);
+        
+        if (error) throw error;
+        
+        console.log('✅ Successfully deleted orphaned reviews');
+        
+        // Update local cache
+        allReviews = allReviews.filter(r => !orphanedIds.includes(r.id));
+        
+    } catch (error) {
+        console.error('❌ Error cleaning orphaned reviews:', error);
+    }
+}
+
+/**
+ * Auto-clean orphaned reviews for ALL trips
+ * Called on page load
+ */
+async function autoCleanAllOrphanedReviews() {
+    try {
+        let totalOrphaned = 0;
+        
+        // Check each trip
+        for (const trip of allTrips) {
+            const validIdeaIds = trip.selection_json
+                .map(activity => activity.idea_id)
+                .filter(Boolean);
+            
+            // Find orphaned reviews for this trip
+            const orphaned = allReviews.filter(review => 
+                review.trip_id == trip.id && 
+                !validIdeaIds.includes(review.idea_id)
+            );
+            
+            if (orphaned.length > 0) {
+                console.log(`🧹 Trip ${formatTanggalIndonesia(trip.trip_date)}: ${orphaned.length} orphaned reviews`);
+                totalOrphaned += orphaned.length;
+            }
+        }
+        
+        if (totalOrphaned === 0) {
+            console.log('✅ No orphaned reviews found');
+            return;
+        }
+        
+        console.log(`🧹 Total orphaned reviews found: ${totalOrphaned}`);
+        console.log('🧹 Cleaning...');
+        
+        // Clean each trip
+        for (const trip of allTrips) {
+            await cleanOrphanedReviews(trip.id);
+        }
+        
+        console.log('✅ All orphaned reviews cleaned');
+        
+    } catch (error) {
+        console.error('❌ Error auto-cleaning orphaned reviews:', error);
+    }
+}
+
 function calculateTripProgress(trip) {
     if (!trip.selection_json || trip.selection_json.length === 0) {
         return { 
@@ -135,43 +241,43 @@ function calculateTripProgress(trip) {
     
     const totalActivities = trip.selection_json.length;
     
-    // ✅ Hitung jumlah TOTAL REVIEWS di trip ini
-    const totalReviews = allReviews.filter(review => 
-        review.trip_id == trip.id
-    ).length;
+    // ✅ Get valid idea_ids dari trip ini
+    const validIdeaIds = trip.selection_json
+        .map(activity => activity.idea_id)
+        .filter(Boolean);
     
-    // ✅ Hitung jumlah ACTIVITIES yang sudah direview (STRICT MATCH)
+    // ✅ Count ONLY reviews yang match dengan valid activities
+    const validReviews = allReviews.filter(review => 
+        review.trip_id == trip.id && 
+        validIdeaIds.includes(review.idea_id)
+    );
+    
+    const totalReviews = validReviews.length;
+    
+    // ✅ Activities yang sudah direview (minimal 1 valid review)
     const reviewedActivities = trip.selection_json.filter(activity => {
-        return allReviews.some(review => 
-            review.trip_id == trip.id && 
+        return validReviews.some(review => 
             review.idea_id == activity.idea_id
         );
     }).length;
     
-    // ✅ FALLBACK: Kalau ada reviews tapi reviewedActivities = 0, 
-    // berarti ada data mismatch (trip edited setelah review dibuat)
-    let adjustedPercentage = 0;
-    let status = 'none';
+    const percentage = Math.round((reviewedActivities / totalActivities) * 100);
     
-    if (reviewedActivities > 0) {
-        adjustedPercentage = Math.round((reviewedActivities / totalActivities) * 100);
-        status = reviewedActivities === totalActivities ? 'complete' : 'partial';
-    } else if (totalReviews > 0) {
-        // Ada reviews tapi tidak match dengan activities
-        // Set status sebagai 'orphaned' atau 'partial' dengan warning
-        adjustedPercentage = 0;
-        status = 'orphaned'; // ✅ NEW status
+    let status = 'none';
+    if (reviewedActivities === totalActivities) {
+        status = 'complete';
+    } else if (reviewedActivities > 0) {
+        status = 'partial';
     }
     
     return {
         totalActivities,
         reviewedActivities,
-        totalReviews,
-        percentage: adjustedPercentage,
+        totalReviews,  // ✅ Only valid reviews counted
+        percentage,
         status
     };
 }
-
 // ============================================================
 // RENDERING
 // ============================================================
@@ -798,6 +904,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderStats(stats);
         renderTimeline();
     }
+
+    const cleanOrphanedBtn = document.getElementById('cleanOrphanedBtn');
+if (cleanOrphanedBtn) {
+    cleanOrphanedBtn.addEventListener('click', async () => {
+        if (confirm('🧹 Clean orphaned reviews?\n\nIni akan hapus review untuk aktivitas yang sudah tidak ada di trip.')) {
+            cleanOrphanedBtn.disabled = true;
+            cleanOrphanedBtn.textContent = '⏳ Cleaning...';
+            
+            await autoCleanAllOrphanedReviews();
+            
+            // Reload data
+            const success = await fetchAllData();
+            if (success) {
+                const stats = calculateStats();
+                renderStats(stats);
+                renderTimeline();
+            }
+            
+            cleanOrphanedBtn.disabled = false;
+            cleanOrphanedBtn.textContent = '🧹 Clean Orphaned';
+            
+            alert('✅ Cleanup completed!');
+        }
+    });
+}
+    
     if (tripUpdated === 'true' && updatedTripId) {
         // Show success notification
         showUpdateSuccessNotification();
