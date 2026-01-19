@@ -933,8 +933,17 @@ async function handleInvitationSubmit(e) {
         
         if (email && sendEmailBtn) {
             sendEmailBtn.style.display = 'inline-block';
-            // TODO: Implement email sending
+
+            const trip = allTrips.find(t => t.id == tripId);
+            const tripDate = trip ? trip.trip_date : '';
+            
+            // Setup WhatsApp button click
+            sendEmailBtn.onclick = () => {
+                sendViaEmail(email, name, tripDate, result.invitationUrl, message);
+            };
+
         }
+
         
     } else {
         invitationStatus.textContent = '❌ Gagal membuat link: ' + result.error;
@@ -1313,3 +1322,42 @@ if (cleanOrphanedBtn) {
         });
     }
 });
+
+// ============================================================
+// EMAIL SENDING
+// ============================================================
+
+
+async function sendViaEmail(email, inviterName, tripDate, invitationUrl, customMessage) {
+    try {
+        const tripDateFormatted = formatTanggalIndonesia(tripDate);
+        
+        console.log('📧 Sending email to:', email);
+        
+        const { data, error } = await supabase.functions.invoke('send-invitation-email', {
+            body: {
+                to: email,
+                inviterName: inviterName,
+                tripDate: tripDateFormatted,
+                invitationUrl: invitationUrl,
+                customMessage: customMessage
+            }
+        });
+        
+        if (error) {
+            console.error('Edge function error:', error);
+            throw error;
+        }
+        
+        if (!data?.success) {
+            throw new Error(data?.error || 'Failed to send email');
+        }
+        
+        console.log('✅ Email sent successfully');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error sending email:', error);
+        throw error;
+    }
+}
