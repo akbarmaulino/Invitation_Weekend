@@ -101,9 +101,21 @@ export async function createTripInvitation({
         
         if (error) throw error;
         
-        // Generate invitation URL
-        const baseUrl = window.location.origin;
+        // ✅ FIX: Use production URL
+        const isLocalhost = window.location.hostname === 'localhost' || 
+                           window.location.hostname === '127.0.0.1';
+        
+        const baseUrl = isLocalhost 
+            ? window.location.origin  // Use localhost for testing
+            : 'https://invitation-weekend.vercel.app';  // ✅ Production URL
+        
         const invitationUrl = `${baseUrl}/review-invitation.html?token=${token}`;
+        
+        console.log('✅ Invitation created:', {
+            token,
+            url: invitationUrl,
+            environment: isLocalhost ? 'localhost' : 'production'
+        });
         
         return {
             success: true,

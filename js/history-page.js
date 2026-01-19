@@ -817,12 +817,60 @@ function showInvitationModal(tripId) {
     showModal(invitationModal);
 }
 
+function generateWhatsAppLink(phoneNumber, inviterName, tripDate, invitationUrl, customMessage) {
+    // Format phone number (remove spaces, dashes, add +62 if starts with 0)
+    let formattedPhone = phoneNumber.replace(/[\s\-\(\)]/g, '');
+    
+    if (formattedPhone.startsWith('0')) {
+        formattedPhone = '62' + formattedPhone.substring(1);
+    } else if (!formattedPhone.startsWith('+') && !formattedPhone.startsWith('62')) {
+        formattedPhone = '62' + formattedPhone;
+    }
+    
+    formattedPhone = formattedPhone.replace(/^\+/, ''); // Remove + if exists
+    
+    // Generate message
+    const tripDateFormatted = formatTanggalIndonesia(tripDate);
+    
+    let message = `Hi!\n\n`;
+    message += `${inviterName} mengundang kamu untuk review trip tanggal ${tripDateFormatted}\n\n`;
+    
+    if (customMessage) {
+        message += `${customMessage}\n\n`;
+    }
+    
+    message += `Klik link di bawah untuk mulai review:\n\n`;
+    message += `${invitationUrl}\n\n`;  // ✅ CRITICAL: Extra line break BEFORE and AFTER URL
+    message += `Terima kasih!`;
+    
+    // URL encode message
+    const encodedMessage = encodeURIComponent(message);
+    
+    // Generate WhatsApp link
+    const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
+    
+    return whatsappUrl;
+}
+
+/**
+ * Open WhatsApp with pre-filled message
+ */
+function sendViaWhatsApp(phoneNumber, inviterName, tripDate, invitationUrl, customMessage) {
+    const whatsappUrl = generateWhatsAppLink(phoneNumber, inviterName, tripDate, invitationUrl, customMessage);
+    
+    console.log('📱 Opening WhatsApp with URL:', whatsappUrl);
+    
+    // Open WhatsApp in new tab
+    window.open(whatsappUrl, '_blank');
+}
+
 async function handleInvitationSubmit(e) {
     e.preventDefault();
     
     const tripId = invitationTripId.value;
     const name = inviterName.value.trim();
     const email = invitedEmail.value.trim() || null;
+    const phone = document.getElementById('invitedPhone').value.trim() || null;  // ✅ NEW
     const message = invitationMessage.value.trim() || null;
     const uses = parseInt(maxUses.value);
     
@@ -853,6 +901,11 @@ async function handleInvitationSubmit(e) {
         invitationResult.style.display = 'block';
         generatedInvitationUrl.value = result.invitationUrl;
         
+        const clickableLink = document.getElementById('clickableInvitationLink');
+        if (clickableLink) {
+            clickableLink.href = result.invitationUrl;
+        }
+
         invitationStatus.textContent = '';
         
         // Auto-select URL for easy copy
@@ -860,6 +913,28 @@ async function handleInvitationSubmit(e) {
         
         // Change button text
         generateInvitationBtn.textContent = '✅ Link Berhasil Dibuat!';
+        
+        // ✅ NEW: Show WhatsApp button if phone number provided
+        const sendWhatsAppBtn = document.getElementById('sendWhatsAppBtn');
+        const sendEmailBtn = document.getElementById('sendEmailBtn');
+        
+        if (phone && sendWhatsAppBtn) {
+            sendWhatsAppBtn.style.display = 'inline-block';
+            
+            // Get trip for date
+            const trip = allTrips.find(t => t.id == tripId);
+            const tripDate = trip ? trip.trip_date : '';
+            
+            // Setup WhatsApp button click
+            sendWhatsAppBtn.onclick = () => {
+                sendViaWhatsApp(phone, name, tripDate, result.invitationUrl, message);
+            };
+        }
+        
+        if (email && sendEmailBtn) {
+            sendEmailBtn.style.display = 'inline-block';
+            // TODO: Implement email sending
+        }
         
     } else {
         invitationStatus.textContent = '❌ Gagal membuat link: ' + result.error;

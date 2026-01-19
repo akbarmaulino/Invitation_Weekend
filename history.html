@@ -198,11 +198,25 @@
                 >
                 
                 <label for="invitedEmail">📧 Email Teman (Opsional):</label>
-                <input 
-                    type="email" 
-                    id="invitedEmail" 
-                    placeholder="teman@example.com (untuk referensi saja)"
-                >
+                    <input 
+                        type="email" 
+                        id="invitedEmail" 
+                        placeholder="teman@example.com"
+                    >
+                    <small style="color: var(--color-muted); display: block; margin-top: 5px;">
+                        💡 Untuk kirim via email (coming soon)
+                    </small>
+
+                    <!-- ✅ NEW: WhatsApp Number -->
+                    <label for="invitedPhone" style="margin-top: 15px;">📱 No. WhatsApp Teman (Opsional):</label>
+                    <input 
+                        type="tel" 
+                        id="invitedPhone" 
+                        placeholder="08123456789 atau +6281234567890"
+                    >
+                    <small style="color: var(--color-muted); display: block; margin-top: 5px;">
+                        💡 Untuk kirim via WhatsApp langsung
+                    </small>
                 <small style="color: var(--color-muted); display: block; margin-top: 5px;">
                     💡 Email tidak wajib, link tetap bisa di-copy dan dishare manual
                 </small>
@@ -248,11 +262,55 @@
                             </button>
                         </div>
                         
+                        <!-- ✅ NEW: Clickable Link -->
+                        <div style="margin-top: 10px; padding: 10px; background: #f0f8ff; border-radius: 6px; text-align: center;">
+                            <a 
+                                id="clickableInvitationLink" 
+                                href="#" 
+                                target="_blank"
+                                style="
+                                    color: var(--color-primary); 
+                                    font-weight: 600; 
+                                    text-decoration: underline;
+                                    word-break: break-all;
+                                "
+                            >
+                                👉 Atau klik link ini langsung
+                            </a>
+                        </div>
+                        
+                        <!-- Send Options -->
+                        <div style="margin-top: 20px; padding: 15px; background: #f0f8ff; border-radius: 8px; border-left: 4px solid var(--color-primary);">
+                            <p style="margin: 0 0 10px 0; font-weight: 600;">📤 Kirim Undangan:</p>
+                            
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <!-- WhatsApp Button -->
+                                <button 
+                                    type="button" 
+                                    class="btn-send-whatsapp"
+                                    id="sendWhatsAppBtn"
+                                    style="display: none;"
+                                >
+                                    💬 Kirim via WhatsApp
+                                </button>
+                                
+                                <!-- Email Button -->
+                                <button 
+                                    type="button" 
+                                    class="btn-send-email"
+                                    id="sendEmailBtn"
+                                    style="display: none;"
+                                >
+                                    📧 Kirim via Email
+                                </button>
+                            </div>
+                        </div>
+                        
                         <div style="margin-top: 15px; padding: 15px; background: #e8f4fd; border-radius: 8px; border-left: 4px solid var(--color-primary);">
                             <p style="margin: 0; font-size: 0.9em;">
                                 <strong>💡 Cara Share:</strong><br>
-                                • Copy link di atas<br>
-                                • Share via WhatsApp, Email, atau sosmed<br>
+                                • Klik link di atas untuk test<br>
+                                • Atau copy dan share via WhatsApp/Email/Sosmed<br>
                                 • Teman klik link → langsung bisa review!
                             </p>
                         </div>

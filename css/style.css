@@ -2929,3 +2929,40 @@ body.edit-mode-active header {
 .review-item-card .btn-edit-review {
     margin-top: 10px;
 }
+
+/* Send Buttons */
+.btn-send-whatsapp,
+.btn-send-email {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.95em;
+    transition: all 0.3s ease;
+}
+
+.btn-send-whatsapp {
+    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+    color: white;
+}
+
+.btn-send-whatsapp:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
+}
+
+.btn-send-email {
+    background: linear-gradient(135deg, #4285F4 0%, #34A853 100%);
+    color: white;
+}
+
+.btn-send-email:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.btn-send-email:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
+}
