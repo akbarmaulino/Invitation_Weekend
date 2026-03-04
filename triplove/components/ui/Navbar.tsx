@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/statistics', label: 'Statistics', icon: '📊' },
   { href: '/gallery',    label: 'Gallery',    icon: '📸' },
   { href: '/history',    label: 'History',    icon: '📖' },
+  { href: '/games',      label: 'Games',      icon: '🎮' },
   { href: '/settings',   label: 'Settings',   icon: '⚙️' },
 ]
 
