@@ -11,30 +11,35 @@ import Countdown from './Countdown'
 import Toast from '@/components/ui/Toast'
 import type { LocalSelection, IdeaReview } from '@/types/types'
 
-const P = '#03254c', PL = '#e1f3ff', PB = '#c4e8ff', PINK = '#1a4d7a', TEXT = '#03254c', MUTED = '#9ca3af'
+const T = {
+  navy: '#03254c', navyMid: '#1a4d7a', navyLight: '#2563a8',
+  sky: '#c4e8ff', skyLight: '#e1f3ff', skyMid: '#a8d8f0',
+  bg: '#d0efff', white: '#ffffff',
+  muted: '#6b8cae', mutedLight: '#a0bcd4',
+}
 
 export default function HomePage() {
   const { ideas, categories, cities, reviews, ideaRatings, loading, loadAllData, loadReviews } = useData()
-  const [tripDate, setTripDate]     = useState('')
-  const [secretMsg, setSecretMsg]   = useState('')
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [selections, setSelections] = useState<LocalSelection[]>([])
-  const [search, setSearch]         = useState('')
+  const [tripDate, setTripDate]         = useState('')
+  const [secretMsg, setSecretMsg]       = useState('')
+  const [selectedIds, setSelectedIds]   = useState<Set<string>>(new Set())
+  const [selections, setSelections]     = useState<LocalSelection[]>([])
+  const [search, setSearch]             = useState('')
   const [detailIdeaId, setDetailIdeaId] = useState<string | null>(null)
   const [detailReviews, setDetailReviews] = useState<IdeaReview[]>([])
-  const [tripDates, setTripDates]   = useState<Record<string, any>>({})
-  const [showAdd, setShowAdd]       = useState(false)
-  const [newName, setNewName]       = useState('')
-  const [newCat, setNewCat]         = useState('')
+  const [tripDates, setTripDates]       = useState<Record<string, any>>({})
+  const [showAdd, setShowAdd]           = useState(false)
+  const [newName, setNewName]           = useState('')
+  const [newCat, setNewCat]             = useState('')
   const [newCatCustom, setNewCatCustom] = useState('')
-  const [newSub, setNewSub]         = useState('')
+  const [newSub, setNewSub]             = useState('')
   const [newSubCustom, setNewSubCustom] = useState('')
-  const [newCity, setNewCity]       = useState('')
-  const [newFile, setNewFile]       = useState<File | null>(null)
-  const [addingIdea, setAddingIdea] = useState(false)
-  const [isEditMode, setIsEditMode] = useState(false)
-  const [toast, setToast]           = useState<{msg:string;type:any}|null>(null)
-  const ideasLoaded                 = useRef(false)
+  const [newCity, setNewCity]           = useState('')
+  const [newFile, setNewFile]           = useState<File | null>(null)
+  const [addingIdea, setAddingIdea]     = useState(false)
+  const [isEditMode, setIsEditMode]     = useState(false)
+  const [toast, setToast]               = useState<{msg:string;type:any}|null>(null)
+  const ideasLoaded = useRef(false)
 
   useEffect(() => {
     loadAllData()
@@ -52,7 +57,6 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => { if (ideas.length > 0) ideasLoaded.current = true }, [ideas])
-
   useEffect(() => {
     localStorage.setItem('tripSelections', JSON.stringify(selections))
     localStorage.setItem('tripDate', tripDate)
@@ -64,8 +68,7 @@ export default function HomePage() {
     setSelectedIds(prev => {
       const next = new Set(prev)
       if (next.has(ideaId)) {
-        next.delete(ideaId)
-        setSelections(s => s.filter(sel => sel.ideaId !== ideaId))
+        next.delete(ideaId); setSelections(s => s.filter(sel => sel.ideaId !== ideaId))
       } else {
         next.add(ideaId)
         setSelections(s => {
@@ -107,7 +110,7 @@ export default function HomePage() {
   const handleAddIdea = async () => {
     const finalName = newName.trim()
     const finalCat  = newCat === '__custom__' ? newCatCustom.trim() : newCat
-    const finalSub  = newSub === '__custom__' ? newSubCustom.trim()  : newSub
+    const finalSub  = newSub === '__custom__' ? newSubCustom.trim() : newSub
     if (!finalName) return setToast({msg:'Nama tidak boleh kosong!', type:'warn'})
     if (!finalCat)  return setToast({msg:'Pilih atau isi kategori!', type:'warn'})
     if (!finalSub)  return setToast({msg:'Pilih atau isi sub-tipe!', type:'warn'})
@@ -122,108 +125,167 @@ export default function HomePage() {
       const typeKey = newSub === '__custom__' ? finalSub.toLowerCase().replace(/\s+/g, '_') : newSub
       const { error } = await supabase.from('trip_ideas_v2').insert([{ idea_name: finalName, type_key: typeKey, day_of_week: '', photo_url: imageUrl, city_id: newCity || null }])
       if (error) throw error
-      await loadAllData()
-      setShowAdd(false); resetAdd()
+      await loadAllData(); setShowAdd(false); resetAdd()
       setToast({msg:'Ide berhasil ditambahkan! 🎉', type:'success'})
-    } catch(err) {
-      setToast({msg:'Gagal menyimpan. Coba lagi.', type:'error'})
-    } finally { setAddingIdea(false) }
+    } catch { setToast({msg:'Gagal menyimpan. Coba lagi.', type:'error'}) }
+    finally { setAddingIdea(false) }
   }
 
-  const uniqueCats    = [...new Set(categories.map(c => c.category))]
+  const uniqueCats     = [...new Set(categories.map(c => c.category))]
   const subtypesForCat = categories.filter(c => c.category === newCat)
-  const detailIdea    = detailIdeaId ? ideas.find(i => i.id === detailIdeaId) : null
+  const detailIdea     = detailIdeaId ? ideas.find(i => i.id === detailIdeaId) : null
+  const canGenerate    = tripDate && selections.length > 0
 
-  const inp: React.CSSProperties = { width: '100%', padding: '10px 14px', border: '2px solid #c4e8ff', borderRadius: 12, fontSize: '0.93em', color: TEXT, background: 'white', outline: 'none', boxSizing: 'border-box' }
+  const inp: React.CSSProperties = {
+    width: '100%', padding: '9px 12px',
+    border: `1.5px solid ${T.sky}`, borderRadius: 10,
+    fontSize: '0.87em', color: T.navy, background: T.white,
+    outline: 'none', boxSizing: 'border-box',
+  }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#d0efff' }}>
-      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+    <div style={{ minHeight: '100vh', background: T.bg, fontFamily: "'DM Sans', sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+        @keyframes spin { to { transform: rotate(360deg) } }
+        * { box-sizing: border-box; }
+        input:focus, select:focus, textarea:focus { border-color: ${T.navyLight} !important; outline: none; box-shadow: 0 0 0 3px ${T.skyMid}66; }
+        input[type='date']::-webkit-calendar-picker-indicator { opacity: 0.4; cursor: pointer; }
+        .sticky-bar { transition: box-shadow .2s; }
+      `}</style>
 
-      {/* Header */}
+      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       <Navbar />
 
-      <main style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* ── Sticky control bar ── */}
+      <div className="sticky-bar" style={{
+        position: 'sticky', top: 0, zIndex: 30,
+        background: 'rgba(208,239,255,0.95)',
+        backdropFilter: 'blur(14px)',
+        borderBottom: `1.5px solid ${T.skyMid}`,
+        padding: '10px 16px 10px',
+        boxShadow: '0 2px 16px rgba(3,37,76,.08)',
+      }}>
+        <div style={{ maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
 
-        {/* Edit mode banner */}
-        {isEditMode && (
-          <div style={{ padding: '12px 18px', borderRadius: 16, background: '#fffbeb', border: '2px solid #fcd34d', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <span style={{ fontWeight: 700, color: '#92400e', fontSize: '0.9em' }}>✏️ Mode edit trip — ubah aktivitas lalu generate ulang</span>
-            <button onClick={() => { localStorage.removeItem('editMode'); localStorage.removeItem('editTripId'); localStorage.removeItem('tripSelections'); localStorage.removeItem('tripDate'); setIsEditMode(false); setSelections([]); setSelectedIds(new Set()); setToast({msg:'Edit dibatalkan',type:'info'}) }} style={{ background: 'none', border: 'none', color: '#f59e0b', fontWeight: 700, cursor: 'pointer', fontSize: '0.85em' }}>✕ Batal</button>
-          </div>
-        )}
+          {isEditMode && (
+            <div style={{ padding: '6px 12px', borderRadius: 8, background: '#fffbeb', border: '1.5px solid #fcd34d', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontWeight: 600, color: '#92400e', fontSize: '0.8em' }}>✏️ Mode edit trip aktif</span>
+              <button onClick={() => { localStorage.removeItem('editMode'); localStorage.removeItem('editTripId'); localStorage.removeItem('tripSelections'); localStorage.removeItem('tripDate'); setIsEditMode(false); setSelections([]); setSelectedIds(new Set()) }}
+                style={{ background: 'none', border: 'none', color: '#f59e0b', fontWeight: 700, cursor: 'pointer', fontSize: '0.78em' }}>✕ Batal</button>
+            </div>
+          )}
 
-        {/* Controls */}
-        <div style={{ padding: 20, borderRadius: 20, background: 'white', border: '2px solid #c4e8ff', boxShadow: '0 2px 12px rgba(168,85,247,0.08)', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: '0.75em', fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>📅 Tanggal Trip</label>
-              <input type='date' value={tripDate} onChange={e => setTripDate(e.target.value)} style={{ ...inp, width: 180 }} />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input type='date' value={tripDate} onChange={e => setTripDate(e.target.value)}
+              style={{ ...inp, width: 158, flexShrink: 0 }} />
+
+            <div style={{ flex: 1, minWidth: 160, position: 'relative' }}>
+              <input type='text' value={secretMsg} onChange={e => setSecretMsg(e.target.value)}
+                placeholder='💌 Pesan rahasia...'
+                style={{ ...inp, width: '100%', paddingRight: secretMsg ? 30 : 12 }} />
+              {secretMsg && <span style={{ position: 'absolute', right: 9, top: '50%', transform: 'translateY(-50%)', fontSize: '0.8em', pointerEvents: 'none' }}>✨</span>}
             </div>
-            <div style={{ flex: 1, minWidth: 200, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ fontSize: '0.75em', fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>💌 Pesan Rahasia</label>
-              <input type='text' value={secretMsg} onChange={e => setSecretMsg(e.target.value)} placeholder='Tulis sesuatu yang manis...' style={inp} />
-            </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setShowAdd(true)} style={{ padding: '10px 18px', borderRadius: 999, background: '#e1f3ff', color: P, border: '2px solid #a8d8f0', fontWeight: 700, cursor: 'pointer', fontSize: '0.88em' }}>➕ Tambah Ide</button>
-              <button onClick={handleGenerate} disabled={!tripDate || selections.length === 0} style={{ padding: '10px 20px', borderRadius: 999, background: !tripDate || selections.length === 0 ? '#a8d8f0' : 'linear-gradient(135deg, #03254c, #1a4d7a)', color: !tripDate || selections.length === 0 ? '#9ca3af' : 'white', border: 'none', fontWeight: 800, cursor: !tripDate || selections.length === 0 ? 'not-allowed' : 'pointer', fontSize: '0.88em', display: 'flex', alignItems: 'center', gap: 8, boxShadow: !tripDate || selections.length === 0 ? 'none' : '0 4px 14px rgba(168,85,247,0.35)' }}>
-                {isEditMode ? '🔄 Update' : '🎫 Generate Tiket'}
-                {selections.length > 0 && <span style={{ background: 'rgba(255,255,255,0.25)', borderRadius: 999, padding: '1px 8px', fontSize: '0.82em' }}>{selections.length}</span>}
-              </button>
-            </div>
+
+            <button onClick={() => setShowAdd(true)} style={{
+              padding: '9px 14px', borderRadius: 10,
+              background: T.white, color: T.navy,
+              border: `1.5px solid ${T.sky}`,
+              fontWeight: 600, cursor: 'pointer', fontSize: '0.82em', whiteSpace: 'nowrap',
+              boxShadow: '0 1px 4px rgba(3,37,76,.07)',
+            }}>➕ Tambah Ide</button>
+
+            <button onClick={handleGenerate} disabled={!canGenerate} style={{
+              padding: '9px 18px', borderRadius: 10,
+              background: canGenerate ? `linear-gradient(135deg, ${T.navy}, ${T.navyMid})` : T.skyMid,
+              color: canGenerate ? T.white : T.mutedLight,
+              border: 'none', fontWeight: 700, cursor: canGenerate ? 'pointer' : 'not-allowed',
+              fontSize: '0.84em', whiteSpace: 'nowrap',
+              display: 'flex', alignItems: 'center', gap: 6,
+              boxShadow: canGenerate ? '0 2px 12px rgba(3,37,76,.28)' : 'none',
+              transition: 'all .15s',
+            }}>
+              {isEditMode ? '🔄 Update' : '🎫 Generate'}
+              {selections.length > 0 && <span style={{ background: 'rgba(255,255,255,0.22)', borderRadius: 999, padding: '1px 7px', fontSize: '0.78em' }}>{selections.length}</span>}
+            </button>
           </div>
+
           <div style={{ position: 'relative' }}>
-            <input type='text' value={search} onChange={e => setSearch(e.target.value)} placeholder='🔍 Cari aktivitas...' style={inp} />
-            {search && <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: MUTED, fontSize: '1em' }}>✕</button>}
+            <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: T.mutedLight, fontSize: '0.82em', pointerEvents: 'none' }}>🔍</span>
+            <input type='text' value={search} onChange={e => setSearch(e.target.value)}
+              placeholder='Cari tempat atau kategori...'
+              style={{ ...inp, width: '100%', paddingLeft: 32, paddingRight: search ? 32 : 12 }} />
+            {search && <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 9, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: T.mutedLight, fontSize: '0.85em' }}>✕</button>}
           </div>
         </div>
+      </div>
+
+      {/* ── Main ── */}
+      <main style={{ maxWidth: 960, margin: '0 auto', padding: '14px 16px 80px', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
         {tripDate && <Countdown tripDate={tripDate} />}
-        <SelectedPanel selections={selections} onRemove={handleRemove} onClearAll={() => { setSelectedIds(new Set()); setSelections([]); setToast({msg:'Semua dihapus',type:'info'}) }} onLocate={id => document.querySelector('[data-ideaid="' + id + '"]')?.scrollIntoView({behavior:'smooth',block:'center'})} />
+
+        <SelectedPanel
+          selections={selections}
+          onRemove={handleRemove}
+          onClearAll={() => { setSelectedIds(new Set()); setSelections([]); setToast({msg:'Semua dihapus',type:'info'}) }}
+          onLocate={id => document.querySelector('[data-ideaid="' + id + '"]')?.scrollIntoView({behavior:'smooth',block:'center'})}
+        />
 
         {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
-            <div style={{ width: 40, height: 40, border: '4px solid #c4e8ff', borderTopColor: P, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+            <div style={{ width: 34, height: 34, border: `3px solid ${T.sky}`, borderTopColor: T.navy, borderRadius: '50%', animation: 'spin 0.85s linear infinite' }} />
           </div>
         ) : (
-          <ActivityArea ideas={ideas} categories={categories} cities={cities} ideaRatings={ideaRatings} selectedIds={selectedIds} searchQuery={search} tripDate={tripDate} onToggle={handleToggle} onViewDetail={handleViewDetail} />
+          <ActivityArea
+            ideas={ideas} categories={categories} cities={cities}
+            ideaRatings={ideaRatings} selectedIds={selectedIds}
+            searchQuery={search} tripDate={tripDate}
+            onToggle={handleToggle} onViewDetail={handleViewDetail}
+          />
         )}
       </main>
 
-      {/* Detail Modal */}
-      {detailIdea && <IdeaDetailModal idea={detailIdea} reviews={detailReviews} rating={ideaRatings[detailIdea.id]} tripDates={tripDates} onClose={() => setDetailIdeaId(null)} onEditInfo={() => {}} onReviewSaved={() => { loadReviews(); handleViewDetail(detailIdea.id) }} />}
+      {detailIdea && (
+        <IdeaDetailModal
+          idea={detailIdea} reviews={detailReviews}
+          rating={ideaRatings[detailIdea.id]} tripDates={tripDates}
+          onClose={() => setDetailIdeaId(null)} onEditInfo={() => {}}
+          onReviewSaved={() => { loadReviews(); handleViewDetail(detailIdea.id) }}
+        />
+      )}
 
-      {/* Add Idea Modal */}
       {showAdd && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(30,27,75,0.4)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '20px 16px', overflowY: 'auto' }} onClick={e => { if (e.target === e.currentTarget) { setShowAdd(false); resetAdd() } }}>
-          <div style={{ background: 'white', borderRadius: 24, border: '2px solid #c4e8ff', boxShadow: '0 16px 48px rgba(168,85,247,0.2)', width: '100%', maxWidth: 480, margin: 'auto', padding: 28 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
-              <h3 style={{ color: P, fontWeight: 800, margin: 0, fontSize: '1.15em' }}>➕ Tambah Ide Baru</h3>
-              <button onClick={() => { setShowAdd(false); resetAdd() }} style={{ background: 'none', border: 'none', color: MUTED, fontSize: '1.3em', cursor: 'pointer' }}>✕</button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div><label style={{ fontSize: '0.8em', fontWeight: 700, color: MUTED, display: 'block', marginBottom: 6 }}>Nama Tempat *</label><input value={newName} onChange={e => setNewName(e.target.value)} placeholder='misal: Braga Permai' style={inp} /></div>
-              <div>
-                <label style={{ fontSize: '0.8em', fontWeight: 700, color: MUTED, display: 'block', marginBottom: 6 }}>Kategori *</label>
-                <select value={newCat} onChange={e => { setNewCat(e.target.value); setNewSub('') }} style={inp}><option value=''>Pilih...</option>{uniqueCats.map(c => <option key={c} value={c}>{c}</option>)}<option value='__custom__'>➕ Tambah baru...</option></select>
-                {newCat === '__custom__' && <input value={newCatCustom} onChange={e => setNewCatCustom(e.target.value)} placeholder='Nama kategori baru' style={{ ...inp, marginTop: 8 }} />}
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(3,37,76,0.38)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '24px 16px', overflowY: 'auto' }}
+          onClick={e => { if (e.target === e.currentTarget) { setShowAdd(false); resetAdd() } }}>
+          <div style={{ background: T.white, borderRadius: 20, border: `1.5px solid ${T.sky}`, boxShadow: '0 20px 60px rgba(3,37,76,.2)', width: '100%', maxWidth: 460, margin: 'auto' }}>
+            <div style={{ padding: '20px 22px 24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+                <h3 style={{ color: T.navy, fontWeight: 800, margin: 0, fontSize: '1.02em' }}>➕ Tambah Ide Baru</h3>
+                <button onClick={() => { setShowAdd(false); resetAdd() }} style={{ background: T.skyLight, border: `1px solid ${T.sky}`, borderRadius: 999, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.navy, fontWeight: 700, fontSize: '0.8em' }}>✕</button>
               </div>
-              <div>
-                <label style={{ fontSize: '0.8em', fontWeight: 700, color: MUTED, display: 'block', marginBottom: 6 }}>Sub-tipe *</label>
-                <select value={newSub} onChange={e => setNewSub(e.target.value)} disabled={!newCat} style={{ ...inp, opacity: !newCat ? 0.5 : 1 }}><option value=''>Pilih...</option>{newCat !== '__custom__' && subtypesForCat.map(s => <option key={s.type_key} value={s.type_key}>{s.subtype}</option>)}<option value='__custom__'>➕ Tambah baru...</option></select>
-                {newSub === '__custom__' && <input value={newSubCustom} onChange={e => setNewSubCustom(e.target.value)} placeholder='Nama sub-tipe baru' style={{ ...inp, marginTop: 8 }} />}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+                <div><label style={{ fontSize: '0.7em', fontWeight: 700, color: T.muted, display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Nama Tempat *</label><input value={newName} onChange={e => setNewName(e.target.value)} placeholder='misal: Braga Permai' style={inp} /></div>
+                <div>
+                  <label style={{ fontSize: '0.7em', fontWeight: 700, color: T.muted, display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Kategori *</label>
+                  <select value={newCat} onChange={e => { setNewCat(e.target.value); setNewSub('') }} style={inp}><option value=''>Pilih...</option>{uniqueCats.map(c => <option key={c} value={c}>{c}</option>)}<option value='__custom__'>➕ Tambah baru...</option></select>
+                  {newCat === '__custom__' && <input value={newCatCustom} onChange={e => setNewCatCustom(e.target.value)} placeholder='Nama kategori baru' style={{ ...inp, marginTop: 7 }} />}
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.7em', fontWeight: 700, color: T.muted, display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Sub-tipe *</label>
+                  <select value={newSub} onChange={e => setNewSub(e.target.value)} disabled={!newCat} style={{ ...inp, opacity: !newCat ? 0.5 : 1 }}><option value=''>Pilih...</option>{newCat !== '__custom__' && subtypesForCat.map(s => <option key={s.type_key} value={s.type_key}>{s.subtype}</option>)}<option value='__custom__'>➕ Tambah baru...</option></select>
+                  {newSub === '__custom__' && <input value={newSubCustom} onChange={e => setNewSubCustom(e.target.value)} placeholder='Nama sub-tipe baru' style={{ ...inp, marginTop: 7 }} />}
+                </div>
+                <div><label style={{ fontSize: '0.7em', fontWeight: 700, color: T.muted, display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Kota</label><select value={newCity} onChange={e => setNewCity(e.target.value)} style={inp}><option value=''>Tanpa Kota</option>{cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+                <div><label style={{ fontSize: '0.7em', fontWeight: 700, color: T.muted, display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 }}>Foto (Opsional)</label><input type='file' accept='image/*' onChange={e => setNewFile(e.target.files?.[0]||null)} style={{ fontSize: '0.8em', color: T.navy, width: '100%' }} /></div>
               </div>
-              <div><label style={{ fontSize: '0.8em', fontWeight: 700, color: MUTED, display: 'block', marginBottom: 6 }}>Kota</label><select value={newCity} onChange={e => setNewCity(e.target.value)} style={inp}><option value=''>Tanpa Kota</option>{cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-              <div><label style={{ fontSize: '0.8em', fontWeight: 700, color: MUTED, display: 'block', marginBottom: 6 }}>Foto (Opsional)</label><input type='file' accept='image/*' onChange={e => setNewFile(e.target.files?.[0]||null)} style={{ fontSize: '0.88em', color: TEXT }} /></div>
+              <button onClick={handleAddIdea} disabled={addingIdea} style={{ width: '100%', marginTop: 16, padding: '12px', borderRadius: 11, background: addingIdea ? T.sky : `linear-gradient(135deg, ${T.navy}, ${T.navyMid})`, color: addingIdea ? T.muted : T.white, border: 'none', fontWeight: 700, cursor: addingIdea ? 'not-allowed' : 'pointer', fontSize: '0.9em', boxShadow: addingIdea ? 'none' : '0 4px 14px rgba(3,37,76,.2)', transition: 'all .15s' }}>
+                {addingIdea ? '⏳ Menyimpan...' : '💾 Simpan Ide'}
+              </button>
             </div>
-            <button onClick={handleAddIdea} disabled={addingIdea} style={{ width: '100%', marginTop: 22, padding: '13px', borderRadius: 999, background: addingIdea ? '#a8d8f0' : 'linear-gradient(135deg, #03254c, #1a4d7a)', color: 'white', border: 'none', fontWeight: 800, cursor: addingIdea ? 'not-allowed' : 'pointer', fontSize: '0.95em', boxShadow: addingIdea ? 'none' : '0 4px 14px rgba(168,85,247,0.35)' }}>
-              {addingIdea ? '⏳ Menyimpan...' : '💾 Simpan Ide'}
-            </button>
           </div>
         </div>
       )}
-
-      <style>{}</style>
     </div>
   )
 }
