@@ -3,6 +3,12 @@ import { useMemo } from 'react'
 import IdeaCard from './IdeaCard'
 import type { TripIdea, IdeaCategory, City, IdeaRating } from '@/types/types'
 
+const T = {
+  navy: '#03254c', navyMid: '#1a4d7a',
+  sky: '#c4e8ff', skyLight: '#e1f3ff', skyMid: '#a8d8f0',
+  bg: '#d0efff', white: '#ffffff', muted: '#6b8cae',
+}
+
 interface Props {
   ideas: TripIdea[]; categories: IdeaCategory[]; cities: City[]
   ideaRatings: Record<string, IdeaRating>; selectedIds: Set<string>
@@ -12,10 +18,10 @@ interface Props {
 
 export default function ActivityArea({ ideas, categories, cities, ideaRatings, selectedIds, searchQuery, tripDate, onToggle, onViewDetail }: Props) {
   if (!tripDate) return (
-    <div style={{ textAlign: 'center', padding: '60px 20px', borderRadius: 20, background: 'linear-gradient(135deg, #fff7ed, #c4e8ff)', border: '2px dashed #fca5a5' }}>
+    <div style={{ textAlign: 'center', padding: '56px 24px', borderRadius: 20, background: T.white, border: `2px dashed ${T.skyMid}` }}>
       <p style={{ fontSize: '2.5em', margin: '0 0 12px' }}>🗓️</p>
-      <p style={{ fontWeight: 700, color: '#03254c', margin: '0 0 6px' }}>Pilih tanggal trip dulu yuk!</p>
-      <p style={{ color: '#9ca3af', fontSize: '0.88em', margin: 0 }}>Isi tanggal di atas untuk mulai pilih aktivitas</p>
+      <p style={{ fontWeight: 700, color: T.navy, margin: '0 0 5px', fontSize: '0.95em' }}>Pilih tanggal trip dulu yuk!</p>
+      <p style={{ color: T.muted, fontSize: '0.82em', margin: 0 }}>Isi tanggal di atas untuk mulai pilih aktivitas</p>
     </div>
   )
 
@@ -26,19 +32,20 @@ export default function ActivityArea({ ideas, categories, cities, ideaRatings, s
   }, [ideas, searchQuery])
 
   if (filtered.length === 0) return (
-    <div style={{ textAlign: 'center', padding: '60px 20px', borderRadius: 20, background: '#e1f3ff', border: '2px dashed #a8d8f0' }}>
+    <div style={{ textAlign: 'center', padding: '56px 24px', borderRadius: 20, background: T.white, border: `2px dashed ${T.skyMid}` }}>
       <p style={{ fontSize: '2em', margin: '0 0 8px' }}>🔍</p>
-      <p style={{ color: '#03254c', fontWeight: 700, margin: 0 }}>Tidak ada hasil</p>
+      <p style={{ color: T.navy, fontWeight: 700, margin: 0, fontSize: '0.93em' }}>Tidak ada hasil</p>
+      <p style={{ color: T.muted, fontSize: '0.8em', margin: '5px 0 0' }}>Coba kata kunci lain</p>
     </div>
   )
 
   const grouped = useMemo(() => {
     const cityMap: Record<string, { city: any; cats: Record<string, { cat: string; subtypes: Record<string, TripIdea[]> }> }> = {}
     filtered.forEach(idea => {
-      const cityId = idea.city_id || '__none__'
-      const city = cities.find(c => c.id === cityId) || null
+      const cityId  = idea.city_id || '__none__'
+      const city    = cities.find(c => c.id === cityId) || null
       const catName = idea.category_name || 'Lainnya'
-      const subtype = idea.subtype_name || 'Umum'
+      const subtype = idea.subtype_name  || 'Umum'
       if (!cityMap[cityId]) cityMap[cityId] = { city, cats: {} }
       if (!cityMap[cityId].cats[catName]) cityMap[cityId].cats[catName] = { cat: catName, subtypes: {} }
       if (!cityMap[cityId].cats[catName].subtypes[subtype]) cityMap[cityId].cats[catName].subtypes[subtype] = []
@@ -48,33 +55,107 @@ export default function ActivityArea({ ideas, categories, cities, ideaRatings, s
   }, [filtered, cities])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <style>{`
+        .hscroll::-webkit-scrollbar { height: 4px; }
+        .hscroll::-webkit-scrollbar-track { background: transparent; }
+        .hscroll::-webkit-scrollbar-thumb { background: ${T.skyMid}; border-radius: 99px; }
+        .cat-header:hover { background: ${T.skyLight} !important; }
+        details[open] > summary .cat-arrow { transform: rotate(90deg); }
+        .cat-arrow { transition: transform .18s; display: inline-block; }
+      `}</style>
+
       {grouped.map(({ city, cats }) => (
         <div key={city?.id || '__none__'}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-            <div style={{ flex: 1, height: 2, background: 'linear-gradient(to right, #a8d8f0, transparent)' }} />
-            <span style={{ fontWeight: 800, color: '#03254c', fontSize: '1em', padding: '4px 16px', background: '#e1f3ff', borderRadius: 999, border: '1.5px solid #a8d8f0' }}>📍 {city?.name || 'Tanpa Kota'}</span>
-            <div style={{ flex: 1, height: 2, background: 'linear-gradient(to left, #a8d8f0, transparent)' }} />
+
+          {/* City pill header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '10px 0 6px' }}>
+            <div style={{ flex: 1, height: 1.5, background: `linear-gradient(to right, ${T.skyMid}, transparent)` }} />
+            <span style={{
+              fontWeight: 800, color: T.navy, fontSize: '0.82em',
+              padding: '5px 16px', background: T.white,
+              borderRadius: 999, border: `1.5px solid ${T.skyMid}`,
+              boxShadow: '0 1px 8px rgba(3,37,76,.08)',
+              letterSpacing: 0.2,
+            }}>
+              📍 {city?.name || 'Tanpa Kota'}
+            </span>
+            <div style={{ flex: 1, height: 1.5, background: `linear-gradient(to left, ${T.skyMid}, transparent)` }} />
           </div>
+
+          {/* Category blocks */}
           {Object.values(cats).map(({ cat, subtypes }) => {
-            const catSelected = Object.values(subtypes).flat().filter(i => selectedIds.has(i.id)).length
+            const totalSelected = Object.values(subtypes).flat().filter(i => selectedIds.has(i.id)).length
+            const totalIdeas    = Object.values(subtypes).flat().length
+
             return (
-              <details key={cat} open style={{ marginBottom: 12 }}>
-                <summary style={{ padding: '10px 16px', cursor: 'pointer', userSelect: 'none', borderRadius: 14, background: 'white', border: '2px solid #c4e8ff', fontWeight: 700, color: '#03254c', fontSize: '0.9em', display: 'flex', alignItems: 'center', gap: 8, listStyle: 'none', marginBottom: 2 }}>
+              <details key={cat} open style={{ marginBottom: 6 }}>
+                <summary className="cat-header" style={{
+                  padding: '10px 14px',
+                  cursor: 'pointer', userSelect: 'none',
+                  borderRadius: 14,
+                  background: T.white,
+                  border: `1.5px solid ${T.sky}`,
+                  fontWeight: 700, color: T.navy, fontSize: '0.87em',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  listStyle: 'none',
+                  transition: 'background .15s',
+                  marginBottom: 0,
+                }}>
+                  <span className="cat-arrow" style={{ color: T.muted, fontSize: '0.75em' }}>▶</span>
                   <span style={{ flex: 1 }}>{cat}</span>
-                  {catSelected > 0 && <span style={{ background: 'linear-gradient(135deg, #03254c, #1a4d7a)', color: 'white', borderRadius: 999, padding: '2px 10px', fontSize: '0.78em', fontWeight: 800 }}>{catSelected}</span>}
+                  <span style={{ color: T.muted, fontSize: '0.72em', fontWeight: 500 }}>{totalIdeas} tempat</span>
+                  {totalSelected > 0 && (
+                    <span style={{
+                      background: `linear-gradient(135deg, ${T.navy}, ${T.navyMid})`,
+                      color: T.white, borderRadius: 999,
+                      padding: '2px 10px', fontSize: '0.72em', fontWeight: 800,
+                    }}>{totalSelected} dipilih</span>
+                  )}
                 </summary>
-                <div style={{ paddingLeft: 8, paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+                {/* Subtypes as horizontal scroll rows */}
+                <div style={{
+                  background: T.skyLight,
+                  borderRadius: '0 0 14px 14px',
+                  border: `1.5px solid ${T.sky}`,
+                  borderTop: 'none',
+                  padding: '10px 0 4px',
+                }}>
                   {Object.entries(subtypes).map(([sub, subIdeas]) => {
                     const subSelected = subIdeas.filter(i => selectedIds.has(i.id)).length
                     return (
-                      <div key={sub}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                          <span style={{ fontSize: '0.78em', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5 }}>{sub}</span>
-                          {subSelected > 0 && <span style={{ background: '#c4e8ff', color: '#03254c', borderRadius: 999, padding: '1px 8px', fontSize: '0.72em', fontWeight: 800 }}>{subSelected} dipilih</span>}
+                      <div key={sub} style={{ marginBottom: 10 }}>
+                        {/* Subtype label row */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '0 14px', marginBottom: 8 }}>
+                          <div style={{ width: 3, height: 12, borderRadius: 99, background: T.skyMid, flexShrink: 0 }} />
+                          <span style={{ fontSize: '0.7em', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: 0.8 }}>{sub}</span>
+                          {subSelected > 0 && (
+                            <span style={{ background: T.sky, color: T.navy, borderRadius: 999, padding: '1px 8px', fontSize: '0.68em', fontWeight: 800, border: `1px solid ${T.skyMid}` }}>
+                              {subSelected} dipilih
+                            </span>
+                          )}
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
-                          {subIdeas.map(idea => <IdeaCard key={idea.id} idea={idea} isSelected={selectedIds.has(idea.id)} rating={ideaRatings[idea.id]} onToggle={onToggle} onViewDetail={onViewDetail} />)}
+
+                        {/* Horizontal scroll of cards */}
+                        <div className="hscroll" style={{
+                          display: 'flex', gap: 10,
+                          overflowX: 'auto',
+                          paddingLeft: 14, paddingRight: 14,
+                          paddingBottom: 6,
+                          scrollSnapType: 'x mandatory',
+                        }}>
+                          {subIdeas.map(idea => (
+                            <div key={idea.id} style={{ scrollSnapAlign: 'start', flexShrink: 0, width: 150 }}>
+                              <IdeaCard
+                                idea={idea}
+                                isSelected={selectedIds.has(idea.id)}
+                                rating={ideaRatings[idea.id]}
+                                onToggle={onToggle}
+                                onViewDetail={onViewDetail}
+                              />
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )
