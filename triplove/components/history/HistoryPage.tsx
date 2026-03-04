@@ -3,38 +3,42 @@
 import { useState, useEffect, useMemo } from 'react'
 import Navbar from '@/components/ui/Navbar'
 import Link from 'next/link'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
-import { formatTanggalIndonesia, createTripInvitation } from '@/lib/utils'
+import { formatTanggalIndonesia, createTripInvitation, getPublicImageUrl } from '@/lib/utils'
 import Toast from '@/components/ui/Toast'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import TripDetailModal from './TripDetailModal'
-import type { TripHistory, IdeaReview } from '@/types/types'
+import type { TripHistory, IdeaReview, TripIdea } from '@/types/types'
 
 const P = '#03254c', S = '#c4e8ff', BG = '#d0efff', BGM = '#e1f3ff', MUTED = '#a0a0b5'
 const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']
 
 export default function HistoryPage() {
-  const [trips, setTrips]     = useState<TripHistory[]>([])
-  const [reviews, setReviews] = useState<IdeaReview[]>([])
-  const [loading, setLoading] = useState(true)
+  const [trips, setTrips]       = useState<TripHistory[]>([])
+  const [reviews, setReviews]   = useState<IdeaReview[]>([])
+  const [ideas, setIdeas]       = useState<TripIdea[]>([])
+  const [loading, setLoading]   = useState(true)
   const [filterYear, setFilterYear]   = useState('all')
   const [filterMonth, setFilterMonth] = useState('all')
   const [search, setSearch]           = useState('')
   const [selectedTrip, setSelectedTrip] = useState<TripHistory | null>(null)
   const [inviteStatus, setInviteStatus] = useState<Record<string,string>>({})
-  const [toast, setToast] = useState<{msg:string;type:any}|null>(null)
+  const [toast, setToast]   = useState<{msg:string;type:any}|null>(null)
   const [dialog, setDialog] = useState<{msg:string;onConfirm:()=>void}|null>(null)
 
   useEffect(() => { loadData() }, [])
 
   async function loadData() {
     setLoading(true)
-    const [tr, rr] = await Promise.all([
+    const [tr, rr, ir] = await Promise.all([
       supabase.from('trip_history').select('*').order('trip_date', { ascending: false }),
       supabase.from('idea_reviews').select('*'),
+      supabase.from('trip_ideas_v2').select('id, idea_name, photo_url'),
     ])
     setTrips(tr.data || [])
     setReviews(rr.data || [])
+    setIdeas(ir.data || [])
     setLoading(false)
   }
 
@@ -103,6 +107,13 @@ export default function HistoryPage() {
     return Object.entries(map).sort((a,b) => b[0].localeCompare(a[0]))
   }, [filtered])
 
+  // Build idea lookup map for photos
+  const ideaMap = useMemo(() => {
+    const map: Record<string, TripIdea> = {}
+    ideas.forEach(i => { map[i.id] = i })
+    return map
+  }, [ideas])
+
   const inp: React.CSSProperties = { padding: '9px 14px', border: `2px solid ${S}`, borderRadius: 12, fontSize: '0.88em', color: P, background: 'white', outline: 'none', cursor: 'pointer' }
 
   return (
@@ -110,7 +121,6 @@ export default function HistoryPage() {
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {dialog && <ConfirmDialog message={dialog.msg} onConfirm={dialog.onConfirm} onCancel={() => setDialog(null)} />}
 
-      {/* Header */}
       <Navbar />
 
       <main style={{ maxWidth: 1000, margin: '0 auto', padding: '32px 16px', display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -175,7 +185,6 @@ export default function HistoryPage() {
               const [year, month] = key.split('-')
               return (
                 <div key={key}>
-                  {/* Month divider */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                     <div style={{ flex: 1, height: 2, background: `linear-gradient(to right, ${P}, ${S})`, borderRadius: 2 }} />
                     <span style={{ fontWeight: 800, color: P, fontSize: '0.9em', padding: '4px 16px', background: 'white', borderRadius: 999, border: `2px solid ${S}`, whiteSpace: 'nowrap' }}>
@@ -188,50 +197,82 @@ export default function HistoryPage() {
                     {monthTrips.map(trip => {
                       const tripReviews = reviews.filter(r => r.trip_id === trip.id)
                       const reviewCount = tripReviews.length
-                      const actCount = trip.selection_json?.length || 0
-                      const avgR = tripReviews.length ? (tripReviews.reduce((s,r)=>s+(r.rating||0),0)/tripReviews.length).toFixed(1) : null
-                      const status = reviewCount === 0 ? 'none' : reviewCount < actCount ? 'partial' : 'complete'
-                      const statusCfg = {
+                      const actCount    = trip.selection_json?.length || 0
+                      const avgR        = tripReviews.length ? (tripReviews.reduce((s,r)=>s+(r.rating||0),0)/tripReviews.length).toFixed(1) : null
+                      const status      = reviewCount === 0 ? 'none' : reviewCount < actCount ? 'partial' : 'complete'
+                      const statusCfg   = {
                         none:     { bg: '#e5e7eb', color: '#6b7280', label: 'Belum diulas' },
                         partial:  { bg: '#fef3c7', color: '#92400e', label: 'Sebagian diulas' },
                         complete: { bg: '#d1fae5', color: '#065f46', label: 'Semua diulas' },
                       }[status]
 
+                      // Get photos from ideas in this trip (up to 4)
+                      const tripPhotos = (trip.selection_json || [])
+                        .filter(a => a.idea_id && ideaMap[a.idea_id]?.photo_url)
+                        .slice(0, 4)
+                        .map(a => ideaMap[a.idea_id!])
+
                       return (
-                        <div key={trip.id} style={{ background: 'white', borderRadius: 18, border: `2px solid ${S}`, padding: 20, boxShadow: '0 2px 8px rgba(3,37,76,0.06)', transition: 'box-shadow 0.2s' }}>
-                          {/* Trip header */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
-                            <div>
-                              <h3 style={{ fontWeight: 800, color: P, margin: '0 0 6px', fontSize: '1.1em' }}>{trip.trip_day}, {formatTanggalIndonesia(trip.trip_date)}</h3>
-                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                                <span style={{ padding: '3px 10px', borderRadius: 999, fontSize: '0.78em', fontWeight: 700, background: statusCfg.bg, color: statusCfg.color }}>{statusCfg.label}</span>
-                                {avgR && <span style={{ fontSize: '0.85em', color: '#f59e0b', fontWeight: 700 }}>⭐ {avgR}</span>}
-                                <span style={{ fontSize: '0.78em', color: MUTED }}>{actCount} aktivitas</span>
-                              </div>
-                            </div>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                              <button onClick={() => setSelectedTrip(trip)} style={{ padding: '8px 16px', borderRadius: 12, background: P, color: 'white', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.85em' }}>🔍 Detail</button>
-                              <button onClick={() => handleInvite(trip)} disabled={inviteStatus[trip.id]==='loading'} style={{ padding: '8px 14px', borderRadius: 12, background: inviteStatus[trip.id]==='copied' ? '#d1fae5' : BGM, color: inviteStatus[trip.id]==='copied' ? '#065f46' : P, border: `2px solid ${S}`, fontWeight: 700, cursor: 'pointer', fontSize: '0.85em' }}>
-                                {inviteStatus[trip.id]==='loading' ? '⏳' : inviteStatus[trip.id]==='copied' ? '✅ Tersalin!' : '💌 Invite'}
-                              </button>
-                              <button onClick={() => handleDelete(trip.id)} style={{ padding: '8px 12px', borderRadius: 12, background: '#fff1f2', color: '#f43f5e', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.85em' }}>🗑️</button>
-                            </div>
-                          </div>
+                        <div key={trip.id} style={{ background: 'white', borderRadius: 18, border: `2px solid ${S}`, overflow: 'hidden', boxShadow: '0 2px 8px rgba(3,37,76,0.06)' }}>
 
-                          {/* Activities preview */}
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: trip.secret_message ? 12 : 0 }}>
-                            {(trip.selection_json||[]).slice(0,6).map((a,i) => (
-                              <span key={i} style={{ padding: '4px 12px', borderRadius: 999, fontSize: '0.8em', background: BGM, color: P, border: `1px solid ${S}` }}>{a.name}</span>
-                            ))}
-                            {actCount > 6 && <span style={{ padding: '4px 12px', borderRadius: 999, fontSize: '0.8em', background: P, color: 'white' }}>+{actCount-6}</span>}
-                          </div>
-
-                          {/* Secret message */}
-                          {trip.secret_message && (
-                            <div style={{ marginTop: 10, padding: '8px 14px', borderRadius: 10, background: '#fffbeb', border: '1.5px solid #fcd34d', fontSize: '0.85em', color: '#92400e', fontStyle: 'italic' }}>
-                              💌 {trip.secret_message}
+                          {/* Photo strip */}
+                          {tripPhotos.length > 0 && (
+                            <div style={{ display: 'flex', height: 90, overflow: 'hidden' }}>
+                              {tripPhotos.map((idea, i) => (
+                                <div key={i} style={{ flex: 1, position: 'relative', borderRight: i < tripPhotos.length - 1 ? '2px solid white' : 'none' }}>
+                                  <Image
+                                    src={getPublicImageUrl(idea.photo_url)}
+                                    alt={idea.idea_name}
+                                    fill
+                                    style={{ objectFit: 'cover' }}
+                                    unoptimized
+                                  />
+                                  {/* Overlay for last photo if more than 4 */}
+                                  {i === 3 && actCount > 4 && (
+                                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(3,37,76,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                      <span style={{ color: 'white', fontWeight: 800, fontSize: '1.1em' }}>+{actCount - 4}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
                             </div>
                           )}
+
+                          <div style={{ padding: 20 }}>
+                            {/* Trip header */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+                              <div>
+                                <h3 style={{ fontWeight: 800, color: P, margin: '0 0 6px', fontSize: '1.1em' }}>{trip.trip_day}, {formatTanggalIndonesia(trip.trip_date)}</h3>
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                                  <span style={{ padding: '3px 10px', borderRadius: 999, fontSize: '0.78em', fontWeight: 700, background: statusCfg.bg, color: statusCfg.color }}>{statusCfg.label}</span>
+                                  {avgR && <span style={{ fontSize: '0.85em', color: '#f59e0b', fontWeight: 700 }}>⭐ {avgR}</span>}
+                                  <span style={{ fontSize: '0.78em', color: MUTED }}>{actCount} aktivitas</span>
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', gap: 8 }}>
+                                <button onClick={() => setSelectedTrip(trip)} style={{ padding: '8px 16px', borderRadius: 12, background: P, color: 'white', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.85em' }}>🔍 Detail</button>
+                                <button onClick={() => handleInvite(trip)} disabled={inviteStatus[trip.id]==='loading'} style={{ padding: '8px 14px', borderRadius: 12, background: inviteStatus[trip.id]==='copied' ? '#d1fae5' : BGM, color: inviteStatus[trip.id]==='copied' ? '#065f46' : P, border: `2px solid ${S}`, fontWeight: 700, cursor: 'pointer', fontSize: '0.85em' }}>
+                                  {inviteStatus[trip.id]==='loading' ? '⏳' : inviteStatus[trip.id]==='copied' ? '✅ Tersalin!' : '💌 Invite'}
+                                </button>
+                                <button onClick={() => handleDelete(trip.id)} style={{ padding: '8px 12px', borderRadius: 12, background: '#fff1f2', color: '#f43f5e', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.85em' }}>🗑️</button>
+                              </div>
+                            </div>
+
+                            {/* Activities preview */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: trip.secret_message ? 12 : 0 }}>
+                              {(trip.selection_json||[]).slice(0,6).map((a,i) => (
+                                <span key={i} style={{ padding: '4px 12px', borderRadius: 999, fontSize: '0.8em', background: BGM, color: P, border: `1px solid ${S}` }}>{a.name}</span>
+                              ))}
+                              {actCount > 6 && <span style={{ padding: '4px 12px', borderRadius: 999, fontSize: '0.8em', background: P, color: 'white' }}>+{actCount-6}</span>}
+                            </div>
+
+                            {/* Secret message — only show if exists */}
+                            {trip.secret_message && (
+                              <div style={{ marginTop: 10, padding: '8px 14px', borderRadius: 10, background: '#fffbeb', border: '1.5px solid #fcd34d', fontSize: '0.85em', color: '#92400e', fontStyle: 'italic' }}>
+                                💌 {trip.secret_message}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )
                     })}

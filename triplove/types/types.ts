@@ -18,25 +18,28 @@ export interface IdeaCategory {
 export interface TripIdea {
   id: string
   idea_name: string
-  type_key: string
-  day_of_week: string | null
-  photo_url: string | null
-  city_id: string | null
-  address: string | null
-  maps_url: string | null
-  phone: string | null
-  opening_hours: string | null
-  price_range: string | null
-  website: string | null
-  notes: string | null
-  locations: IdeaLocation[] | null
-  created_at: string
+  type_key?: string        // ← tambah ?
+  day_of_week?: string | null
+  photo_url?: string | null
+  city_id?: string | null
+  address?: string | null
+  maps_url?: string | null
+  phone?: string | null
+  opening_hours?: string | null
+  price_range?: string | null
+  website?: string | null
+  notes?: string | null
+  locations?: IdeaLocation[] | null
+  created_at?: string
   // Computed from join
   category_name?: string
+  city_name?: string
   subtype_name?: string
   icon?: string
   photo_url_category?: string | null
 }
+
+
 
 export interface IdeaLocation {
   name: string
