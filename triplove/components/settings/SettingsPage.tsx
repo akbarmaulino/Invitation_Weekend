@@ -21,25 +21,20 @@ export default function SettingsPage() {
   return (
     <div style={{ minHeight: '100vh', background: `linear-gradient(135deg, ${BG}, ${BGM})` }}>
       <Navbar />
-
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '32px 16px', display: 'flex', flexDirection: 'column', gap: 24 }}>
         <div style={{ textAlign: 'center' }}>
           <h1 style={{ fontWeight: 900, fontSize: '1.8em', color: P, margin: '0 0 8px' }}>⚙️ Settings</h1>
           <p style={{ color: MUTED, margin: 0 }}>Kelola kota, kategori, sub-tipe, dan tempat</p>
         </div>
-
-        {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, background: 'white', borderRadius: 16, padding: 6, border: `2px solid ${S}` }}>
           {([['cities', '🏙️ Kota'], ['categories', '🗂️ Kategori'], ['places', '📍 Tempat']] as [Tab, string][]).map(([v, l]) => (
             <button key={v} onClick={() => setTab(v)} style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', fontWeight: 700, fontSize: '0.88em', cursor: 'pointer', background: tab === v ? P : 'transparent', color: tab === v ? 'white' : MUTED, transition: 'all 0.2s' }}>{l}</button>
           ))}
         </div>
-
         {tab === 'cities'     && <CitiesTab />}
         {tab === 'categories' && <CategoriesTab />}
         {tab === 'places'     && <PlacesTab />}
       </main>
-
       <style dangerouslySetInnerHTML={{__html:'@keyframes spin{to{transform:rotate(360deg)}}'}} />
     </div>
   )
@@ -47,19 +42,39 @@ export default function SettingsPage() {
 
 // ─── PLACES TAB ───────────────────────────────────────────────────────────────
 function PlacesTab() {
-  const [ideas, setIdeas]       = useState<TripIdea[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [search, setSearch]     = useState('')
-  const [filterCat, setFilterCat] = useState('all')
-  const [toast, setToast]       = useState<{msg:string;type:any}|null>(null)
-  const [dialog, setDialog]     = useState<{msg:string;onConfirm:()=>void}|null>(null)
+  const [ideas, setIdeas]         = useState<TripIdea[]>([])
+  const [cities, setCities]       = useState<City[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [search, setSearch]       = useState('')
+  const [filterCity, setFilterCity] = useState('all')
+  const [openCat, setOpenCat]     = useState<string|null>(null)
+  const [toast, setToast]         = useState<{msg:string;type:any}|null>(null)
+  const [dialog, setDialog]       = useState<{msg:string;onConfirm:()=>void}|null>(null)
 
   useEffect(() => { load() }, [])
 
   async function load() {
     setLoading(true)
-    const { data } = await supabase.from('trip_ideas_v2').select('*').order('idea_name')
-    setIdeas(data || [])
+    const [ir, cr, catr] = await Promise.all([
+      supabase.from('trip_ideas_v2').select('*').order('idea_name'),
+      supabase.from('cities').select('*').order('display_order'),
+      supabase.from('idea_categories').select('type_key, category, subtype'),
+    ])
+    setIdeas(ir.data || [])
+    setCities(cr.data || [])
+    // Build lookup maps
+    const cityMap: Record<string, string> = {}
+    ;(cr.data || []).forEach((c: any) => { cityMap[c.id] = c.name })
+    const catMap: Record<string, {category: string; subtype: string}> = {}
+    ;(catr.data || []).forEach((c: any) => { catMap[c.type_key] = { category: c.category, subtype: c.subtype } })
+    // Enrich ideas with city_name, category_name, subtype_name
+    const enriched = (ir.data || []).map((idea: any) => ({
+      ...idea,
+      city_name: idea.city_id ? cityMap[idea.city_id] || null : null,
+      category_name: idea.type_key ? catMap[idea.type_key]?.category || 'Lainnya' : 'Lainnya',
+      subtype_name: idea.type_key ? catMap[idea.type_key]?.subtype || 'Umum' : 'Umum',
+    }))
+    setIdeas(enriched)
     setLoading(false)
   }
 
@@ -76,16 +91,29 @@ function PlacesTab() {
     })
   }
 
-  const categories = useMemo(() => ['all', ...new Set(ideas.map(i => i.category_name).filter(Boolean))], [ideas])
-
   const filtered = useMemo(() => ideas.filter(i => {
-    if (filterCat !== 'all' && i.category_name !== filterCat) return false
+    if (filterCity !== 'all' && (i.city_id || '__none__') !== filterCity) return false
     if (search) {
       const q = search.toLowerCase()
       return i.idea_name?.toLowerCase().includes(q) || i.category_name?.toLowerCase().includes(q) || i.subtype_name?.toLowerCase().includes(q)
     }
     return true
-  }), [ideas, search, filterCat])
+  }), [ideas, search, filterCity])
+
+  // Group by category → subtype
+  const grouped = useMemo(() => {
+    const catMap: Record<string, Record<string, TripIdea[]>> = {}
+    filtered.forEach(i => {
+      const cat = i.category_name || 'Lainnya'
+      const sub = i.subtype_name  || 'Umum'
+      if (!catMap[cat]) catMap[cat] = {}
+      if (!catMap[cat][sub]) catMap[cat][sub] = []
+      catMap[cat][sub].push(i)
+    })
+    return Object.entries(catMap).sort((a,b) => a[0].localeCompare(b[0]))
+  }, [filtered])
+
+  const totalFiltered = filtered.length
 
   return (
     <>
@@ -94,61 +122,80 @@ function PlacesTab() {
 
       <div style={card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
-          <h2 style={{ fontWeight: 800, color: P, margin: 0, fontSize: '1em' }}>📍 Semua Tempat ({filtered.length}/{ideas.length})</h2>
+          <h2 style={{ fontWeight: 800, color: P, margin: 0, fontSize: '1em' }}>📍 Semua Tempat ({totalFiltered}/{ideas.length})</h2>
           <span style={{ fontSize: '0.78em', color: MUTED }}>Klik 🗑️ untuk menghapus</span>
         </div>
 
-        {/* Search + filter */}
+        {/* Search + filter kota */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 180, position: 'relative' }}>
-            <input
-              value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="🔍 Cari nama tempat..."
-              style={{ ...inp, paddingRight: search ? 32 : 13 }}
-            />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Cari nama tempat..." style={{ ...inp, paddingRight: search ? 32 : 13 }} />
             {search && <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 9, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: MUTED }}>✕</button>}
           </div>
-          <select value={filterCat} onChange={e => setFilterCat(e.target.value)} style={{ ...inp, width: 'auto', flexShrink: 0 }}>
-            <option value="all">Semua Kategori</option>
-            {categories.filter(c => c !== 'all').map(c => <option key={c} value={c}>{c}</option>)}
+          <select value={filterCity} onChange={e => setFilterCity(e.target.value)} style={{ ...inp, width: 'auto', flexShrink: 0 }}>
+            <option value="all">Semua Kota</option>
+            {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <option value="__none__">Tanpa Kota</option>
           </select>
         </div>
 
-        {loading ? <Spinner /> : filtered.length === 0 ? (
-          <Empty text={search || filterCat !== 'all' ? 'Tidak ada hasil pencarian' : 'Belum ada tempat'} />
+        {loading ? <Spinner /> : totalFiltered === 0 ? (
+          <Empty text={search || filterCity !== 'all' ? 'Tidak ada hasil pencarian' : 'Belum ada tempat'} />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {filtered.map(idea => (
-              <div key={idea.id} style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '10px 14px', borderRadius: 14,
-                background: 'white', border: `1.5px solid ${S}`,
-                transition: 'border-color .15s',
-              }}>
-                {/* Thumbnail */}
-                <div style={{ width: 48, height: 48, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: BGM, position: 'relative' }}>
-                  {idea.photo_url ? (
-                    <Image src={getPublicImageUrl(idea.photo_url)} alt={idea.idea_name} fill style={{ objectFit: 'cover' }} unoptimized />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3em' }}>📍</div>
+            {grouped.map(([catName, subtypes]) => {
+              const isOpen = openCat === catName
+              const catTotal = Object.values(subtypes).flat().length
+              return (
+                <div key={catName} style={{ borderRadius: 14, border: `2px solid ${isOpen ? P : S}`, overflow: 'hidden', transition: 'border-color .2s' }}>
+                  {/* Category header */}
+                  <div
+                    onClick={() => setOpenCat(isOpen ? null : catName)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: isOpen ? BGM : 'white', cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    <span style={{ color: MUTED, fontSize: '0.82em', display: 'inline-block', transition: 'transform .2s', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+                    <span style={{ flex: 1, fontWeight: 800, color: P, fontSize: '0.92em' }}>{catName}</span>
+                    <span style={{ fontSize: '0.75em', color: MUTED }}>{catTotal} tempat</span>
+                  </div>
+
+                  {/* Subtypes */}
+                  {isOpen && (
+                    <div style={{ borderTop: `1.5px solid ${S}`, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {Object.entries(subtypes).map(([subName, subIdeas]) => (
+                        <div key={subName}>
+                          {/* Subtype label */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, paddingLeft: 4 }}>
+                            <div style={{ width: 3, height: 11, borderRadius: 99, background: S, flexShrink: 0 }} />
+                            <span style={{ fontSize: '0.72em', fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.6 }}>{subName}</span>
+                            <span style={{ fontSize: '0.68em', color: MUTED }}>({subIdeas.length})</span>
+                          </div>
+                          {/* Ideas in subtype */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {subIdeas.map(idea => (
+                              <div key={idea.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, background: 'white', border: `1.5px solid ${S}` }}>
+                                <div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: BGM, position: 'relative' }}>
+                                  {idea.photo_url
+                                    ? <Image src={getPublicImageUrl(idea.photo_url)} alt={idea.idea_name} fill style={{ objectFit: 'cover' }} unoptimized />
+                                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1em' }}>📍</div>
+                                  }
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <p style={{ margin: 0, fontWeight: 700, color: P, fontSize: '0.88em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{idea.idea_name}</p>
+                                  {idea.city_name && (
+                                    <span style={{ fontSize: '0.7em', color: P, background: BGM, padding: '1px 7px', borderRadius: 999, border: `1px solid ${S}`, marginTop: 2, display: 'inline-block' }}>📍 {idea.city_name}</span>
+                                  )}
+                                </div>
+                                <button onClick={() => handleDelete(idea)} style={{ padding: '6px 10px', borderRadius: 8, background: '#fff1f2', color: '#f43f5e', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.8em', flexShrink: 0 }}>🗑️</button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
-
-                {/* Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: 0, fontWeight: 700, color: P, fontSize: '0.9em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{idea.idea_name}</p>
-                  <p style={{ margin: 0, fontSize: '0.75em', color: MUTED }}>
-                    {[idea.category_name, idea.subtype_name].filter(Boolean).join(' · ')}
-                    {idea.city_name && <span style={{ marginLeft: 6, color: S, background: BGM, padding: '1px 7px', borderRadius: 999, border: `1px solid ${S}` }}>📍 {idea.city_name}</span>}
-                  </p>
-                </div>
-
-                {/* Delete button */}
-                <button onClick={() => handleDelete(idea)} style={{ padding: '7px 12px', borderRadius: 10, background: '#fff1f2', color: '#f43f5e', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.82em', flexShrink: 0, transition: 'background .15s' }}>
-                  🗑️
-                </button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
@@ -233,7 +280,6 @@ function CitiesTab() {
           <button onClick={handleAdd} disabled={adding} style={{ padding: '9px 20px', borderRadius: 10, background: adding ? BGM : P, color: adding ? MUTED : 'white', border: 'none', fontWeight: 700, cursor: adding ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>{adding ? '⏳' : '+ Tambah'}</button>
         </div>
       </div>
-
       <div style={card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <h2 style={{ fontWeight: 800, color: P, margin: 0, fontSize: '1em' }}>📋 Daftar Kota ({cities.length})</h2>
@@ -252,11 +298,10 @@ function CitiesTab() {
                   : <span style={{ flex: 1, fontWeight: 700, color: P }}>{city.name}</span>
                 }
                 <div style={{ display: 'flex', gap: 6 }}>
-                  {editId === city.id ? (
-                    <><button onClick={() => handleEditSave(city)} style={btnSm(P,'white')}>✓</button><button onClick={() => setEditId(null)} style={btnSm(BGM,P)}>✕</button></>
-                  ) : (
-                    <><button onClick={() => { setEditId(city.id); setEditName(city.name) }} style={btnSm(BGM,P)}>✏️</button><button onClick={() => handleDelete(city)} style={btnSm('#fff1f2','#f43f5e')}>🗑️</button></>
-                  )}
+                  {editId === city.id
+                    ? <><button onClick={() => handleEditSave(city)} style={btnSm(P,'white')}>✓</button><button onClick={() => setEditId(null)} style={btnSm(BGM,P)}>✕</button></>
+                    : <><button onClick={() => { setEditId(city.id); setEditName(city.name) }} style={btnSm(BGM,P)}>✏️</button><button onClick={() => handleDelete(city)} style={btnSm('#fff1f2','#f43f5e')}>🗑️</button></>
+                  }
                 </div>
               </div>
             ))}
@@ -370,7 +415,6 @@ function CategoriesTab() {
     <>
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {dialog && <ConfirmDialog message={dialog.msg} onConfirm={dialog.onConfirm} onCancel={() => setDialog(null)} />}
-
       <div style={card}>
         <h2 style={{ fontWeight: 800, color: P, margin: '0 0 14px', fontSize: '1em' }}>➕ Tambah Kategori Baru</h2>
         <div style={{ display: 'flex', gap: 10 }}>
@@ -378,7 +422,6 @@ function CategoriesTab() {
           <button onClick={handleAddCategory} disabled={addingCat} style={{ padding: '9px 20px', borderRadius: 10, background: addingCat ? BGM : P, color: addingCat ? MUTED : 'white', border: 'none', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>{addingCat ? '⏳' : '+ Tambah'}</button>
         </div>
       </div>
-
       <div style={card}>
         <h2 style={{ fontWeight: 800, color: P, margin: '0 0 16px', fontSize: '1em' }}>🗂️ Semua Kategori ({grouped.length})</h2>
         {loading ? <Spinner /> : grouped.length === 0 ? <Empty text="Belum ada kategori" /> : (
