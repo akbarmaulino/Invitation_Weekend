@@ -41,11 +41,19 @@ interface TripGroup {
   media: MediaItem[]
 }
 
+interface DiaryNote {
+  id: string
+  trip_id: string
+  content: string
+  created_at: string
+}
+
 type ViewMode = 'masonry' | 'timeline' | 'moodboard'
 
 export default function GalleryPage() {
   const { ideas, reviews, loading, loadAllData } = useData()
   const [trips, setTrips] = useState<Record<string, TripHistory>>({})
+  const [diaryNotes, setDiaryNotes] = useState<DiaryNote[]>([])
   const [filter, setFilter] = useState<'all' | 'photo' | 'video'>('all')
   const [filterCat, setFilterCat] = useState('all')
   const [search, setSearch] = useState('')
@@ -66,6 +74,12 @@ export default function GalleryPage() {
   const [showAddTrack, setShowAddTrack] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
+  function refreshNotes() {
+    supabase.from('diary_notes').select('*').then(({ data }) => {
+      if (data) setDiaryNotes(data as DiaryNote[])
+    })
+  }
+
   useEffect(() => {
     loadAllData()
     supabase.from('trip_history').select('*').then(({ data }) => {
@@ -73,6 +87,7 @@ export default function GalleryPage() {
       ;(data || []).forEach((t: any) => { map[t.id] = t })
       setTrips(map)
     })
+    refreshNotes()
   }, [])
 
   const allMedia = useMemo<MediaItem[]>(() => {
@@ -262,23 +277,8 @@ export default function GalleryPage() {
             ))}
           </div>
         ) : viewMode === 'timeline' ? (
-          // ── DIARY / POLAROID STACK VIEW ───────────────────────────────────
-          <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 24, padding: '8px 4px' }}>
-              {tripGroups.map((group, gi) => (
-                <PolaroidStack key={group.trip?.id || gi} group={group} index={gi} onClick={() => setDiaryGroup(group)} />
-              ))}
-            </div>
-
-            {/* Scattered diary modal */}
-            {diaryGroup && (
-              <DiaryModal
-                group={diaryGroup}
-                onClose={() => setDiaryGroup(null)}
-                onOpenLightbox={openLightbox}
-              />
-            )}
-          </>
+          // ── DIARY BOOK VIEW ───────────────────────────────────────────────
+          <DiaryBook tripGroups={tripGroups} ideas={ideas} diaryNotes={diaryNotes} onRefreshNotes={refreshNotes} onOpenDiary={g => setDiaryGroup(g)} diaryGroup={diaryGroup} onCloseDiary={() => setDiaryGroup(null)} onOpenLightbox={openLightbox} />
         ) : (
           // ── MOODBOARD ─────────────────────────────────────────────────────
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -316,7 +316,7 @@ export default function GalleryPage() {
 
         {/* Playlist panel */}
         {showPlaylist && (
-          <div style={{ background: 'white', borderRadius: 20, border: `2px solid ${S}`, boxShadow: '0 8px 32px rgba(3,37,76,0.18)', width: 300, overflow: 'hidden', animation: 'floatIn .25s ease' }}>
+          <div style={{ background: 'white', borderRadius: 20, border: `2px solid ${S}`, boxShadow: '0 8px 32px rgba(3,37,76,0.18)', width: 'min(300px, 90vw)', overflow: 'hidden', animation: 'floatIn .25s ease' }}>
             <div style={{ padding: '14px 16px', borderBottom: `1.5px solid ${S}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontWeight: 800, color: P, fontSize: '0.9em' }}>🎵 Playlist</span>
               <button onClick={() => setShowAddTrack(p => !p)} style={{ padding: '4px 10px', borderRadius: 8, background: showAddTrack ? P : BGM, color: showAddTrack ? 'white' : P, border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.75em' }}>+ Tambah</button>
@@ -353,7 +353,7 @@ export default function GalleryPage() {
         )}
 
         {/* Player pill */}
-        <div style={{ background: P, borderRadius: 999, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 6px 24px rgba(3,37,76,0.35)', minWidth: showPlayer ? 260 : 'auto', transition: 'all .3s ease' }}>
+        <div style={{ background: P, borderRadius: 999, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 6px 24px rgba(3,37,76,0.35)', minWidth: showPlayer ? 'min(260px, 80vw)' : 'auto', transition: 'all .3s ease' }}>
           {showPlayer ? (
             <>
               {/* Track info */}
@@ -422,6 +422,191 @@ export default function GalleryPage() {
     </div>
   )
 }
+
+// ── DIARY BOOK ────────────────────────────────────────────────────────────────
+function DiaryBook({ tripGroups, ideas, diaryNotes, onRefreshNotes, onOpenDiary, diaryGroup, onCloseDiary, onOpenLightbox }: {
+  tripGroups: TripGroup[]
+  ideas: any[]
+  diaryNotes: DiaryNote[]
+  onRefreshNotes: () => void
+  onOpenDiary: (g: TripGroup) => void
+  diaryGroup: TripGroup | null
+  onCloseDiary: () => void
+  onOpenLightbox: (item: MediaItem) => void
+}) {
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  const perPage = isMobile ? 1 : 2
+  const [page, setPage] = useState(0)
+  const [flipping, setFlipping] = useState<'left'|'right'|null>(null)
+  const totalPages = Math.ceil(tripGroups.length / perPage)
+
+  function flipTo(dir: 'left'|'right') {
+    const nextPage = dir === 'right' ? page + 1 : page - 1
+    if (nextPage < 0 || nextPage >= totalPages) return
+    setFlipping(dir)
+    setTimeout(() => { setPage(nextPage); setFlipping(null) }, 350)
+  }
+
+  const leftTrip  = tripGroups[page * perPage]
+  const rightTrip = !isMobile ? tripGroups[page * perPage + 1] : undefined
+
+  function DiaryPage({ bg, paddingLeft, pageNum, trip, align }: { bg: string; paddingLeft: string; pageNum: number; trip: TripGroup | undefined; align: 'left'|'right' }) {
+    return (
+      <div style={{ flex: 1, background: bg, position: 'relative', padding: `20px ${align === 'right' ? '16px' : '16px'} 20px ${paddingLeft}`, display: 'flex', flexDirection: 'column', minHeight: isMobile ? 420 : undefined }}>
+        {Array.from({length: 18}).map((_,i) => (
+          <div key={i} style={{ position: 'absolute', left: align === 'left' ? 36 : 16, right: 16, top: 40 + i * 24, height: 1, background: 'rgba(180,160,120,0.18)', pointerEvents: 'none' }} />
+        ))}
+        {align === 'left' && <div style={{ position: 'absolute', left: 30, top: 0, bottom: 0, width: 2, background: 'rgba(220,60,60,0.22)' }} />}
+        {trip ? (
+          <BookPage group={trip} ideas={ideas} notes={diaryNotes.filter(n => n.trip_id === trip.trip?.id)} onRefreshNotes={onRefreshNotes} onClick={() => onOpenDiary(trip)} />
+        ) : (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9b99a', fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '0.9em' }}>halaman kosong</div>
+        )}
+        <div style={{ textAlign: align, fontSize: '0.68em', color: '#b8a88a', fontFamily: "'Playfair Display', serif", fontStyle: 'italic', marginTop: 'auto', paddingTop: 10 }}>{pageNum}</div>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+        {/* Book spread */}
+        <div style={{
+          display: 'flex', width: '100%', maxWidth: isMobile ? 400 : 860,
+          minHeight: isMobile ? 460 : 480,
+          borderRadius: isMobile ? 16 : 12, overflow: 'hidden',
+          boxShadow: '0 16px 48px rgba(3,37,76,0.2), 0 4px 12px rgba(3,37,76,0.1)',
+          transform: flipping === 'right' ? 'perspective(1200px) rotateY(-2deg)' : flipping === 'left' ? 'perspective(1200px) rotateY(2deg)' : 'none',
+          transition: 'transform .35s cubic-bezier(.25,.46,.45,.94)',
+        }}>
+          <DiaryPage bg="#fdfaf5" paddingLeft="40px" pageNum={page * perPage + 1} trip={leftTrip} align="left" />
+          {!isMobile && <>
+            <div style={{ width: 10, background: 'linear-gradient(to right, #d4c4a0, #efe8d8, #d4c4a0)', flexShrink: 0 }} />
+            <DiaryPage bg="#fefcf8" paddingLeft="20px" pageNum={page * perPage + 2} trip={rightTrip} align="right" />
+          </>}
+        </div>
+
+        {/* Navigation */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <button onClick={() => flipTo('left')} disabled={page === 0}
+            style={{ padding: '9px 20px', borderRadius: 999, background: page === 0 ? '#e8dcc8' : P, color: page === 0 ? '#b8a88a' : 'white', border: 'none', fontWeight: 700, cursor: page === 0 ? 'not-allowed' : 'pointer', fontSize: '0.85em', transition: 'all .2s' }}
+          >‹ Sebelumnya</button>
+          <span style={{ fontSize: '0.78em', color: MUTED, fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}>{page + 1} / {totalPages}</span>
+          <button onClick={() => flipTo('right')} disabled={page >= totalPages - 1}
+            style={{ padding: '9px 20px', borderRadius: 999, background: page >= totalPages - 1 ? '#e8dcc8' : P, color: page >= totalPages - 1 ? '#b8a88a' : 'white', border: 'none', fontWeight: 700, cursor: page >= totalPages - 1 ? 'not-allowed' : 'pointer', fontSize: '0.85em', transition: 'all .2s' }}
+          >Berikutnya ›</button>
+        </div>
+      </div>
+
+      {diaryGroup && <DiaryModal group={diaryGroup} notes={diaryNotes.filter(n => n.trip_id === diaryGroup.trip?.id)} onRefreshNotes={onRefreshNotes} onClose={onCloseDiary} onOpenLightbox={onOpenLightbox} />}
+    </>
+  )
+}
+
+// ── BOOK PAGE (single trip on one diary page) ─────────────────────────────────
+function BookPage({ group, ideas, notes, onRefreshNotes, onClick }: { group: TripGroup; ideas: any[]; notes: DiaryNote[]; onRefreshNotes: () => void; onClick: () => void }) {
+  // Get unique places visited in this trip from selection_json
+  const places: Array<{ id: string; name: string; photoUrl: string | null; size: number }> = useMemo(() => {
+    const sel = (group.trip as any)?.selection_json || []
+    const total = sel.length || group.media.length
+    // Smaller sizes when more places
+    const baseSize = total <= 3 ? 115 : total <= 5 ? 95 : total <= 8 ? 80 : 68
+    const sizeVar = [0, -10, 10, -5, 8, -8, 5, -12, 12, -6]
+    return sel.map((s: any, i: number) => {
+      const idea = ideas.find((id: any) => id.id === s.id || id.idea_name === s.name)
+      return {
+        id: s.id || `place-${i}`,
+        name: s.name || idea?.idea_name || 'Tempat',
+        photoUrl: idea?.photo_url ? getPublicImageUrl(idea.photo_url) : null,
+        size: baseSize + (sizeVar[i % sizeVar.length]),
+      }
+    })
+  }, [group, ideas])
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, cursor: 'pointer' }} onClick={onClick}>
+      {/* Date header */}
+      <div style={{ zIndex: 1 }}>
+        <h3 style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '1.05em', color: '#5a3e2b', margin: '0 0 3px', fontWeight: 400 }}>
+          {group.trip ? `${group.trip.trip_day}, ${formatTanggalIndonesia(group.trip.trip_date)}` : 'Kenangan'}
+        </h3>
+        <div style={{ width: 40, height: 2, background: '#c9a96e', borderRadius: 1, marginBottom: 5 }} />
+        <p style={{ fontSize: '0.7em', color: '#9a7d5a', margin: 0 }}>{places.length} tempat · {group.media.length} foto</p>
+      </div>
+
+      {/* Scattered polaroids — random positions within page bounds */}
+      <div style={{ flex: 1, position: 'relative', minHeight: 220, overflow: 'hidden' }}>
+        {(places.length > 0 ? places : group.media.map((m, i) => {
+          const total = group.media.length
+          const base = total <= 3 ? 115 : total <= 5 ? 95 : total <= 8 ? 80 : 68
+          return { id: m.id, name: m.ideaName, photoUrl: m.url, size: base + [0,-10,10,-5,8,-8,5,-12][i%8] }
+        })).map((place, i) => {
+          const w = place.size
+          const h = Math.round(w * 0.8)
+          function sr(seed: number, min: number, max: number) {
+            const x = Math.sin(seed) * 10000; return min + (x - Math.floor(x)) * (max - min)
+          }
+          const lx = sr(i * 17 + 3, 2, 60)
+          const ty = sr(i * 11 + 7, 4, 55)
+          const rot = sr(i * 7 + 1, -15, 15)
+          return (
+            <div key={place.id} style={{
+              position: 'absolute',
+              left: `${lx}%`,
+              top: `${ty}%`,
+              transform: `rotate(${rot}deg)`,
+              background: 'white',
+              padding: '4px 4px 16px',
+              borderRadius: 3,
+              boxShadow: '0 3px 12px rgba(0,0,0,0.14)',
+              zIndex: i + 1,
+              width: w,
+            }}>
+              <div style={{ width: '100%', height: h, background: '#f0ece4', overflow: 'hidden', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {place.photoUrl
+                  ? <img src={place.photoUrl} alt={place.name} draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
+                  : <span style={{ fontSize: '1.2em' }}>📍</span>
+                }
+              </div>
+              <p style={{ margin: '3px 0 0', fontSize: '0.46em', fontFamily: "'Playfair Display', serif", fontStyle: 'italic', color: '#6b5240', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{place.name}</p>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Secret message sticky note */}
+      {group.trip?.secret_message && group.trip.secret_message !== 'Tidak ada pesan rahasia.' && (
+        <div style={{ background: '#fff9c4', padding: '7px 10px', borderRadius: 2, boxShadow: '2px 2px 6px rgba(0,0,0,0.12)', fontSize: '0.65em', color: '#5a4a00', fontStyle: 'italic', fontFamily: "'Playfair Display', serif", transform: 'rotate(-1deg)', alignSelf: 'flex-start', maxWidth: '85%' }}>
+          💌 {group.trip.secret_message}
+        </div>
+      )}
+
+      {/* Diary notes */}
+      {notes.map(note => (
+        <div key={note.id} style={{ background: '#e8f4fd', padding: '6px 10px', borderRadius: 2, boxShadow: '2px 2px 6px rgba(0,0,0,0.1)', fontSize: '0.62em', color: '#1a3a5c', fontFamily: "'Playfair Display', serif", transform: `rotate(${note.id.charCodeAt(0) % 6 - 3}deg)`, alignSelf: 'flex-start', maxWidth: '85%', position: 'relative' }}>
+          📝 {note.content}
+          <button
+            onClick={async e => { e.stopPropagation(); await supabase.from('diary_notes').delete().eq('id', note.id); onRefreshNotes() }}
+            style={{ position: 'absolute', top: 2, right: 4, background: 'none', border: 'none', fontSize: '0.8em', cursor: 'pointer', color: '#999', lineHeight: 1 }}
+          >×</button>
+        </div>
+      ))}
+
+      {/* Add note inline */}
+      <NoteAdder tripId={group.trip?.id} onRefreshNotes={onRefreshNotes} />
+
+      <p style={{ fontSize: '0.6em', color: '#c9b99a', textAlign: 'center', margin: 0, fontStyle: 'italic' }}>ketuk untuk lihat semua foto</p>
+    </div>
+  )
+}
+
 
 // ── POLAROID STACK ────────────────────────────────────────────────────────────
 function PolaroidStack({ group, index, onClick }: { group: TripGroup; index: number; onClick: () => void }) {
@@ -517,105 +702,388 @@ function PolaroidStack({ group, index, onClick }: { group: TripGroup; index: num
 }
 
 // ── DIARY MODAL ───────────────────────────────────────────────────────────────
-function DiaryModal({ group, onClose, onOpenLightbox }: { group: TripGroup; onClose: () => void; onOpenLightbox: (item: MediaItem) => void }) {
-  const [zoomed, setZoomed] = useState<string | null>(null)
+// ── INLINE VIDEO ──────────────────────────────────────────────────────────────
+function InlineVideo({ src }: { src: string }) {
+  const [playing, setPlaying] = useState(false)
+  const ref = useRef<HTMLVideoElement>(null)
 
-  // Seeded random rotations + positions so they're stable
-  function seededRand(seed: number, min: number, max: number) {
-    const x = Math.sin(seed) * 10000
-    return min + (x - Math.floor(x)) * (max - min)
+  function toggle(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!ref.current) return
+    if (playing) { ref.current.pause(); setPlaying(false) }
+    else { ref.current.play(); setPlaying(true) }
   }
+
+  return (
+    <div style={{ width: '100%', height: 110, background: '#0a1a2e', borderRadius: 2, position: 'relative', overflow: 'hidden' }}>
+      <video
+        ref={ref}
+        src={src}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        playsInline
+        loop
+        onEnded={() => setPlaying(false)}
+      />
+      <div
+        onClick={toggle}
+        style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: playing ? 'transparent' : 'rgba(3,37,76,0.35)', transition: 'background .2s', cursor: 'pointer' }}
+      >
+        {!playing && (
+          <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>
+            <span style={{ fontSize: '0.8em', marginLeft: 2, color: P }}>▶</span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+
+// ── NOTE ADDER ────────────────────────────────────────────────────────────────
+function NoteAdder({ tripId, onRefreshNotes, dark }: { tripId?: string; onRefreshNotes: () => void; dark?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  if (!tripId) return null
+
+  async function save() {
+    if (!text.trim()) return
+    setSaving(true)
+    await supabase.from('diary_notes').insert({ trip_id: tripId, content: text.trim() })
+    setText('')
+    setOpen(false)
+    setSaving(false)
+    onRefreshNotes()
+  }
+
+  if (!open) return (
+    <button
+      onClick={e => { e.stopPropagation(); setOpen(true) }}
+      style={{ padding: '5px 12px', borderRadius: 8, background: dark ? 'rgba(255,255,255,0.12)' : '#e8f0f8', border: dark ? '1px solid rgba(255,255,255,0.2)' : '1px dashed #b8c8d8', fontSize: '0.65em', color: dark ? 'rgba(255,255,255,0.7)' : '#5a7a9a', cursor: 'pointer', fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}
+    >+ tambah catatan</button>
+  )
+
+  return (
+    <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+      <input
+        autoFocus
+        value={text}
+        onChange={e => setText(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setOpen(false) }}
+        placeholder="Tulis catatan..."
+        style={{ padding: '5px 10px', borderRadius: 8, border: dark ? '1px solid rgba(255,255,255,0.25)' : '1px solid #b8c8d8', fontSize: '0.72em', background: dark ? 'rgba(255,255,255,0.1)' : 'white', color: dark ? 'white' : '#333', outline: 'none', width: 180, fontFamily: 'inherit' }}
+      />
+      <button
+        onClick={save} disabled={saving}
+        style={{ padding: '5px 12px', borderRadius: 8, background: P, color: 'white', border: 'none', fontSize: '0.68em', cursor: 'pointer', fontWeight: 700 }}
+      >{saving ? '...' : 'Simpan'}</button>
+      <button
+        onClick={() => setOpen(false)}
+        style={{ padding: '5px 8px', borderRadius: 8, background: 'transparent', color: dark ? 'rgba(255,255,255,0.5)' : '#999', border: 'none', fontSize: '0.68em', cursor: 'pointer' }}
+      >Batal</button>
+    </div>
+  )
+}
+
+
+function DiaryModal({ group, notes, onRefreshNotes, onClose, onOpenLightbox }: { group: TripGroup; notes: DiaryNote[]; onRefreshNotes: () => void; onClose: () => void; onOpenLightbox: (item: MediaItem) => void }) {
+  function sr(seed: number, min: number, max: number) {
+    const x = Math.sin(seed) * 10000; return min + (x - Math.floor(x)) * (max - min)
+  }
+
+  // Photo positions
+  const [photoPos, setPhotoPos] = useState(() =>
+    group.media.map((_, i) => ({ x: sr(i * 13 + 2, 5, 62), y: sr(i * 11 + 3, 8, 52), rot: sr(i * 7 + 1, -12, 12) }))
+  )
+  // Note positions (index = note index in notes array, stored as % of container)
+  const [notePos, setNotePos] = useState<Array<{ x: number; y: number; rot: number }>>([])
+  const [photoZ, setPhotoZ] = useState<number[]>(() => group.media.map((_, i) => i + 1))
+  const [noteZ, setNoteZ] = useState<number[]>([])
+  const maxZ = useRef(group.media.length + notes.length + 10)
+
+  // Sync notePos when notes change
+  useEffect(() => {
+    setNotePos(prev => notes.map((n, i) => prev[i] || { x: sr(i * 31 + 5, 8, 70), y: sr(i * 19 + 9, 10, 60), rot: sr(i * 13 + 3, -8, 8) }))
+    setNoteZ(prev => notes.map((_, i) => prev[i] || (group.media.length + i + 1)))
+  }, [notes.length])
+
+  type DragTarget = { kind: 'photo' | 'note'; idx: number }
+  const dragging = useRef<DragTarget | null>(null)
+  const dragStartMouse = useRef({ x: 0, y: 0 })
+  const dragStartPos = useRef({ x: 0, y: 0 })
+  const hasMoved = useRef(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const [zoomedItem, setZoomedItem] = useState<MediaItem | null>(null)
+  const [showReviewForm, setShowReviewForm] = useState(false)
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
+
+    function getXY(e: MouseEvent | TouchEvent) {
+      if ('touches' in e) return { x: e.touches[0]?.clientX ?? 0, y: e.touches[0]?.clientY ?? 0 }
+      return { x: e.clientX, y: e.clientY }
+    }
+
+    function onMove(e: MouseEvent | TouchEvent) {
+      if (!dragging.current) return
+      const { x, y } = getXY(e)
+      const dx = x - dragStartMouse.current.x
+      const dy = y - dragStartMouse.current.y
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) hasMoved.current = true
+      const rect = containerRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const newX = Math.max(0, Math.min(82, dragStartPos.current.x + (dx / rect.width) * 100))
+      const newY = Math.max(0, Math.min(74, dragStartPos.current.y + (dy / rect.height) * 100))
+      const { kind, idx } = dragging.current
+      if (kind === 'photo') setPhotoPos(prev => prev.map((p, i) => i === idx ? { ...p, x: newX, y: newY } : p))
+      else setNotePos(prev => prev.map((p, i) => i === idx ? { ...p, x: newX, y: newY } : p))
+    }
+    function onEnd() { dragging.current = null }
+
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onEnd)
+    window.addEventListener('touchmove', onMove, { passive: false })
+    window.addEventListener('touchend', onEnd)
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onEnd)
+      window.removeEventListener('touchmove', onMove)
+      window.removeEventListener('touchend', onEnd)
+    }
   }, [])
 
+  function startDrag(e: React.MouseEvent | React.TouchEvent, kind: 'photo' | 'note', idx: number, curPos: { x: number; y: number }) {
+    e.preventDefault(); e.stopPropagation()
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
+    dragging.current = { kind, idx }
+    hasMoved.current = false
+    dragStartMouse.current = { x: clientX, y: clientY }
+    dragStartPos.current = { x: curPos.x, y: curPos.y }
+    maxZ.current += 1
+    if (kind === 'photo') setPhotoZ(prev => prev.map((z, i) => i === idx ? maxZ.current : z))
+    else setNoteZ(prev => prev.map((z, i) => i === idx ? maxZ.current : z))
+  }
+
+  const memoColors = ['#fff9c4', '#d4f0c4', '#ffd6e0', '#c4e8ff', '#ffe4c4']
+
   return (
-    <div
-      style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(3,37,76,0.88)', backdropFilter: 'blur(8px)', display: 'flex', flexDirection: 'column' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-    >
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(3,37,76,0.9)', backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <div style={{ padding: '20px 24px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+      <div style={{ padding: '12px 16px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontWeight: 400, fontSize: '1.3em', color: 'white', margin: '0 0 3px' }}>
+          <h2 style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontWeight: 400, fontSize: '1.2em', color: 'white', margin: '0 0 2px' }}>
             {group.trip ? `${group.trip.trip_day}, ${formatTanggalIndonesia(group.trip.trip_date)}` : 'Kenangan'}
           </h2>
-          <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0, fontSize: '0.8em' }}>{group.media.length} kenangan · klik foto untuk zoom</p>
+          <p style={{ color: 'rgba(255,255,255,0.4)', margin: 0, fontSize: '0.72em' }}>drag foto & memo · ketuk foto untuk zoom</p>
         </div>
-        <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '50%', width: 40, height: 40, color: 'white', fontSize: '1.1em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* Add memo button */}
+          <NoteAdder tripId={group.trip?.id} onRefreshNotes={onRefreshNotes} dark />
+          <button
+            onClick={() => setShowReviewForm(true)}
+            style={{ padding: '6px 12px', borderRadius: 20, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', fontSize: '0.72em', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}
+          >✏️ Review</button>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '50%', width: 36, height: 36, color: 'white', fontSize: '1em', cursor: 'pointer', flexShrink: 0 }}>✕</button>
+        </div>
       </div>
 
-      {/* Scattered photos area */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', margin: '16px 0 0' }}>
-        {group.media.map((item, i) => {
-          const rot = seededRand(i * 7 + 1, -12, 12)
-          const tx = seededRand(i * 13 + 2, 5, 80)   // % from left
-          const ty = seededRand(i * 11 + 3, 5, 70)   // % from top
-          const isZoomed = zoomed === item.id
-          const zIdx = isZoomed ? 100 : i + 1
+      {/* Secret message strip */}
+      {group.trip?.secret_message && group.trip.secret_message !== 'Tidak ada pesan rahasia.' && (
+        <div style={{ margin: '8px 20px 0', padding: '6px 14px', borderRadius: 8, background: 'rgba(255,251,235,0.1)', border: '1px solid rgba(252,211,77,0.3)', fontSize: '0.75em', color: '#fde68a', fontStyle: 'italic', flexShrink: 0 }}>
+          💌 {group.trip.secret_message}
+        </div>
+      )}
 
+      {/* Scatter canvas */}
+      <div ref={containerRef} style={{ flex: 1, position: 'relative', overflow: 'hidden', margin: '10px 0 0' }}>
+
+        {/* Photos */}
+        {group.media.map((item, i) => {
+          const pos = photoPos[i] || { x: 5, y: 5, rot: 0 }
           return (
             <div
               key={item.id}
-              onClick={e => {
-                e.stopPropagation()
-                if (isZoomed) {
-                  onOpenLightbox(item)
-                  setZoomed(null)
-                } else {
-                  setZoomed(item.id)
-                }
-              }}
-              style={{
-                position: 'absolute',
-                left: `${tx}%`,
-                top: `${ty}%`,
-                transform: isZoomed
-                  ? `rotate(0deg) scale(1.35) translate(-10%, -10%)`
-                  : `rotate(${rot}deg)`,
-                zIndex: zIdx,
-                cursor: 'pointer',
-                transition: 'transform .3s cubic-bezier(.25,.46,.45,.94), z-index 0s',
-                background: 'white',
-                borderRadius: 4,
-                boxShadow: isZoomed ? '0 20px 60px rgba(0,0,0,0.6)' : '0 4px 20px rgba(0,0,0,0.4)',
-                padding: '7px 7px 28px',
-                width: 130,
-              }}
+              onMouseDown={e => startDrag(e, 'photo', i, pos)}
+              onTouchStart={e => startDrag(e, 'photo', i, pos)}
+              onClick={e => { e.stopPropagation(); if (!hasMoved.current) setZoomedItem(item) }}
+              style={{ position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, transform: `rotate(${pos.rot}deg)`, zIndex: photoZ[i], cursor: 'grab', background: 'white', borderRadius: 4, boxShadow: '0 5px 20px rgba(0,0,0,0.4)', padding: '7px 7px 24px', width: 120, userSelect: 'none', touchAction: 'none' }}
             >
-              {item.type === 'photo' ? (
-                <img src={item.url} alt={item.ideaName} style={{ width: '100%', height: 110, objectFit: 'cover', display: 'block', borderRadius: 2 }} loading="lazy" />
-              ) : (
-                <div style={{ width: '100%', height: 110, background: '#0a1a2e', borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                  <video src={item.url} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 2 }} />
-                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(3,37,76,0.4)', borderRadius: 2 }}>
-                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75em' }}>▶</div>
-                  </div>
-                </div>
-              )}
-              {/* Polaroid caption */}
-              <p style={{ margin: '6px 0 0', fontSize: '0.58em', fontFamily: "'Playfair Display', serif", fontStyle: 'italic', color: '#444', textAlign: 'center', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {item.ideaName}
-              </p>
-              {item.rating > 0 && (
-                <p style={{ margin: '2px 0 0', fontSize: '0.55em', color: '#f59e0b', textAlign: 'center' }}>{'★'.repeat(item.rating)}</p>
-              )}
-              {isZoomed && (
-                <div style={{ position: 'absolute', bottom: -28, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', fontSize: '0.65em', color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>klik lagi untuk buka</div>
-              )}
+              {item.type === 'photo'
+                ? <div style={{ width: '100%', height: 108, background: '#f5f5f0', borderRadius: 2, overflow: 'hidden' }}><img src={item.url} alt={item.ideaName} draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} /></div>
+                : <InlineVideo src={item.url} />
+              }
+              <p style={{ margin: '4px 0 0', fontSize: '0.54em', fontFamily: "'Playfair Display', serif", fontStyle: 'italic', color: '#444', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.ideaName}</p>
+              {item.rating > 0 && <p style={{ margin: '1px 0 0', fontSize: '0.52em', color: '#f59e0b', textAlign: 'center' }}>{'★'.repeat(item.rating)}</p>}
+            </div>
+          )
+        })}
+
+        {/* Memo sticky notes */}
+        {notes.map((note, i) => {
+          const pos = notePos[i] || { x: 30, y: 30, rot: 0 }
+          const color = memoColors[i % memoColors.length]
+          return (
+            <div
+              key={note.id}
+              onMouseDown={e => startDrag(e, 'note', i, pos)}
+              onTouchStart={e => startDrag(e, 'note', i, pos)}
+              style={{ position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, transform: `rotate(${pos.rot}deg)`, zIndex: noteZ[i] || 1, cursor: 'grab', background: color, borderRadius: 2, boxShadow: '2px 4px 14px rgba(0,0,0,0.3)', padding: '10px 12px 10px', width: 130, userSelect: 'none', minHeight: 70, touchAction: 'none' }}
+            >
+              {/* Top tape strip */}
+              <div style={{ position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', width: 40, height: 16, background: 'rgba(255,255,255,0.55)', borderRadius: 2, backdropFilter: 'blur(2px)' }} />
+              <p style={{ margin: 0, fontSize: '0.72em', color: '#333', lineHeight: 1.5, fontFamily: "'Playfair Display', serif", fontStyle: 'italic', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{note.content}</p>
+              <button
+                onMouseDown={e => e.stopPropagation()}
+                onClick={async e => { e.stopPropagation(); await supabase.from('diary_notes').delete().eq('id', note.id); onRefreshNotes() }}
+                style={{ position: 'absolute', top: 4, right: 6, background: 'none', border: 'none', color: 'rgba(0,0,0,0.3)', cursor: 'pointer', fontSize: '0.8em', lineHeight: 1 }}
+              >×</button>
             </div>
           )
         })}
       </div>
 
-      {/* Secret message */}
-      {group.trip?.secret_message && group.trip.secret_message !== 'Tidak ada pesan rahasia.' && (
-        <div style={{ margin: '0 24px 20px', padding: '10px 16px', borderRadius: 12, background: 'rgba(255,251,235,0.12)', border: '1.5px solid rgba(252,211,77,0.4)', fontSize: '0.85em', color: '#fde68a', fontStyle: 'italic', flexShrink: 0 }}>
-          💌 {group.trip.secret_message}
+      {/* Zoom lightbox */}
+      {zoomedItem && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }} onClick={() => setZoomedItem(null)}>
+          <button onClick={() => setZoomedItem(null)} style={{ position: 'absolute', top: 20, right: 20, background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 40, height: 40, color: 'white', fontSize: '1.1em', cursor: 'pointer' }}>✕</button>
+          <div style={{ maxWidth: 620, width: '100%' }} onClick={e => e.stopPropagation()}>
+            {zoomedItem.type === 'photo'
+              ? <img src={zoomedItem.url} alt={zoomedItem.ideaName} style={{ width: '100%', maxHeight: '72vh', objectFit: 'contain', borderRadius: 12, display: 'block' }} />
+              : <video src={zoomedItem.url} controls autoPlay playsInline style={{ width: '100%', maxHeight: '72vh', borderRadius: 12, background: '#000', display: 'block' }} />
+            }
+            <div style={{ marginTop: 12, textAlign: 'center' }}>
+              <p style={{ color: 'white', fontWeight: 700, margin: '0 0 4px' }}>{zoomedItem.ideaName}</p>
+              {zoomedItem.rating > 0 && <span style={{ color: '#f59e0b' }}>{'★'.repeat(zoomedItem.rating)}</span>}
+              {zoomedItem.reviewText && <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85em', fontStyle: 'italic', marginTop: 6 }}>"{zoomedItem.reviewText}"</p>}
+            </div>
+          </div>
         </div>
       )}
+
+      {/* Add/Edit Review modal */}
+      {showReviewForm && (
+        <ReviewFormModal
+          group={group}
+          onClose={() => setShowReviewForm(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── REVIEW FORM MODAL ─────────────────────────────────────────────────────────
+function ReviewFormModal({ group, onClose }: { group: TripGroup; onClose: () => void }) {
+  const places = useMemo(() => {
+    const sel = (group.trip as any)?.selection_json || []
+    // Fallback: unique places from media
+    if (sel.length === 0) {
+      const seen = new Set<string>()
+      return group.media.filter(m => { if (seen.has(m.ideaName)) return false; seen.add(m.ideaName); return true })
+        .map(m => ({ id: m.tripId || m.id, name: m.ideaName, idea_id: m.id }))
+    }
+    return sel.map((s: any) => ({ id: s.id, name: s.name, idea_id: s.id }))
+  }, [group])
+
+  const [selectedIdeaId, setSelectedIdeaId] = useState(places[0]?.idea_id || '')
+  const [reviewerName, setReviewerName] = useState('')
+  const [rating, setRating] = useState(5)
+  const [reviewText, setReviewText] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [existing, setExisting] = useState<any>(null)
+  const [loadingExisting, setLoadingExisting] = useState(false)
+
+  // Load existing review when ideaId or reviewer changes
+  useEffect(() => {
+    if (!selectedIdeaId || !reviewerName.trim() || !group.trip?.id) { setExisting(null); return }
+    setLoadingExisting(true)
+    supabase.from('idea_reviews')
+      .select('*')
+      .eq('idea_id', selectedIdeaId)
+      .eq('trip_id', group.trip.id)
+      .eq('reviewer_name', reviewerName.trim())
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) { setExisting(data); setRating(data.rating || 5); setReviewText(data.review_text || '') }
+        else { setExisting(null); setRating(5); setReviewText('') }
+        setLoadingExisting(false)
+      })
+  }, [selectedIdeaId, reviewerName, group.trip?.id])
+
+  async function save() {
+    if (!reviewerName.trim() || !selectedIdeaId || !group.trip?.id) return
+    setSaving(true)
+    const payload = { idea_id: selectedIdeaId, trip_id: group.trip.id, reviewer_name: reviewerName.trim(), rating, review_text: reviewText }
+    if (existing) {
+      await supabase.from('idea_reviews').update(payload).eq('id', existing.id)
+    } else {
+      await supabase.from('idea_reviews').insert(payload)
+    }
+    setSaving(false)
+    onClose()
+  }
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={{ background: 'white', borderRadius: 20, padding: 'clamp(16px, 4vw, 28px)', width: '100%', maxWidth: 460, display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, fontFamily: "'Playfair Display', serif", fontStyle: 'italic', color: P, fontSize: '1.1em' }}>
+            {existing ? 'Edit Review' : 'Tambah Review'}
+          </h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.2em', cursor: 'pointer', color: MUTED }}>✕</button>
+        </div>
+
+        {/* Place picker */}
+        <div>
+          <label style={{ fontSize: '0.78em', fontWeight: 700, color: P, display: 'block', marginBottom: 6 }}>Tempat</label>
+          <select value={selectedIdeaId} onChange={e => setSelectedIdeaId(e.target.value)}
+            style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${S}`, fontSize: '0.88em', color: P, background: 'white', outline: 'none' }}>
+            {places.map((p: { id: string; name: string; idea_id: string }, i: number) => <option key={p.idea_id || i} value={p.idea_id}>{p.name}</option>)}
+          </select>
+        </div>
+
+        {/* Reviewer name */}
+        <div>
+          <label style={{ fontSize: '0.78em', fontWeight: 700, color: P, display: 'block', marginBottom: 6 }}>Nama</label>
+          <input
+            value={reviewerName} onChange={e => setReviewerName(e.target.value)}
+            placeholder="Nama kamu..."
+            style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${S}`, fontSize: '0.88em', outline: 'none', boxSizing: 'border-box' }}
+          />
+          {loadingExisting && <p style={{ fontSize: '0.7em', color: MUTED, margin: '4px 0 0' }}>Mengecek review sebelumnya...</p>}
+          {existing && <p style={{ fontSize: '0.7em', color: '#10b981', margin: '4px 0 0' }}>✓ Review ditemukan — kamu bisa edit</p>}
+        </div>
+
+        {/* Rating */}
+        <div>
+          <label style={{ fontSize: '0.78em', fontWeight: 700, color: P, display: 'block', marginBottom: 6 }}>Rating</label>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {[1,2,3,4,5].map(n => (
+              <button key={n} onClick={() => setRating(n)}
+                style={{ fontSize: '1.4em', background: 'none', border: 'none', cursor: 'pointer', opacity: n <= rating ? 1 : 0.3, transition: 'opacity .15s' }}>★</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Review text */}
+        <div>
+          <label style={{ fontSize: '0.78em', fontWeight: 700, color: P, display: 'block', marginBottom: 6 }}>Ulasan</label>
+          <textarea
+            value={reviewText} onChange={e => setReviewText(e.target.value)}
+            placeholder="Tulis ulasan kamu..."
+            rows={3}
+            style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${S}`, fontSize: '0.88em', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+          />
+        </div>
+
+        <button
+          onClick={save} disabled={saving || !reviewerName.trim()}
+          style={{ padding: '12px', borderRadius: 12, background: P, color: 'white', border: 'none', fontWeight: 700, fontSize: '0.9em', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}
+        >{saving ? 'Menyimpan...' : existing ? 'Update Review' : 'Simpan Review'}</button>
+      </div>
     </div>
   )
 }
@@ -634,12 +1102,23 @@ function AutoCarousel({ items, onClickItem }: { items: MediaItem[]; onClickItem:
   const containerRef = useRef<HTMLDivElement>(null)
   const total = items.length
 
-  // Auto-advance every 4s
+  const [direction, setDirection] = useState(1) // 1 = forward, -1 = backward
+
+  // Auto-advance every 4s — ping-pong (1-2-3-2-1)
   useEffect(() => {
     if (paused || total <= 1) return
-    const t = setInterval(() => goTo((current + 1) % total), 4000)
+    const t = setInterval(() => {
+      setCurrent(prev => {
+        let next = prev + direction
+        let newDir = direction
+        if (next >= total) { next = total - 2; newDir = -1 }
+        else if (next < 0) { next = 1; newDir = 1 }
+        setDirection(newDir)
+        return next
+      })
+    }, 4000)
     return () => clearInterval(t)
-  }, [paused, current, total])
+  }, [paused, direction, total])
 
   // Handle slide change — autoplay video if current is video, else stop all
   useEffect(() => {
@@ -662,7 +1141,9 @@ function AutoCarousel({ items, onClickItem }: { items: MediaItem[]; onClickItem:
 
   function goTo(idx: number) {
     if (sliding) return
-    const next = (idx + total) % total
+    const next = Math.max(0, Math.min(idx, total - 1))
+    if (next === current) return
+    setDirection(next > current ? 1 : -1)
     setSliding(true)
     setCurrent(next)
     setDragDeltaX(0)
@@ -690,6 +1171,7 @@ function AutoCarousel({ items, onClickItem }: { items: MediaItem[]; onClickItem:
     } else {
       setDragDeltaX(0)
     }
+    setTimeout(() => setPaused(false), 1500)
   }
 
   async function handleVideoToggle(e: React.MouseEvent, id: string) {
@@ -766,7 +1248,10 @@ function AutoCarousel({ items, onClickItem }: { items: MediaItem[]; onClickItem:
                       playsInline
                       muted
                       preload="metadata"
-                      onEnded={() => { goTo(current + 1); setPaused(false) }}
+                      onEnded={() => {
+                        const next = direction === 1 ? (current + 1 >= total ? current - 1 : current + 1) : (current - 1 < 0 ? current + 1 : current - 1)
+                        goTo(next); setPaused(false)
+                      }}
                     />
                     {/* Play/Pause overlay */}
                     <div
