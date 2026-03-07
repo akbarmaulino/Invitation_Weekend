@@ -19,9 +19,6 @@ interface RoomState {
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 const REACTIONS = ['❤️','😂','😱','😭','🔥','👏','😍','💀']
 
-// ICE Servers — STUN (free) + TURN relay via Metered.ca free tier
-// Ganti USERNAME dan CREDENTIAL dengan akun Metered.ca kamu
-// Daftar gratis di: https://dashboard.metered.ca
 const TURN_USER = process.env.NEXT_PUBLIC_TURN_USERNAME || '52361553299cc352d159aa8a'
 const TURN_CRED = process.env.NEXT_PUBLIC_TURN_CREDENTIAL || 'UqT3j4VoaECWj4on'
 const TURN_DOMAIN = process.env.NEXT_PUBLIC_TURN_DOMAIN || 'global.relay.metered.ca'
@@ -147,7 +144,6 @@ export default function WatchPartyPage() {
       streamRef.current = stream
       stream.getVideoTracks()[0].onended = () => stopScreenShare()
 
-      // Host: show own stream immediately in the video element
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         setShowScreen(true)
@@ -157,28 +153,23 @@ export default function WatchPartyPage() {
       pcRef.current = pc
       stream.getTracks().forEach((t: MediaStreamTrack) => pc.addTrack(t, stream))
 
-      // Collect all ICE candidates before sending offer (trickle off for reliability)
       const candidates: RTCIceCandidate[] = []
       pc.onicecandidate = e => {
         if (e.candidate) candidates.push(e.candidate)
       }
 
-      // Wait for ICE gathering to complete
       await new Promise<void>(resolve => {
         pc.onicegatheringstatechange = () => {
           if (pc.iceGatheringState === 'complete') resolve()
         }
-        // Fallback timeout 3s
         setTimeout(resolve, 3000)
       })
 
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
 
-      // Small delay so partner's channel subscription is ready
       await new Promise(r => setTimeout(r, 800))
       console.log('[WP] Sending offer with', candidates.length, 'candidates')
-      // Send offer + all candidates together
       broadcastWebRTC({ type: 'offer', sdp: pc.localDescription, candidates })
       setScreenActive(true)
     } catch (e) {
@@ -199,15 +190,12 @@ export default function WatchPartyPage() {
 
   async function handleWebRTCSignal(payload: any) {
     if (isHost) {
-      // Host only handles answer
       if (payload.type === 'answer' && pcRef.current) {
         console.log('[WP] Host got answer')
         await pcRef.current.setRemoteDescription(new RTCSessionDescription(payload.sdp))
       }
     } else {
-      // Partner handles offer
       if (payload.type === 'offer') {
-        // Close existing connection if any
         if (pcRef.current) pcRef.current.close()
 
         const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
@@ -220,24 +208,31 @@ export default function WatchPartyPage() {
         pc.ontrack = e => {
           console.log('[WP] Partner got track!', e.streams.length, 'streams')
           if (e.streams[0]) {
-            // Just store stream — do NOT set srcObject yet (mobile blocks background autoplay)
+            // Simpan stream ke ref
             streamRef.current = e.streams[0]
             setShowScreen(true)
-            setNeedsTap(true) // Always show tap button on mobile
+            setNeedsTap(true)
           }
         }
+
         pc.onconnectionstatechange = () => {
           console.log('[WP] Connection state:', pc.connectionState)
         }
         pc.oniceconnectionstatechange = () => {
           console.log('[WP] ICE state:', pc.iceConnectionState)
+          // Kalau ICE connected tapi video belum play, trigger needsTap lagi
+          if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+            if (streamRef.current) {
+              setShowScreen(true)
+              setNeedsTap(true)
+            }
+          }
         }
 
         console.log('[WP] Partner got offer, candidates:', payload.candidates?.length)
         await new Promise(r => setTimeout(r, 200))
         await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp))
 
-        // Add bundled ICE candidates from offer payload
         if (payload.candidates) {
           for (const c of payload.candidates) {
             await pc.addIceCandidate(new RTCIceCandidate(c)).catch(e => console.warn('[WP] ICE candidate failed:', e))
@@ -303,9 +298,7 @@ export default function WatchPartyPage() {
   // ── RENDER ───────────────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: DARK, fontFamily: "'Georgia', serif", position: 'relative', overflow: 'hidden' }}>
-      {/* Grain overlay */}
       <div style={{ position: 'fixed', inset: 0, backgroundImage: 'url("https://www.transparenttextures.com/patterns/stardust.png")', opacity: 0.08, pointerEvents: 'none', zIndex: 0 }} />
-      {/* Radial glow */}
       <div style={{ position: 'fixed', top: '20%', left: '50%', transform: 'translateX(-50%)', width: '60vw', height: '40vh', background: `radial-gradient(ellipse, rgba(201,169,110,0.08) 0%, transparent 70%)`, pointerEvents: 'none', zIndex: 0 }} />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
@@ -333,7 +326,6 @@ function LobbyScreen({ myName, setMyName, filmTitle, setFilmTitle, joinCode, set
   const [tab, setTab] = useState<'create' | 'join'>('create')
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
-      {/* Title */}
       <div style={{ textAlign: 'center', marginBottom: 40 }}>
         <div style={{ fontSize: '3em', marginBottom: 8 }}>🎬</div>
         <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(1.8em, 5vw, 2.8em)', color: CREAM, margin: '0 0 8px', fontWeight: 400, letterSpacing: '-0.5px' }}>
@@ -342,9 +334,7 @@ function LobbyScreen({ myName, setMyName, filmTitle, setFilmTitle, joinCode, set
         <p style={{ color: GOLD, fontSize: '0.9em', margin: 0, fontStyle: 'italic', opacity: 0.8 }}>Nonton bareng, walau berjauhan</p>
       </div>
 
-      {/* Card */}
       <div style={{ width: '100%', maxWidth: 420, background: 'rgba(255,255,255,0.04)', borderRadius: 20, border: '1px solid rgba(201,169,110,0.2)', overflow: 'hidden', backdropFilter: 'blur(10px)' }}>
-        {/* Tabs */}
         <div style={{ display: 'flex', borderBottom: '1px solid rgba(201,169,110,0.15)' }}>
           {(['create', 'join'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)} style={{ flex: 1, padding: '14px', background: 'none', border: 'none', color: tab === t ? GOLD : 'rgba(255,255,255,0.4)', fontWeight: tab === t ? 700 : 400, fontSize: '0.85em', cursor: 'pointer', borderBottom: tab === t ? `2px solid ${GOLD}` : '2px solid transparent', transition: 'all .2s', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
@@ -387,7 +377,6 @@ function WaitingScreen({ roomCode, filmTitle, myName, partnerOnline, onStart }: 
       <h2 style={{ fontFamily: "'Playfair Display', serif", color: CREAM, fontSize: 'clamp(1.3em, 4vw, 1.8em)', margin: '0 0 6px', fontWeight: 400 }}>Menunggu pasangan...</h2>
       <p style={{ color: GOLD, fontStyle: 'italic', margin: '0 0 36px', fontSize: '0.9em', opacity: 0.8 }}>{filmTitle}</p>
 
-      {/* Room code */}
       <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,169,110,0.25)', borderRadius: 16, padding: '24px 32px', marginBottom: 32, width: '100%', maxWidth: 360 }}>
         <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72em', margin: '0 0 10px', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Kode Room</p>
         <div style={{ fontFamily: 'monospace', fontSize: 'clamp(2em, 8vw, 3em)', fontWeight: 900, color: GOLD, letterSpacing: '0.15em', marginBottom: 16 }}>{roomCode}</div>
@@ -396,7 +385,6 @@ function WaitingScreen({ roomCode, filmTitle, myName, partnerOnline, onStart }: 
         </button>
       </div>
 
-      {/* Status */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 32 }}>
         <div style={{ width: 10, height: 10, borderRadius: '50%', background: partnerOnline ? '#4ade80' : '#6b7280', boxShadow: partnerOnline ? '0 0 8px #4ade80' : 'none', transition: 'all .3s' }} />
         <span style={{ color: partnerOnline ? '#4ade80' : 'rgba(255,255,255,0.4)', fontSize: '0.82em' }}>
@@ -417,12 +405,72 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
   const [showReactions, setShowReactions] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [chatOpen, setChatOpen] = useState(true)
+  // Ref lokal untuk video element di PartyScreen — ini yang fix utama
+  const localVideoRef = useRef<HTMLVideoElement | null>(null)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
     check(); window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
+
+  // Sync localVideoRef ke videoRef parent setiap kali el berubah
+  function setVideoRef(el: HTMLVideoElement | null) {
+    localVideoRef.current = el
+    if (videoRef) videoRef.current = el
+  }
+
+  // Fungsi tap yang robust untuk mobile
+  function handleTap() {
+    const vid = localVideoRef.current
+    const stream = streamRef?.current
+
+    console.log('[TAP] vid:', !!vid, 'stream:', !!stream, 'stream active:', stream?.active)
+
+    if (!vid) {
+      console.error('[TAP] video element tidak ditemukan!')
+      return
+    }
+    if (!stream) {
+      console.error('[TAP] stream belum ada!')
+      return
+    }
+    if (!stream.active) {
+      console.error('[TAP] stream sudah tidak aktif!')
+      return
+    }
+
+    // Set srcObject di dalam gesture — WAJIB untuk mobile
+    if (vid.srcObject !== stream) {
+      vid.srcObject = stream
+    }
+
+    // Mute dulu, play, baru unmute — paling reliable di mobile
+    vid.muted = true
+    vid.play()
+      .then(() => {
+        console.log('[TAP] Play berhasil! Unmuting...')
+        // Unmute setelah play sukses
+        setTimeout(() => {
+          vid.muted = false
+          setNeedsTap(false)
+          console.log('[TAP] Unmuted & needsTap cleared')
+        }, 300)
+      })
+      .catch((err: unknown) => {
+        console.error('[TAP] Play gagal:', err)
+        // Coba lagi tetap muted
+        vid.muted = true
+        vid.play()
+          .then(() => {
+            setNeedsTap(false)
+            console.log('[TAP] Play berhasil (muted mode)')
+          })
+          .catch((err2: unknown) => {
+            console.error('[TAP] Play gagal total:', err2)
+          })
+      })
+  }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -458,39 +506,36 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
           <div style={{ flex: 1, position: 'relative', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: isMobile ? 220 : 0 }}>
             {showScreen ? (
               <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                {/* Video element — ref pakai fungsi setVideoRef agar parent juga dapat ref-nya */}
                 <video
-                  ref={el => {
-                    (videoRef as any).current = el
-                    // Don't auto-set srcObject — mobile blocks it. Wait for user tap.
-                  }}
+                  ref={setVideoRef}
                   autoPlay
                   playsInline
-                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  muted={needsTap}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                 />
-                {/* Only show tap hint when autoplay is actually blocked */}
+
+                {/* Tap overlay — hanya tampil saat needsTap */}
                 {needsTap && (
                   <div
-                    onClick={() => {
-                      const vid = videoRef.current
-                      const stream = (streamRef as any)?.current
-                      if (vid && stream) {
-                        // Set srcObject INSIDE user gesture — this is what mobile requires
-                        vid.srcObject = stream
-                        vid.muted = true // start muted (required by some mobile browsers)
-                        vid.play().then(() => {
-                          vid.muted = false // unmute after play starts
-                          setNeedsTap(false)
-                          console.log('[WP] Mobile play success!')
-                        }).catch((err: unknown) => {
-                          console.error('[WP] Play failed even with gesture:', err)
-                        })
-                      } else {
-                        console.warn('[WP] Tap: vid=', !!vid, 'stream=', !!stream)
-                      }
+                    onClick={handleTap}
+                    style={{
+                      position: 'absolute', inset: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer',
+                      background: 'rgba(0,0,0,0.55)',
+                      zIndex: 5
                     }}
-                    style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'rgba(0,0,0,0.4)' }}>
+                  >
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ width: 80, height: 80, borderRadius: '50%', background: `linear-gradient(135deg, ${GOLD}, #a07840)`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 0 40px rgba(201,169,110,0.6)', fontSize: '2em' }}>▶</div>
+                      <div style={{
+                        width: 80, height: 80, borderRadius: '50%',
+                        background: `linear-gradient(135deg, ${GOLD}, #a07840)`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        margin: '0 auto 16px',
+                        boxShadow: '0 0 40px rgba(201,169,110,0.6)',
+                        fontSize: '2em'
+                      }}>▶</div>
                       <p style={{ color: 'white', fontWeight: 700, fontSize: '1.1em', margin: 0 }}>Tap untuk mulai</p>
                       <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75em', margin: '6px 0 0' }}>Ketuk layar untuk memutar video</p>
                     </div>
@@ -516,25 +561,16 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
 
           {/* Controls bar */}
           <div style={{ padding: isMobile ? '10px 12px' : '14px 20px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 14, flexWrap: 'wrap' }}>
-            {/* Timer */}
             <div style={{ fontFamily: 'monospace', fontSize: isMobile ? '1em' : '1.2em', color: GOLD, fontWeight: 700, minWidth: 60 }}>{fmtTime(elapsed)}</div>
 
-            {/* Play/Pause */}
             <button onClick={() => {
               onTogglePlay()
-              // Also trigger video play on mobile if blocked
-              const vid = videoRef?.current
-              const stream = (streamRef as any)?.current
-              if (vid && stream && needsTap) {
-                if (!vid.srcObject) vid.srcObject = stream
-                vid.muted = true
-                vid.play().then(() => { vid.muted = false; setNeedsTap(false) }).catch(() => {})
-              }
+              // Kalau mobile masih needsTap, trigger play juga
+              if (needsTap) handleTap()
             }} style={{ width: isMobile ? 38 : 44, height: isMobile ? 38 : 44, borderRadius: '50%', background: `linear-gradient(135deg, ${GOLD}, #a07840)`, border: 'none', color: DARK, fontSize: isMobile ? '1em' : '1.2em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(201,169,110,0.35)', flexShrink: 0 }}>
               {isPlaying ? '⏸' : '▶'}
             </button>
 
-            {/* Screen share (host only) */}
             {isHost && (
               <button onClick={screenActive ? onStopScreen : onStartScreen}
                 style={{ padding: isMobile ? '6px 12px' : '7px 16px', background: screenActive ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.07)', border: `1px solid ${screenActive ? '#ef4444' : 'rgba(255,255,255,0.15)'}`, borderRadius: 8, color: screenActive ? '#ef4444' : 'rgba(255,255,255,0.7)', fontSize: '0.75em', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
@@ -542,7 +578,6 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
               </button>
             )}
 
-            {/* Reactions toggle */}
             <div style={{ marginLeft: 'auto', position: 'relative' }}>
               <button onClick={() => setShowReactions(r => !r)}
                 style={{ padding: isMobile ? '6px 10px' : '7px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: 'rgba(255,255,255,0.8)', fontSize: isMobile ? '0.9em' : '1em', cursor: 'pointer' }}>
@@ -593,7 +628,6 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
         )}
       </div>
 
-      {/* CSS for reaction animation */}
       <style>{`
         @keyframes reactionFloat {
           0% { opacity: 1; transform: translateY(0) scale(1); }
