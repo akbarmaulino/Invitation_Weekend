@@ -925,22 +925,6 @@ function PartyScreen({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  useEffect(() => {
-    log(
-      "STREAM EFFECT: remoteStream=" +
-        !!remoteStream +
-        " vid=" +
-        !!localVidRef.current,
-    );
-    if (remoteStream && localVidRef.current) {
-      localVidRef.current.srcObject = remoteStream;
-      log(
-        "STREAM EFFECT: srcObject set ✅ tracks=" +
-          remoteStream.getTracks().length,
-      );
-    }
-  }, [remoteStream]);
-
   function assignVideoRef(el: HTMLVideoElement | null) {
     localVidRef.current = el
     if (videoRef) videoRef.current = el
@@ -948,22 +932,31 @@ function PartyScreen({
 
 function handleTap() {
   const vid = localVidRef.current
-  log('TAP: vid=' + !!vid + ' srcObject=' + !!(vid?.srcObject) + ' remoteStream=' + !!remoteStream)
+  if (!vid || !remoteStream) {
+    alert('Stream belum siap, tunggu 2 detik lalu tap lagi')
+    return
+  }
 
-  if (!vid) { alert('ERROR: video element tidak ada!'); return }
-  if (!remoteStream) { alert('ERROR: stream belum ada!\nTunggu lalu tap lagi.'); return }
-  if (!remoteStream.active) { alert('Stream mati!\nMinta host share ulang.'); return }
+  // Reset total — penting untuk Samsung Chrome
+  vid.srcObject = null
+  vid.load()
 
-  vid.muted = true
-  vid.play()
-    .then(() => {
-      log('TAP: ✅ PLAY SUKSES!')
-      setTimeout(() => { vid.muted = false; setNeedsTap(false) }, 500)
-    })
-    .catch((err: any) => {
-      log('TAP ERROR: ' + err.name + ': ' + err.message)
-      alert('Play gagal!\n' + err.name + ': ' + err.message)
-    })
+  // Set srcObject fresh dalam gesture
+  vid.srcObject = remoteStream
+
+  const playPromise = vid.play()
+  if (playPromise !== undefined) {
+    playPromise
+      .then(() => {
+        log('TAP: ✅ PLAY SUKSES')
+        setNeedsTap(false)
+      })
+      .catch((err: any) => {
+        log('TAP ERROR: ' + err.name + ': ' + err.message)
+        // Coba fallback: createElement baru
+        alert('Gagal: ' + err.name + '\n' + err.message)
+      })
+  }
 }
 
   return (
