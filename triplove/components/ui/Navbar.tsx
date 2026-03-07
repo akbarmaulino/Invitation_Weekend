@@ -8,6 +8,7 @@ const P = '#03254c', S = '#c4e8ff'
 const NAV_ITEMS = [
   { href: '/',           label: 'Home',       icon: '🏠' },
   { href: '/statistics', label: 'Statistics', icon: '📊' },
+  { href: '/watch-party', label: 'Watch Party', icon: '🍿' },
   { href: '/gallery',    label: 'Gallery',    icon: '📸' },
   { href: '/history',    label: 'History',    icon: '📖' },
   { href: '/games',      label: 'Games',      icon: '🎮' },
