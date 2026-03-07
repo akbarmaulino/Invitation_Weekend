@@ -44,7 +44,7 @@ class ErrorBoundary extends React.Component<EBProps, EBState> {
               marginBottom: 12,
             }}
           >
-            💥 CRASH — v7-debug
+            💥 CRASH — v8-debug
           </div>
           {this.state.error}
         </div>
@@ -79,6 +79,9 @@ const TURN_DOMAIN =
 const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" },
+  { urls: "stun:stun2.l.google.com:19302" },
+  { urls: "stun:stun3.l.google.com:19302" },
+  { urls: "stun:stun4.l.google.com:19302" },
   { urls: `stun:${TURN_DOMAIN}:80` },
   ...(TURN_USER
     ? [
@@ -244,7 +247,11 @@ export default function WatchPartyPage() {
         setShowScreen(true);
       }
 
-      const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+      const pc = new RTCPeerConnection({ 
+        iceServers: ICE_SERVERS,
+        iceTransportPolicy: "all",
+        bundlePolicy: "max-bundle",
+      });
       pcRef.current = pc;
       stream
         .getTracks()
@@ -299,7 +306,11 @@ export default function WatchPartyPage() {
         );
         if (pcRef.current) pcRef.current.close();
 
-        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        const pc = new RTCPeerConnection({ 
+          iceServers: ICE_SERVERS,
+          iceTransportPolicy: "all",
+          bundlePolicy: "max-bundle",
+        });
         pcRef.current = pc;
 
         pc.onicecandidate = (e) => {
@@ -307,8 +318,13 @@ export default function WatchPartyPage() {
             broadcastWebRTC({ type: "candidate", candidate: e.candidate });
         };
         pc.onconnectionstatechange = () => log("CONN: " + pc.connectionState);
-        pc.oniceconnectionstatechange = () =>
+        pc.oniceconnectionstatechange = () => {
           log("ICE: " + pc.iceConnectionState);
+          if (pc.iceConnectionState === "failed") {
+            log("ICE FAILED — restart ICE...");
+            pc.restartIce();
+          }
+        };
         pc.onsignalingstatechange = () => log("SIG: " + pc.signalingState);
 
         pc.ontrack = (e) => {
@@ -486,7 +502,7 @@ export default function WatchPartyPage() {
               width: "100%",
             }}
           >
-            🐛 DEBUG v7 — {debugLog.length} logs —{" "}
+            🐛 DEBUG v8 — {debugLog.length} logs —{" "}
             {showDebug ? "TUTUP" : "BUKA"}
           </button>
           {showDebug && (
@@ -946,31 +962,28 @@ function handleTap() {
     return
   }
 
-  // Set srcObject kalau belum
-  if (vid.srcObject !== remoteStream) {
-    vid.srcObject = remoteStream
-  }
+  // Selalu set ulang srcObject saat tap — paling reliable di mobile
+  vid.srcObject = remoteStream
 
-  // Tunggu canplay dulu, BARU play
-  const tryPlay = () => {
-    vid.play()
-      .then(() => {
-        log('TAP: ✅ PLAY SUKSES')
-        setNeedsTap(false)
-      })
-      .catch((err: any) => {
-        log('TAP ERROR: ' + err.name + ': ' + err.message)
+  vid.play()
+    .then(() => {
+      log('TAP: ✅ PLAY SUKSES')
+      setNeedsTap(false)
+    })
+    .catch((err: any) => {
+      log('TAP ERROR: ' + err.name + ': ' + err.message)
+      // Kalau gagal karena interrupted by load, coba lagi setelah delay
+      if (err.name === 'AbortError') {
+        log('TAP: AbortError — retry setelah 500ms...')
+        setTimeout(() => {
+          vid.play()
+            .then(() => { log('TAP RETRY: ✅ SUKSES'); setNeedsTap(false) })
+            .catch((e2: any) => { log('TAP RETRY ERROR: ' + e2.name); alert('Gagal: ' + e2.name + '\n' + e2.message) })
+        }, 500)
+      } else {
         alert('Gagal: ' + err.name + '\n' + err.message)
-      })
-  }
-
-  if (vid.readyState >= 3) {
-    // Sudah ready, langsung play
-    tryPlay()
-  } else {
-    // Tunggu canplay event
-    vid.addEventListener('canplay', tryPlay, { once: true })
-  }
+      }
+    })
 }
 
   return (
