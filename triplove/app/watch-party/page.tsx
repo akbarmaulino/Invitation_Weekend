@@ -44,7 +44,7 @@ class ErrorBoundary extends React.Component<EBProps, EBState> {
               marginBottom: 12,
             }}
           >
-            💥 CRASH — v8-debug
+            💥 CRASH — v10-debug
           </div>
           {this.state.error}
         </div>
@@ -260,10 +260,12 @@ export default function WatchPartyPage() {
       const candidates: RTCIceCandidate[] = [];
       pc.onicecandidate = (e) => {
         if (e.candidate) {
-          candidates.push(e.candidate);
-          log("HOST candidate: " + e.candidate.type + " | " + e.candidate.protocol + " | " + e.candidate.address);
+          candidates.push(e.candidate)
+          log('HOST CANDIDATE: ' + e.candidate.type + ' ' + e.candidate.address + ':' + e.candidate.port)
+        } else {
+          log('HOST: ICE gathering complete, total=' + candidates.length)
         }
-      };
+      }
 
       await new Promise<void>((resolve) => {
         pc.onicegatheringstatechange = () => {
@@ -318,9 +320,11 @@ export default function WatchPartyPage() {
         pcRef.current = pc;
 
         pc.onicecandidate = (e) => {
-          if (e.candidate)
-            broadcastWebRTC({ type: "candidate", candidate: e.candidate });
-        };
+          if (e.candidate) {
+            log('PARTNER CANDIDATE: ' + e.candidate.type + ' ' + e.candidate.address)
+            broadcastWebRTC({ type: "candidate", candidate: e.candidate })
+          }
+        }
         pc.onconnectionstatechange = () => log("CONN: " + pc.connectionState);
         pc.oniceconnectionstatechange = () => {
           log("ICE: " + pc.iceConnectionState);
@@ -506,7 +510,7 @@ export default function WatchPartyPage() {
               width: "100%",
             }}
           >
-            🐛 DEBUG v8 — {debugLog.length} logs —{" "}
+            🐛 DEBUG v10 — {debugLog.length} logs —{" "}
             {showDebug ? "TUTUP" : "BUKA"}
           </button>
           {showDebug && (
