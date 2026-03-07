@@ -154,6 +154,7 @@ export default function WatchPartyPage() {
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const playStartRef = useRef<number>(0);
+  const channelRef = useRef<any>(null);
 
   const [debugLog, setDebugLog] = useState<string[]>([]);
   const [showDebug, setShowDebug] = useState(false);
@@ -202,10 +203,13 @@ export default function WatchPartyPage() {
       setPartnerOnline(Object.keys(state).length >= 2);
     });
     ch.subscribe(async (status) => {
-      if (status === "SUBSCRIBED")
+      if (status === "SUBSCRIBED") {
+        channelRef.current = ch;
         await ch.track({ name: myName, host: isHost });
+      }
     });
     return () => {
+      channelRef.current = null;
       supabase.removeChannel(ch);
     };
   }, [roomCode, phase]);
@@ -366,9 +370,12 @@ export default function WatchPartyPage() {
   }
 
   function broadcastWebRTC(payload: any) {
-    supabase
-      .channel(`watch:${roomCode}`)
-      .send({ type: "broadcast", event: "webrtc", payload });
+    const ch = channelRef.current;
+    if (!ch) {
+      log("broadcastWebRTC: channel belum ready!");
+      return;
+    }
+    ch.send({ type: "broadcast", event: "webrtc", payload });
   }
 
   // ── ACTIONS ─────────────────────────────────────────────────────────────────
@@ -962,28 +969,33 @@ function handleTap() {
     return
   }
 
-  // Selalu set ulang srcObject saat tap — paling reliable di mobile
   vid.srcObject = remoteStream
 
-  vid.play()
-    .then(() => {
-      log('TAP: ✅ PLAY SUKSES')
-      setNeedsTap(false)
-    })
-    .catch((err: any) => {
-      log('TAP ERROR: ' + err.name + ': ' + err.message)
-      // Kalau gagal karena interrupted by load, coba lagi setelah delay
-      if (err.name === 'AbortError') {
-        log('TAP: AbortError — retry setelah 500ms...')
-        setTimeout(() => {
-          vid.play()
-            .then(() => { log('TAP RETRY: ✅ SUKSES'); setNeedsTap(false) })
-            .catch((e2: any) => { log('TAP RETRY ERROR: ' + e2.name); alert('Gagal: ' + e2.name + '\n' + e2.message) })
-        }, 500)
-      } else {
-        alert('Gagal: ' + err.name + '\n' + err.message)
-      }
-    })
+  const tryPlay = () => {
+    vid.play()
+      .then(() => {
+        log('TAP: ✅ PLAY SUKSES')
+        setNeedsTap(false)
+      })
+      .catch((err: any) => {
+        log('TAP ERROR: ' + err.name + ': ' + err.message)
+        if (err.name === 'AbortError') {
+          log('TAP: AbortError — retry setelah 800ms...')
+          setTimeout(tryPlay, 800)
+        } else {
+          alert('Gagal: ' + err.name + '\n' + err.message)
+        }
+      })
+  }
+
+  if (vid.readyState >= 1) {
+    tryPlay()
+  } else {
+    vid.onloadedmetadata = () => {
+      log('TAP: loadedmetadata — mulai play')
+      tryPlay()
+    }
+  }
 }
 
   return (
