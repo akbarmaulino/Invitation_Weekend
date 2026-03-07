@@ -74,6 +74,7 @@ export default function WatchPartyPage() {
   const streamRef = useRef<MediaStream | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [screenActive, setScreenActive] = useState(false)
+  const [needsTap, setNeedsTap] = useState(false)
 
   const chatEndRef = useRef<HTMLDivElement | null>(null)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -219,16 +220,10 @@ export default function WatchPartyPage() {
         pc.ontrack = e => {
           console.log('[WP] Partner got track!', e.streams.length, 'streams')
           if (e.streams[0]) {
-            // Store stream in ref and trigger re-render via state
+            // Just store stream — do NOT set srcObject yet (mobile blocks background autoplay)
             streamRef.current = e.streams[0]
             setShowScreen(true)
-            // Set srcObject after React renders the video element
-            setTimeout(() => {
-              if (videoRef.current) {
-                videoRef.current.srcObject = e.streams[0]
-                videoRef.current.play().catch(err => console.warn('[WP] video play failed:', err))
-              }
-            }, 100)
+            setNeedsTap(true) // Always show tap button on mobile
           }
         }
         pc.onconnectionstatechange = () => {
@@ -325,6 +320,7 @@ export default function WatchPartyPage() {
             partnerOnline={partnerOnline} screenActive={screenActive}
             onStartScreen={startScreenShare} onStopScreen={stopScreenShare}
             showScreen={showScreen} videoRef={videoRef} streamRef={streamRef} chatEndRef={chatEndRef}
+            needsTap={needsTap} setNeedsTap={setNeedsTap}
           />
         )}
       </div>
@@ -417,11 +413,10 @@ function WaitingScreen({ roomCode, filmTitle, myName, partnerOnline, onStart }: 
 }
 
 // ── PARTY SCREEN ──────────────────────────────────────────────────────────────
-function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions, chatInput, setChatInput, onSendChat, onReaction, elapsed, isPlaying, onTogglePlay, partnerOnline, screenActive, onStartScreen, onStopScreen, showScreen, videoRef, streamRef, chatEndRef }: any) {
+function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions, chatInput, setChatInput, onSendChat, onReaction, elapsed, isPlaying, onTogglePlay, partnerOnline, screenActive, onStartScreen, onStopScreen, showScreen, videoRef, streamRef, chatEndRef, needsTap, setNeedsTap }: any) {
   const [showReactions, setShowReactions] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [chatOpen, setChatOpen] = useState(true)
-  const [needsTap, setNeedsTap] = useState(false)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -466,15 +461,7 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
                 <video
                   ref={el => {
                     (videoRef as any).current = el
-                    if (el && streamRef && (streamRef as any).current) {
-                      el.srcObject = (streamRef as any).current
-                      el.muted = false
-                      el.play().then(() => {
-                        setNeedsTap(false)
-                      }).catch(() => {
-                        setNeedsTap(true)
-                      })
-                    }
+                    // Don't auto-set srcObject — mobile blocks it. Wait for user tap.
                   }}
                   autoPlay
                   playsInline
@@ -485,20 +472,20 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
                   <div
                     onClick={() => {
                       const vid = videoRef.current
-                      if (vid) {
-                        // Re-attach stream in case it got lost
-                        if (!vid.srcObject && streamRef?.current) {
-                          vid.srcObject = streamRef.current
-                        }
-                        vid.muted = false
-                        vid.play().then(() => setNeedsTap(false)).catch(() => {
-                          // Try muted first (some browsers require this)
-                          vid.muted = true
-                          vid.play().then(() => {
-                            vid.muted = false
-                            setNeedsTap(false)
-                          }).catch(console.error)
+                      const stream = (streamRef as any)?.current
+                      if (vid && stream) {
+                        // Set srcObject INSIDE user gesture — this is what mobile requires
+                        vid.srcObject = stream
+                        vid.muted = true // start muted (required by some mobile browsers)
+                        vid.play().then(() => {
+                          vid.muted = false // unmute after play starts
+                          setNeedsTap(false)
+                          console.log('[WP] Mobile play success!')
+                        }).catch((err: unknown) => {
+                          console.error('[WP] Play failed even with gesture:', err)
                         })
+                      } else {
+                        console.warn('[WP] Tap: vid=', !!vid, 'stream=', !!stream)
                       }
                     }}
                     style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'rgba(0,0,0,0.4)' }}>
@@ -536,9 +523,12 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
             <button onClick={() => {
               onTogglePlay()
               // Also trigger video play on mobile if blocked
-              if (videoRef?.current && videoRef.current.paused) {
-                videoRef.current.muted = false
-                videoRef.current.play().catch(() => {})
+              const vid = videoRef?.current
+              const stream = (streamRef as any)?.current
+              if (vid && stream && needsTap) {
+                if (!vid.srcObject) vid.srcObject = stream
+                vid.muted = true
+                vid.play().then(() => { vid.muted = false; setNeedsTap(false) }).catch(() => {})
               }
             }} style={{ width: isMobile ? 38 : 44, height: isMobile ? 38 : 44, borderRadius: '50%', background: `linear-gradient(135deg, ${GOLD}, #a07840)`, border: 'none', color: DARK, fontSize: isMobile ? '1em' : '1.2em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(201,169,110,0.35)', flexShrink: 0 }}>
               {isPlaying ? '⏸' : '▶'}
