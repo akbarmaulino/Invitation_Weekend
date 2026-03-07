@@ -154,7 +154,6 @@ export default function WatchPartyPage() {
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const playStartRef = useRef<number>(0);
-  const channelRef = useRef<any>(null);
 
   const [debugLog, setDebugLog] = useState<string[]>([]);
   const [showDebug, setShowDebug] = useState(false);
@@ -203,13 +202,10 @@ export default function WatchPartyPage() {
       setPartnerOnline(Object.keys(state).length >= 2);
     });
     ch.subscribe(async (status) => {
-      if (status === "SUBSCRIBED") {
-        channelRef.current = ch;
+      if (status === "SUBSCRIBED")
         await ch.track({ name: myName, host: isHost });
-      }
     });
     return () => {
-      channelRef.current = null;
       supabase.removeChannel(ch);
     };
   }, [roomCode, phase]);
@@ -321,14 +317,22 @@ export default function WatchPartyPage() {
           if (e.candidate)
             broadcastWebRTC({ type: "candidate", candidate: e.candidate });
         };
-        pc.onconnectionstatechange = () => log("CONN: " + pc.connectionState);
+        pc.onconnectionstatechange = () => {
+          log("CONN: " + pc.connectionState)
+          if (pc.connectionState === 'failed') {
+            log("CONN FAILED — iceGatheringState=" + pc.iceGatheringState + " signalingState=" + pc.signalingState)
+          }
+        }
         pc.oniceconnectionstatechange = () => {
-          log("ICE: " + pc.iceConnectionState);
+          log("ICE: " + pc.iceConnectionState)
           if (pc.iceConnectionState === "failed") {
-            log("ICE FAILED — restart ICE...");
+            log("ICE FAILED — coba restartIce()")
             pc.restartIce();
           }
-        };
+          if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+            log("ICE ✅ CONNECTED — stream harusnya mengalir")
+          }
+        }
         pc.onsignalingstatechange = () => log("SIG: " + pc.signalingState);
 
         pc.ontrack = (e) => {
@@ -370,12 +374,9 @@ export default function WatchPartyPage() {
   }
 
   function broadcastWebRTC(payload: any) {
-    const ch = channelRef.current;
-    if (!ch) {
-      log("broadcastWebRTC: channel belum ready!");
-      return;
-    }
-    ch.send({ type: "broadcast", event: "webrtc", payload });
+    supabase
+      .channel(`watch:${roomCode}`)
+      .send({ type: "broadcast", event: "webrtc", payload });
   }
 
   // ── ACTIONS ─────────────────────────────────────────────────────────────────
@@ -950,53 +951,93 @@ function PartyScreen({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-    useEffect(() => {
-  if (remoteStream && localVidRef.current) {
+  useEffect(() => {
+    log('STREAM EFFECT: remoteStream=' + (remoteStream ? 'ADA' : 'NULL') + ' vidRef=' + (localVidRef.current ? 'ADA' : 'NULL'))
+    if (remoteStream) {
+      log('STREAM EFFECT: tracks=' + remoteStream.getTracks().length + ' active=' + remoteStream.active)
+      remoteStream.getTracks().forEach((t: MediaStreamTrack, i: number) => {
+        log('STREAM EFFECT track[' + i + ']: kind=' + t.kind + ' state=' + t.readyState + ' enabled=' + t.enabled + ' muted=' + t.muted)
+      })
+    }
+    if (remoteStream && localVidRef.current) {
       localVidRef.current.srcObject = remoteStream
-      log('STREAM EFFECT: srcObject set, tracks=' + remoteStream.getTracks().length)
+      log('STREAM EFFECT: srcObject SET ke video element')
+      log('STREAM EFFECT: video.readyState=' + localVidRef.current.readyState + ' paused=' + localVidRef.current.paused)
+    } else {
+      if (!remoteStream) log('STREAM EFFECT: skip — remoteStream null')
+      if (!localVidRef.current) log('STREAM EFFECT: skip — videoRef null (video belum mount?)')
     }
   }, [remoteStream])
 
   function assignVideoRef(el: HTMLVideoElement | null) {
+    log('assignVideoRef: el=' + (el ? 'ADA' : 'NULL'))
     localVidRef.current = el
     if (videoRef) videoRef.current = el
-  }
-
-function handleTap() {
-  const vid = localVidRef.current
-  if (!vid || !remoteStream) {
-    alert('Stream belum siap, tunggu lalu tap lagi')
-    return
-  }
-
-  vid.srcObject = remoteStream
-
-  const tryPlay = () => {
-    vid.play()
-      .then(() => {
-        log('TAP: ✅ PLAY SUKSES')
-        setNeedsTap(false)
-      })
-      .catch((err: any) => {
-        log('TAP ERROR: ' + err.name + ': ' + err.message)
-        if (err.name === 'AbortError') {
-          log('TAP: AbortError — retry setelah 800ms...')
-          setTimeout(tryPlay, 800)
-        } else {
-          alert('Gagal: ' + err.name + '\n' + err.message)
-        }
-      })
-  }
-
-  if (vid.readyState >= 1) {
-    tryPlay()
-  } else {
-    vid.onloadedmetadata = () => {
-      log('TAP: loadedmetadata — mulai play')
-      tryPlay()
+    if (el && remoteStream) {
+      log('assignVideoRef: langsung set srcObject karena stream sudah ada')
+      el.srcObject = remoteStream
     }
   }
-}
+
+  function handleTap() {
+    log('TAP: dipanggil')
+    const vid = localVidRef.current
+    log('TAP: vid=' + (vid ? 'ADA' : 'NULL') + ' remoteStream=' + (remoteStream ? 'ADA' : 'NULL'))
+
+    if (!vid) {
+      log('TAP: ❌ video element NULL')
+      alert('Video element tidak ada — coba refresh')
+      return
+    }
+    if (!remoteStream) {
+      log('TAP: ❌ remoteStream NULL — koneksi belum berhasil')
+      alert('Stream belum ada. Lihat log — kemungkinan ICE failed.\nCoba: refresh kedua browser, lalu host share screen lagi.')
+      return
+    }
+
+    log('TAP: remoteStream.active=' + remoteStream.active + ' tracks=' + remoteStream.getTracks().length)
+    remoteStream.getTracks().forEach((t: MediaStreamTrack, i: number) => {
+      log('TAP track[' + i + ']: kind=' + t.kind + ' state=' + t.readyState + ' enabled=' + t.enabled)
+    })
+    log('TAP: vid.readyState=' + vid.readyState + ' vid.srcObject=' + (vid.srcObject ? 'ADA' : 'NULL') + ' vid.paused=' + vid.paused)
+
+    // Selalu set ulang srcObject
+    vid.srcObject = remoteStream
+    log('TAP: srcObject di-set ulang')
+
+    const tryPlay = () => {
+      log('TAP tryPlay: vid.readyState=' + vid.readyState)
+      vid.play()
+        .then(() => {
+          log('TAP: ✅ PLAY SUKSES — needsTap = false')
+          setNeedsTap(false)
+        })
+        .catch((err: any) => {
+          log('TAP ERROR: ' + err.name + ': ' + err.message)
+          if (err.name === 'AbortError') {
+            log('TAP: AbortError — retry setelah 800ms...')
+            setTimeout(tryPlay, 800)
+          } else if (err.name === 'NotAllowedError') {
+            log('TAP: NotAllowedError — butuh gesture user')
+            alert('Browser blokir autoplay. Tap langsung di video.')
+          } else {
+            log('TAP: error lain — ' + err.name)
+            alert('Gagal: ' + err.name + '\n' + err.message)
+          }
+        })
+    }
+
+    if (vid.readyState >= 1) {
+      log('TAP: readyState >= 1, langsung tryPlay')
+      tryPlay()
+    } else {
+      log('TAP: readyState=0, tunggu loadedmetadata...')
+      vid.onloadedmetadata = () => {
+        log('TAP: loadedmetadata fired! readyState=' + vid.readyState)
+        tryPlay()
+      }
+    }
+  }
 
   return (
     <div
