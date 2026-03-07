@@ -22,8 +22,8 @@ const REACTIONS = ['❤️','😂','😱','😭','🔥','👏','😍','💀']
 // ICE Servers — STUN (free) + TURN relay via Metered.ca free tier
 // Ganti USERNAME dan CREDENTIAL dengan akun Metered.ca kamu
 // Daftar gratis di: https://dashboard.metered.ca
-const TURN_USER = process.env.NEXT_PUBLIC_TURN_USERNAME || ''
-const TURN_CRED = process.env.NEXT_PUBLIC_TURN_CREDENTIAL || ''
+const TURN_USER = process.env.NEXT_PUBLIC_TURN_USERNAME || '52361553299cc352d159aa8a'
+const TURN_CRED = process.env.NEXT_PUBLIC_TURN_CREDENTIAL || 'UqT3j4VoaECWj4on'
 const TURN_DOMAIN = process.env.NEXT_PUBLIC_TURN_DOMAIN || 'global.relay.metered.ca'
 const ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
@@ -458,18 +458,37 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
           {/* Screen / placeholder */}
           <div style={{ flex: 1, position: 'relative', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: isMobile ? 220 : 0 }}>
             {showScreen ? (
-              <video
-              ref={el => {
-                (videoRef as any).current = el
-                if (el && streamRef && (streamRef as any).current) {
-                  el.srcObject = (streamRef as any).current
-                  el.play().catch(() => {})
-                }
-              }}
-              autoPlay
-              playsInline
-              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-            />
+              <div style={{ width: '100%', height: '100%', position: 'relative' }} onClick={() => {
+                // Tap anywhere to play — handles mobile autoplay block
+                if (videoRef.current) videoRef.current.play().catch(() => {})
+              }}>
+                <video
+                  ref={el => {
+                    (videoRef as any).current = el
+                    if (el && streamRef && (streamRef as any).current) {
+                      el.srcObject = (streamRef as any).current
+                      el.muted = false
+                      el.play().catch(() => {
+                        // Autoplay blocked — show tap hint
+                        console.log('[WP] Autoplay blocked, waiting for tap')
+                      })
+                    }
+                  }}
+                  autoPlay
+                  playsInline
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+                {/* Tap to play hint for mobile */}
+                <div id="tap-hint" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}
+                  onClick={() => {
+                    const hint = document.getElementById('tap-hint')
+                    if (hint) hint.style.display = 'none'
+                  }}>
+                  <div style={{ background: 'rgba(0,0,0,0.6)', borderRadius: 999, padding: '12px 24px', color: 'white', fontSize: '0.85em', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: '1.2em' }}>▶</span> Tap untuk mulai
+                  </div>
+                </div>
+              </div>
             ) : (
               <div style={{ textAlign: 'center', padding: 24 }}>
                 <div style={{ fontSize: isMobile ? '3em' : '5em', marginBottom: 12, opacity: 0.3 }}>🎞️</div>
