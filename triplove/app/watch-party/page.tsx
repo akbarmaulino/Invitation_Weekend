@@ -942,65 +942,29 @@ function PartyScreen({
   }, [remoteStream]);
 
   function assignVideoRef(el: HTMLVideoElement | null) {
-    localVidRef.current = el;
-    if (videoRef) videoRef.current = el;
-    if (el && remoteStream) {
-      el.srcObject = remoteStream;
-      log("ASSIGN REF: srcObject set on mount");
-    }
+    localVidRef.current = el
+    if (videoRef) videoRef.current = el
   }
 
-  function handleTap() {
-    const vid = localVidRef.current;
-    log(
-      "TAP: vid=" +
-        !!vid +
-        " srcObject=" +
-        !!vid?.srcObject +
-        " remoteStream=" +
-        !!remoteStream +
-        " active=" +
-        remoteStream?.active +
-        " tracks=" +
-        remoteStream?.getTracks().length,
-    );
+function handleTap() {
+  const vid = localVidRef.current
+  log('TAP: vid=' + !!vid + ' srcObject=' + !!(vid?.srcObject) + ' remoteStream=' + !!remoteStream)
 
-    if (!vid) {
-      log("TAP ERROR: no video element");
-      alert("ERROR: video element tidak ada!");
-      return;
-    }
-    if (!remoteStream) {
-      log("TAP ERROR: no remoteStream");
-      alert("ERROR: stream belum ada!\nTunggu beberapa detik lalu tap lagi.");
-      return;
-    }
-    if (!remoteStream.active) {
-      log("TAP ERROR: stream tidak active");
-      alert("Stream sudah mati!\nMinta host stop lalu share ulang.");
-      return;
-    }
+  if (!vid) { alert('ERROR: video element tidak ada!'); return }
+  if (!remoteStream) { alert('ERROR: stream belum ada!\nTunggu lalu tap lagi.'); return }
+  if (!remoteStream.active) { alert('Stream mati!\nMinta host share ulang.'); return }
 
-    if (!vid.srcObject) {
-      vid.srcObject = remoteStream;
-      log("TAP: srcObject assigned manually");
-    }
-
-    vid.muted = true;
-    vid
-      .play()
-      .then(() => {
-        log("TAP: ✅ PLAY SUKSES!");
-        setTimeout(() => {
-          vid.muted = false;
-          setNeedsTap(false);
-        }, 500);
-      })
-      .catch((err: any) => {
-        log("TAP ERROR: play gagal — " + err.name + ": " + err.message);
-        alert("Play gagal!\n" + err.name + ": " + err.message);
-      });
-  }
+  vid.muted = true
+  vid.play()
+    .then(() => {
+      log('TAP: ✅ PLAY SUKSES!')
+      setTimeout(() => { vid.muted = false; setNeedsTap(false) }, 500)
+    })
+    .catch((err: any) => {
+      log('TAP ERROR: ' + err.name + ': ' + err.message)
+      alert('Play gagal!\n' + err.name + ': ' + err.message)
+    })
+}
 
   return (
     <div
