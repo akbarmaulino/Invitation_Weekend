@@ -44,7 +44,7 @@ class ErrorBoundary extends React.Component<EBProps, EBState> {
               marginBottom: 12,
             }}
           >
-            💥 CRASH — v5-debug
+            💥 CRASH — v7-debug
           </div>
           {this.state.error}
         </div>
@@ -164,6 +164,8 @@ export default function WatchPartyPage() {
     // Pakai setTimeout agar tidak panggil setState di tengah render cycle
     setTimeout(() => setDebugLog([...debugLogRef.current]), 0);
   }
+
+
   // ── REALTIME ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!roomCode || phase === "lobby") return;
@@ -484,7 +486,7 @@ export default function WatchPartyPage() {
               width: "100%",
             }}
           >
-            🐛 DEBUG v5 — {debugLog.length} logs —{" "}
+            🐛 DEBUG v7 — {debugLog.length} logs —{" "}
             {showDebug ? "TUTUP" : "BUKA"}
           </button>
           {showDebug && (
@@ -925,6 +927,13 @@ function PartyScreen({
     return () => window.removeEventListener("resize", check);
   }, []);
 
+    useEffect(() => {
+  if (remoteStream && localVidRef.current) {
+      localVidRef.current.srcObject = remoteStream
+      log('STREAM EFFECT: srcObject set, tracks=' + remoteStream.getTracks().length)
+    }
+  }, [remoteStream])
+
   function assignVideoRef(el: HTMLVideoElement | null) {
     localVidRef.current = el
     if (videoRef) videoRef.current = el
@@ -933,29 +942,34 @@ function PartyScreen({
 function handleTap() {
   const vid = localVidRef.current
   if (!vid || !remoteStream) {
-    alert('Stream belum siap, tunggu 2 detik lalu tap lagi')
+    alert('Stream belum siap, tunggu lalu tap lagi')
     return
   }
 
-  // Reset total — penting untuk Samsung Chrome
-  vid.srcObject = null
-  vid.load()
+  // Set srcObject kalau belum
+  if (vid.srcObject !== remoteStream) {
+    vid.srcObject = remoteStream
+  }
 
-  // Set srcObject fresh dalam gesture
-  vid.srcObject = remoteStream
-
-  const playPromise = vid.play()
-  if (playPromise !== undefined) {
-    playPromise
+  // Tunggu canplay dulu, BARU play
+  const tryPlay = () => {
+    vid.play()
       .then(() => {
         log('TAP: ✅ PLAY SUKSES')
         setNeedsTap(false)
       })
       .catch((err: any) => {
         log('TAP ERROR: ' + err.name + ': ' + err.message)
-        // Coba fallback: createElement baru
         alert('Gagal: ' + err.name + '\n' + err.message)
       })
+  }
+
+  if (vid.readyState >= 3) {
+    // Sudah ready, langsung play
+    tryPlay()
+  } else {
+    // Tunggu canplay event
+    vid.addEventListener('canplay', tryPlay, { once: true })
   }
 }
 
@@ -1084,7 +1098,6 @@ function handleTap() {
                   ref={assignVideoRef}
                   autoPlay
                   playsInline
-                  muted
                   style={{
                     width: "100%",
                     height: "100%",
