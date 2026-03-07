@@ -139,10 +139,7 @@ export default function WatchPartyPage() {
   // ── WEBRTC ───────────────────────────────────────────────────────────────────
   async function startScreenShare() {
     try {
-      const stream = await (navigator.mediaDevices as any).getDisplayMedia({
-        video: { frameRate: { ideal: 30 } },
-        audio: { echoCancellation: false, noiseSuppression: false, sampleRate: 44100 }
-      })
+      const stream = await (navigator.mediaDevices as any).getDisplayMedia({ video: true, audio: true })
       streamRef.current = stream
       stream.getVideoTracks()[0].onended = () => stopScreenShare()
 
@@ -421,7 +418,6 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
   const [showReactions, setShowReactions] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [chatOpen, setChatOpen] = useState(true)
-  const [needsTap, setNeedsTap] = useState(false)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -462,17 +458,19 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
           {/* Screen / placeholder */}
           <div style={{ flex: 1, position: 'relative', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: isMobile ? 220 : 0 }}>
             {showScreen ? (
-              <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+              <div style={{ width: '100%', height: '100%', position: 'relative' }} onClick={() => {
+                // Tap anywhere to play — handles mobile autoplay block
+                if (videoRef.current) videoRef.current.play().catch(() => {})
+              }}>
                 <video
                   ref={el => {
                     (videoRef as any).current = el
                     if (el && streamRef && (streamRef as any).current) {
                       el.srcObject = (streamRef as any).current
                       el.muted = false
-                      el.play().then(() => {
-                        setNeedsTap(false)
-                      }).catch(() => {
-                        setNeedsTap(true)
+                      el.play().catch(() => {
+                        // Autoplay blocked — show tap hint
+                        console.log('[WP] Autoplay blocked, waiting for tap')
                       })
                     }
                   }}
@@ -480,21 +478,16 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
                   playsInline
                   style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 />
-                {/* Only show tap hint when autoplay is actually blocked */}
-                {needsTap && (
-                  <div
-                    onClick={() => {
-                      if (videoRef.current) {
-                        videoRef.current.muted = false
-                        videoRef.current.play().then(() => setNeedsTap(false)).catch(() => {})
-                      }
-                    }}
-                    style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'rgba(0,0,0,0.3)' }}>
-                    <div style={{ background: 'rgba(0,0,0,0.75)', borderRadius: 999, padding: '14px 28px', color: 'white', fontSize: '0.9em', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
-                      <span style={{ fontSize: '1.3em' }}>▶</span> Tap untuk mulai
-                    </div>
+                {/* Tap to play hint for mobile */}
+                <div id="tap-hint" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}
+                  onClick={() => {
+                    const hint = document.getElementById('tap-hint')
+                    if (hint) hint.style.display = 'none'
+                  }}>
+                  <div style={{ background: 'rgba(0,0,0,0.6)', borderRadius: 999, padding: '12px 24px', color: 'white', fontSize: '0.85em', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: '1.2em' }}>▶</span> Tap untuk mulai
                   </div>
-                )}
+                </div>
               </div>
             ) : (
               <div style={{ textAlign: 'center', padding: 24 }}>
