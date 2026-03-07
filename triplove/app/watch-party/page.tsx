@@ -139,7 +139,10 @@ export default function WatchPartyPage() {
   // ── WEBRTC ───────────────────────────────────────────────────────────────────
   async function startScreenShare() {
     try {
-      const stream = await (navigator.mediaDevices as any).getDisplayMedia({ video: true, audio: true })
+      const stream = await (navigator.mediaDevices as any).getDisplayMedia({
+        video: { frameRate: { ideal: 30 } },
+        audio: { echoCancellation: false, noiseSuppression: false, sampleRate: 44100 }
+      })
       streamRef.current = stream
       stream.getVideoTracks()[0].onended = () => stopScreenShare()
 
@@ -418,6 +421,7 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
   const [showReactions, setShowReactions] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [chatOpen, setChatOpen] = useState(true)
+  const [needsTap, setNeedsTap] = useState(false)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -458,19 +462,17 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
           {/* Screen / placeholder */}
           <div style={{ flex: 1, position: 'relative', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: isMobile ? 220 : 0 }}>
             {showScreen ? (
-              <div style={{ width: '100%', height: '100%', position: 'relative' }} onClick={() => {
-                // Tap anywhere to play — handles mobile autoplay block
-                if (videoRef.current) videoRef.current.play().catch(() => {})
-              }}>
+              <div style={{ width: '100%', height: '100%', position: 'relative' }}>
                 <video
                   ref={el => {
                     (videoRef as any).current = el
                     if (el && streamRef && (streamRef as any).current) {
                       el.srcObject = (streamRef as any).current
                       el.muted = false
-                      el.play().catch(() => {
-                        // Autoplay blocked — show tap hint
-                        console.log('[WP] Autoplay blocked, waiting for tap')
+                      el.play().then(() => {
+                        setNeedsTap(false)
+                      }).catch(() => {
+                        setNeedsTap(true)
                       })
                     }
                   }}
@@ -478,16 +480,35 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
                   playsInline
                   style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 />
-                {/* Tap to play hint for mobile */}
-                <div id="tap-hint" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}
-                  onClick={() => {
-                    const hint = document.getElementById('tap-hint')
-                    if (hint) hint.style.display = 'none'
-                  }}>
-                  <div style={{ background: 'rgba(0,0,0,0.6)', borderRadius: 999, padding: '12px 24px', color: 'white', fontSize: '0.85em', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: '1.2em' }}>▶</span> Tap untuk mulai
+                {/* Only show tap hint when autoplay is actually blocked */}
+                {needsTap && (
+                  <div
+                    onClick={() => {
+                      const vid = videoRef.current
+                      if (vid) {
+                        // Re-attach stream in case it got lost
+                        if (!vid.srcObject && streamRef?.current) {
+                          vid.srcObject = streamRef.current
+                        }
+                        vid.muted = false
+                        vid.play().then(() => setNeedsTap(false)).catch(() => {
+                          // Try muted first (some browsers require this)
+                          vid.muted = true
+                          vid.play().then(() => {
+                            vid.muted = false
+                            setNeedsTap(false)
+                          }).catch(console.error)
+                        })
+                      }
+                    }}
+                    style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'rgba(0,0,0,0.4)' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ width: 80, height: 80, borderRadius: '50%', background: `linear-gradient(135deg, ${GOLD}, #a07840)`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 0 40px rgba(201,169,110,0.6)', fontSize: '2em' }}>▶</div>
+                      <p style={{ color: 'white', fontWeight: 700, fontSize: '1.1em', margin: 0 }}>Tap untuk mulai</p>
+                      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75em', margin: '6px 0 0' }}>Ketuk layar untuk memutar video</p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ) : (
               <div style={{ textAlign: 'center', padding: 24 }}>
@@ -512,7 +533,14 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
             <div style={{ fontFamily: 'monospace', fontSize: isMobile ? '1em' : '1.2em', color: GOLD, fontWeight: 700, minWidth: 60 }}>{fmtTime(elapsed)}</div>
 
             {/* Play/Pause */}
-            <button onClick={onTogglePlay} style={{ width: isMobile ? 38 : 44, height: isMobile ? 38 : 44, borderRadius: '50%', background: `linear-gradient(135deg, ${GOLD}, #a07840)`, border: 'none', color: DARK, fontSize: isMobile ? '1em' : '1.2em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(201,169,110,0.35)', flexShrink: 0 }}>
+            <button onClick={() => {
+              onTogglePlay()
+              // Also trigger video play on mobile if blocked
+              if (videoRef?.current && videoRef.current.paused) {
+                videoRef.current.muted = false
+                videoRef.current.play().catch(() => {})
+              }
+            }} style={{ width: isMobile ? 38 : 44, height: isMobile ? 38 : 44, borderRadius: '50%', background: `linear-gradient(135deg, ${GOLD}, #a07840)`, border: 'none', color: DARK, fontSize: isMobile ? '1em' : '1.2em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(201,169,110,0.35)', flexShrink: 0 }}>
               {isPlaying ? '⏸' : '▶'}
             </button>
 
