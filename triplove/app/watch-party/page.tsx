@@ -49,14 +49,16 @@ export default function WatchPartyPage() {
   const [chatInput, setChatInput] = useState('')
   const [elapsed, setElapsed] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
+
+  // showScreen: hanya true untuk PARTNER (bukan host)
+  // screenActive: true kalau host sedang share
   const [showScreen, setShowScreen] = useState(false)
+  const [screenActive, setScreenActive] = useState(false)
   const [needsInteraction, setNeedsInteraction] = useState(false)
 
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
-  const [screenActive, setScreenActive] = useState(false)
-
   const chatEndRef = useRef<HTMLDivElement | null>(null)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const playStartRef = useRef<number>(0)
@@ -100,7 +102,7 @@ export default function WatchPartyPage() {
     return () => { supabase.removeChannel(ch) }
   }, [roomCode, phase])
 
-  // ── TIMER LOGIC ──────────────────────────────────────────────────────────────
+  // ── TIMER ────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current)
     if (isPlaying) {
@@ -116,13 +118,9 @@ export default function WatchPartyPage() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // ── WEBRTC SIGNALING ─────────────────────────────────────────────────────────
+  // ── WEBRTC ───────────────────────────────────────────────────────────────────
   async function broadcastWebRTC(payload: any) {
-    await supabase.channel(`watch:${roomCode}`).send({
-      type: 'broadcast',
-      event: 'webrtc',
-      payload
-    })
+    await supabase.channel(`watch:${roomCode}`).send({ type: 'broadcast', event: 'webrtc', payload })
   }
 
   async function handleWebRTCSignal(payload: any) {
@@ -135,7 +133,7 @@ export default function WatchPartyPage() {
     } else {
       if (payload.type === 'offer') {
         if (pcRef.current) pcRef.current.close()
-        
+
         const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
         pcRef.current = pc
 
@@ -146,14 +144,14 @@ export default function WatchPartyPage() {
         pc.ontrack = (e: RTCTrackEvent) => {
           if (e.streams[0]) {
             streamRef.current = e.streams[0]
+            // FIX: hanya partner yang set showScreen=true
             setShowScreen(true)
             setNeedsInteraction(true)
-            
             setTimeout(() => {
               if (videoRef.current) {
                 videoRef.current.srcObject = e.streams[0]
                 videoRef.current.muted = true
-                videoRef.current.play().catch(err => console.error(err))
+                videoRef.current.play().catch(err => console.warn('[WP] autoplay blocked:', err))
               }
             }, 200)
           }
@@ -181,15 +179,11 @@ export default function WatchPartyPage() {
       streamRef.current = stream
       stream.getVideoTracks()[0].onended = () => stopScreenShare()
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        setShowScreen(true)
-      }
+      // FIX: Host TIDAK set showScreen — biar tidak looping/capture diri sendiri
+      // Host cukup tahu screenActive = true
 
       const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
       pcRef.current = pc
-      
-      // PERBAIKAN: Memberikan tipe data 'MediaStreamTrack' pada 't'
       stream.getTracks().forEach((t: MediaStreamTrack) => pc.addTrack(t, stream))
 
       const collectedCandidates: RTCIceCandidate[] = []
@@ -205,7 +199,7 @@ export default function WatchPartyPage() {
       broadcastWebRTC({ type: 'offer', sdp: pc.localDescription, candidates: collectedCandidates })
       setScreenActive(true)
     } catch (e) {
-      console.error(e)
+      console.error('[WP] startScreenShare error:', e)
     }
   }
 
@@ -216,89 +210,380 @@ export default function WatchPartyPage() {
     streamRef.current = null
     setShowScreen(false)
     setScreenActive(false)
+    setNeedsInteraction(false)
+  }
+
+  function handleTapToPlay() {
+    if (!videoRef.current) return
+    videoRef.current.muted = false
+    videoRef.current.play().catch(() => {
+      if (videoRef.current) videoRef.current.muted = true
+      videoRef.current?.play().catch(console.warn)
+    })
+    setNeedsInteraction(false)
+  }
+
+  // ── ACTIONS ──────────────────────────────────────────────────────────────────
+  function createRoom() {
+    if (!myName.trim() || !filmTitle.trim()) { setError('Isi nama dan judul film dulu!'); return }
+    setRoomCode(genCode())
+    setIsHost(true)
+    setPhase('waiting')
+    setError('')
+  }
+
+  function joinRoom() {
+    if (!myName.trim() || !joinCode.trim()) { setError('Isi nama dan kode room dulu!'); return }
+    setRoomCode(joinCode.toUpperCase())
+    setIsHost(false)
+    setPhase('party')
+    setError('')
+  }
+
+  function togglePlay() {
+    const next = !isPlaying
+    setIsPlaying(next)
+    supabase.channel(`watch:${roomCode}`).send({
+      type: 'broadcast', event: 'sync',
+      payload: { playing: next, time: elapsed, ts: Date.now() }
+    })
+  }
+
+  function sendChat() {
+    if (!chatInput.trim()) return
+    const msg: ChatMessage = { id: genId(), sender: myName, text: chatInput.trim(), ts: Date.now() }
+    setMessages(m => [...m, msg])
+    supabase.channel(`watch:${roomCode}`).send({ type: 'broadcast', event: 'chat', payload: msg })
+    setChatInput('')
+  }
+
+  function sendReaction(emoji: string) {
+    const r: Reaction = { id: genId(), emoji, x: 20 + Math.random() * 60, y: 20 + Math.random() * 60, ts: Date.now() }
+    setReactions(prev => [...prev, r])
+    setTimeout(() => setReactions(prev => prev.filter(x => x.id !== r.id)), 3000)
+    supabase.channel(`watch:${roomCode}`).send({ type: 'broadcast', event: 'reaction', payload: r })
   }
 
   // ── RENDER ───────────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: DARK, color: CREAM, fontFamily: 'serif' }}>
-      {phase === 'lobby' && (
-        <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ width: '100%', maxWidth: 400, background: '#162435', padding: 40, borderRadius: 24, border: `1px solid ${GOLD}33` }}>
-            <h1 style={{ color: GOLD, textAlign: 'center', marginBottom: 30 }}>Watch Party</h1>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <input placeholder="Nama Kamu" value={myName} onChange={e => setMyName(e.target.value)} style={inputStyle} />
-              <input placeholder="Judul Film" value={filmTitle} onChange={e => setFilmTitle(e.target.value)} style={inputStyle} />
-              <button onClick={() => { if(myName && filmTitle) { setRoomCode(genCode()); setIsHost(true); setPhase('waiting'); } }} style={btnStyle}>Buat Room</button>
-              <input placeholder="Kode Room" value={joinCode} onChange={e => setJoinCode(e.target.value)} style={inputStyle} />
-              <button onClick={() => { if(myName && joinCode) { setRoomCode(joinCode.toUpperCase()); setIsHost(false); setPhase('party'); } }} style={{ ...btnStyle, background: 'transparent', border: `1px solid ${GOLD}`, color: GOLD }}>Join Party</button>
-            </div>
-          </div>
-        </div>
-      )}
+    <div style={{ minHeight: '100vh', background: DARK, fontFamily: "'Georgia', serif", position: 'relative', overflow: 'hidden' }}>
+      {/* Grain overlay */}
+      <div style={{ position: 'fixed', inset: 0, backgroundImage: 'url("https://www.transparenttextures.com/patterns/stardust.png")', opacity: 0.08, pointerEvents: 'none', zIndex: 0 }} />
+      {/* Radial glow */}
+      <div style={{ position: 'fixed', top: '20%', left: '50%', transform: 'translateX(-50%)', width: '60vw', height: '40vh', background: `radial-gradient(ellipse, rgba(201,169,110,0.08) 0%, transparent 70%)`, pointerEvents: 'none', zIndex: 0 }} />
 
-      {phase === 'waiting' && (
-        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 30 }}>
-          <h1 style={{ fontSize: '3rem', color: GOLD }}>{roomCode}</h1>
-          <p>{partnerOnline ? 'Pasangan Ready!' : 'Menunggu Partner...'}</p>
-          <button disabled={!partnerOnline} onClick={() => setPhase('party')} style={btnStyle}>Mulai</button>
-        </div>
-      )}
-
-      {phase === 'party' && (
-        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ flex: 1, position: 'relative', background: '#000' }}>
-            {showScreen && (
-              <>
-                <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                {needsInteraction && (
-                  <div onClick={() => { if(videoRef.current){videoRef.current.muted=false; videoRef.current.play();} setNeedsInteraction(false); }} style={overlayStyle}>
-                    <div style={tapStyle}>TAP UNTUK SUARA 🔊</div>
-                  </div>
-                )}
-              </>
-            )}
-            {reactions.map(r => (
-              <div key={r.id} style={{ position: 'absolute', left: `${r.x}%`, top: `${r.y}%`, fontSize: '3rem', animation: 'reactionFloat 3s forwards' }}>{r.emoji}</div>
-            ))}
-          </div>
-
-          <div style={{ padding: 20, background: '#0a1524', display: 'flex', gap: 15, alignItems: 'center' }}>
-            <span style={{ color: GOLD, fontSize: '1.2rem' }}>{fmtTime(elapsed)}</span>
-            <button onClick={() => {
-               const next = !isPlaying; setIsPlaying(next);
-               supabase.channel(`watch:${roomCode}`).send({ type: 'broadcast', event: 'sync', payload: { playing: next, time: elapsed, ts: Date.now() } })
-            }} style={{ width: 40, height: 40, borderRadius: '50%', background: GOLD }}>{isPlaying ? '⏸' : '▶'}</button>
-            {isHost && <button onClick={screenActive ? stopScreenShare : startScreenShare} style={{ color: GOLD }}>{screenActive ? 'Stop' : 'Share'}</button>}
-            <div style={{ marginLeft: 'auto' }}>
-              {REACTIONS.slice(0,4).map(e => <button key={e} onClick={() => {
-                const r = { id: genId(), emoji: e, x: 20 + Math.random() * 60, y: 20 + Math.random() * 60, ts: Date.now() };
-                setReactions(p => [...p, r]); setTimeout(() => setReactions(p => p.filter(x => x.id !== r.id)), 3000);
-                supabase.channel(`watch:${roomCode}`).send({ type: 'broadcast', event: 'reaction', payload: r })
-              }} style={{ fontSize: '1.5rem' }}>{e}</button>)}
-            </div>
-          </div>
-
-          <div style={{ height: 150, background: '#0d1b2a', padding: 10, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              {messages.map(m => <div key={m.id}><b style={{ color: GOLD }}>{m.sender}:</b> {m.text}</div>)}
-              <div ref={chatEndRef} />
-            </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if(e.key==='Enter' && chatInput.trim()){
-                const msg = { id: genId(), sender: myName, text: chatInput, ts: Date.now() };
-                setMessages(p => [...p, msg]); setChatInput('');
-                supabase.channel(`watch:${roomCode}`).send({ type: 'broadcast', event: 'chat', payload: msg })
-              }}} style={{ flex: 1, background: '#1a2a3a', color: '#fff' }} />
-            </div>
-          </div>
-        </div>
-      )}
-      <style>{`@keyframes reactionFloat { 0%{opacity:1; transform:translateY(0);} 100%{opacity:0; transform:translateY(-100px);} }`}</style>
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        {phase === 'lobby' && (
+          <LobbyScreen
+            myName={myName} setMyName={setMyName}
+            filmTitle={filmTitle} setFilmTitle={setFilmTitle}
+            joinCode={joinCode} setJoinCode={setJoinCode}
+            onCreate={createRoom} onJoin={joinRoom}
+            error={error}
+          />
+        )}
+        {phase === 'waiting' && (
+          <WaitingScreen
+            roomCode={roomCode} filmTitle={filmTitle}
+            partnerOnline={partnerOnline}
+            onStart={() => setPhase('party')}
+          />
+        )}
+        {phase === 'party' && (
+          <PartyScreen
+            myName={myName} filmTitle={filmTitle}
+            isHost={isHost} roomCode={roomCode}
+            messages={messages} reactions={reactions}
+            chatInput={chatInput} setChatInput={setChatInput}
+            onSendChat={sendChat} onReaction={sendReaction}
+            elapsed={elapsed} isPlaying={isPlaying} onTogglePlay={togglePlay}
+            partnerOnline={partnerOnline}
+            screenActive={screenActive}
+            onStartScreen={startScreenShare} onStopScreen={stopScreenShare}
+            showScreen={showScreen}
+            needsInteraction={needsInteraction} onTapToPlay={handleTapToPlay}
+            videoRef={videoRef} chatEndRef={chatEndRef}
+          />
+        )}
+      </div>
     </div>
   )
 }
 
-const inputStyle = { padding: 12, borderRadius: 8, background: '#0d1b2a', border: '1px solid #333', color: '#fff' }
-const btnStyle = { padding: 12, borderRadius: 8, background: GOLD, color: DARK, fontWeight: 'bold' }
-const overlayStyle: any = { position: 'absolute', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center' }
-const tapStyle = { background: GOLD, color: DARK, padding: '15px 30px', borderRadius: 99, fontWeight: 'bold' }
+// ── LOBBY SCREEN ──────────────────────────────────────────────────────────────
+function LobbyScreen({ myName, setMyName, filmTitle, setFilmTitle, joinCode, setJoinCode, onCreate, onJoin, error }: any) {
+  const [tab, setTab] = useState<'create' | 'join'>('create')
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
+      <div style={{ textAlign: 'center', marginBottom: 40 }}>
+        <div style={{ fontSize: '3em', marginBottom: 8 }}>🎬</div>
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(1.8em, 5vw, 2.8em)', color: CREAM, margin: '0 0 8px', fontWeight: 400, letterSpacing: '-0.5px' }}>
+          Watch Together
+        </h1>
+        <p style={{ color: GOLD, fontSize: '0.9em', margin: 0, fontStyle: 'italic', opacity: 0.8 }}>Nonton bareng, walau berjauhan</p>
+      </div>
+
+      <div style={{ width: '100%', maxWidth: 420, background: 'rgba(255,255,255,0.04)', borderRadius: 20, border: '1px solid rgba(201,169,110,0.2)', overflow: 'hidden', backdropFilter: 'blur(10px)' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid rgba(201,169,110,0.15)' }}>
+          {(['create', 'join'] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)} style={{ flex: 1, padding: '14px', background: 'none', border: 'none', color: tab === t ? GOLD : 'rgba(255,255,255,0.4)', fontWeight: tab === t ? 700 : 400, fontSize: '0.85em', cursor: 'pointer', borderBottom: tab === t ? `2px solid ${GOLD}` : '2px solid transparent', transition: 'all .2s', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              {t === 'create' ? '🎥 Buat Room' : '🔗 Join Room'}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Input label="Nama kamu" value={myName} onChange={setMyName} placeholder="e.g. Rara" />
+          {tab === 'create'
+            ? <Input label="Judul film / tontonan" value={filmTitle} onChange={setFilmTitle} placeholder="e.g. Your Name" />
+            : <Input label="Kode room" value={joinCode} onChange={(v: string) => setJoinCode(v.toUpperCase())} placeholder="e.g. AB12CD" mono />
+          }
+          {error && <p style={{ color: '#ff6b6b', fontSize: '0.78em', margin: 0, textAlign: 'center' }}>{error}</p>}
+          <button
+            onClick={tab === 'create' ? onCreate : onJoin}
+            style={{ padding: '14px', background: `linear-gradient(135deg, ${GOLD} 0%, #a07840 100%)`, border: 'none', borderRadius: 12, color: DARK, fontWeight: 800, fontSize: '0.95em', cursor: 'pointer', letterSpacing: '0.05em', boxShadow: '0 4px 20px rgba(201,169,110,0.3)', transition: 'transform .15s, box-shadow .15s' }}
+            onMouseEnter={e => { (e.target as any).style.transform = 'translateY(-2px)'; (e.target as any).style.boxShadow = '0 8px 28px rgba(201,169,110,0.4)' }}
+            onMouseLeave={e => { (e.target as any).style.transform = ''; (e.target as any).style.boxShadow = '0 4px 20px rgba(201,169,110,0.3)' }}>
+            {tab === 'create' ? 'Buat Room →' : 'Join Room →'}
+          </button>
+        </div>
+      </div>
+      <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.7em', marginTop: 24, textAlign: 'center', maxWidth: 320, lineHeight: 1.6 }}>
+        Sync timer + live chat + screen share (YouTube & file lokal). Netflix tidak support screen capture.
+      </p>
+    </div>
+  )
+}
+
+// ── WAITING SCREEN ────────────────────────────────────────────────────────────
+function WaitingScreen({ roomCode, filmTitle, partnerOnline, onStart }: any) {
+  const [copied, setCopied] = useState(false)
+  function copyCode() {
+    navigator.clipboard.writeText(roomCode)
+    setCopied(true); setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', textAlign: 'center' }}>
+      <div style={{ fontSize: '2.5em', marginBottom: 16 }}>🎞️</div>
+      <h2 style={{ fontFamily: "'Playfair Display', serif", color: CREAM, fontSize: 'clamp(1.3em, 4vw, 1.8em)', margin: '0 0 6px', fontWeight: 400 }}>Menunggu pasangan...</h2>
+      <p style={{ color: GOLD, fontStyle: 'italic', margin: '0 0 36px', fontSize: '0.9em', opacity: 0.8 }}>{filmTitle}</p>
+
+      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,169,110,0.25)', borderRadius: 16, padding: '24px 32px', marginBottom: 32, width: '100%', maxWidth: 360 }}>
+        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72em', margin: '0 0 10px', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Kode Room</p>
+        <div style={{ fontFamily: 'monospace', fontSize: 'clamp(2em, 8vw, 3em)', fontWeight: 900, color: GOLD, letterSpacing: '0.15em', marginBottom: 16 }}>{roomCode}</div>
+        <button onClick={copyCode} style={{ padding: '8px 20px', background: copied ? 'rgba(201,169,110,0.2)' : 'transparent', border: `1px solid ${GOLD}`, borderRadius: 99, color: GOLD, fontSize: '0.78em', cursor: 'pointer', transition: 'all .2s' }}>
+          {copied ? '✓ Tersalin!' : 'Salin kode'}
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 32 }}>
+        <div style={{ width: 10, height: 10, borderRadius: '50%', background: partnerOnline ? '#4ade80' : '#6b7280', boxShadow: partnerOnline ? '0 0 8px #4ade80' : 'none', transition: 'all .3s' }} />
+        <span style={{ color: partnerOnline ? '#4ade80' : 'rgba(255,255,255,0.4)', fontSize: '0.82em' }}>
+          {partnerOnline ? 'Pasangan sudah join!' : 'Belum ada yang join...'}
+        </span>
+      </div>
+
+      <button onClick={onStart} disabled={!partnerOnline}
+        style={{ padding: '14px 36px', background: partnerOnline ? `linear-gradient(135deg, ${GOLD}, #a07840)` : 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 12, color: partnerOnline ? DARK : 'rgba(255,255,255,0.3)', fontWeight: 800, fontSize: '1em', cursor: partnerOnline ? 'pointer' : 'not-allowed', transition: 'all .3s', boxShadow: partnerOnline ? '0 4px 20px rgba(201,169,110,0.3)' : 'none' }}>
+        Mulai Nonton 🎬
+      </button>
+    </div>
+  )
+}
+
+// ── PARTY SCREEN ──────────────────────────────────────────────────────────────
+function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions, chatInput, setChatInput, onSendChat, onReaction, elapsed, isPlaying, onTogglePlay, partnerOnline, screenActive, onStartScreen, onStopScreen, showScreen, needsInteraction, onTapToPlay, videoRef, chatEndRef }: any) {
+  const [showReactions, setShowReactions] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [chatOpen, setChatOpen] = useState(true)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check(); window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Top bar */}
+      <div style={{ padding: '12px 16px', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(201,169,110,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: '1.2em' }}>🎬</span>
+          <div>
+            <p style={{ margin: 0, color: CREAM, fontWeight: 700, fontSize: '0.9em', fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}>{filmTitle}</p>
+            <p style={{ margin: 0, color: 'rgba(255,255,255,0.35)', fontSize: '0.68em', letterSpacing: '0.05em' }}>ROOM: {roomCode} · {myName}</p>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: 99, border: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: partnerOnline ? '#4ade80' : '#6b7280', boxShadow: partnerOnline ? '0 0 6px #4ade80' : 'none' }} />
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7em' }}>{partnerOnline ? 'Online' : 'Offline'}</span>
+          </div>
+          {isMobile && (
+            <button onClick={() => setChatOpen(o => !o)} style={{ padding: '5px 12px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 99, color: 'rgba(255,255,255,0.6)', fontSize: '0.72em', cursor: 'pointer' }}>
+              {chatOpen ? 'Sembunyikan chat' : '💬 Chat'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Main area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', overflow: 'hidden' }}>
+
+        {/* Left: screen + controls */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+
+          {/* Screen area */}
+          <div style={{ flex: 1, position: 'relative', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: isMobile ? 220 : 0 }}>
+
+            {/* Video — hanya muncul untuk partner (showScreen=true) */}
+            {showScreen && (
+              <>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                />
+                {/* Tap to unmute overlay — Android fix */}
+                {needsInteraction && (
+                  <div
+                    onClick={onTapToPlay}
+                    style={{ position: 'absolute', inset: 0, zIndex: 10, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                  >
+                    <div style={{ background: 'rgba(0,0,0,0.75)', border: `1px solid ${GOLD}`, borderRadius: 999, padding: '14px 28px', color: CREAM, fontSize: '0.95em', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: '1.3em' }}>🔊</span> Tap untuk suara
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Placeholder saat tidak ada stream */}
+            {!showScreen && (
+              <div style={{ textAlign: 'center', padding: 24 }}>
+                <div style={{ fontSize: isMobile ? '3em' : '5em', marginBottom: 12, opacity: 0.3 }}>🎞️</div>
+                <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.82em', lineHeight: 1.6, maxWidth: 280, margin: '0 auto' }}>
+                  {isHost
+                    ? screenActive
+                      ? 'Kamu sedang share screen ke pasangan'
+                      : 'Klik Share Screen di bawah untuk mulai streaming'
+                    : 'Menunggu host mulai share screen...'}
+                </p>
+                {/* Kalau host lagi share, tampilkan indikator */}
+                {isHost && screenActive && (
+                  <div style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 99 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 8px #ef4444' }} />
+                    <span style={{ color: '#ef4444', fontSize: '0.78em' }}>Live</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Floating reactions */}
+            {reactions.map((r: Reaction) => (
+              <div key={r.id} style={{ position: 'absolute', left: `${r.x}%`, top: `${r.y}%`, fontSize: isMobile ? '1.8em' : '2.4em', animation: 'reactionFloat 3s ease forwards', pointerEvents: 'none', zIndex: 20 }}>
+                {r.emoji}
+              </div>
+            ))}
+          </div>
+
+          {/* Controls bar */}
+          <div style={{ padding: isMobile ? '10px 12px' : '14px 20px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 14, flexWrap: 'wrap' }}>
+            {/* Timer */}
+            <div style={{ fontFamily: 'monospace', fontSize: isMobile ? '1em' : '1.2em', color: GOLD, fontWeight: 700, minWidth: 60 }}>{fmtTime(elapsed)}</div>
+
+            {/* Play/Pause */}
+            <button onClick={onTogglePlay} style={{ width: isMobile ? 38 : 44, height: isMobile ? 38 : 44, borderRadius: '50%', background: `linear-gradient(135deg, ${GOLD}, #a07840)`, border: 'none', color: DARK, fontSize: isMobile ? '1em' : '1.2em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(201,169,110,0.35)', flexShrink: 0 }}>
+              {isPlaying ? '⏸' : '▶'}
+            </button>
+
+            {/* Screen share (host only) */}
+            {isHost && (
+              <button
+                onClick={screenActive ? onStopScreen : onStartScreen}
+                style={{ padding: isMobile ? '6px 12px' : '7px 16px', background: screenActive ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.07)', border: `1px solid ${screenActive ? '#ef4444' : 'rgba(255,255,255,0.15)'}`, borderRadius: 8, color: screenActive ? '#ef4444' : 'rgba(255,255,255,0.7)', fontSize: '0.75em', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
+                {screenActive ? '⏹ Stop Share' : '🖥️ Share Screen'}
+              </button>
+            )}
+
+            {/* Reactions */}
+            <div style={{ marginLeft: 'auto', position: 'relative' }}>
+              <button onClick={() => setShowReactions(r => !r)}
+                style={{ padding: isMobile ? '6px 10px' : '7px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: 'rgba(255,255,255,0.8)', fontSize: isMobile ? '0.9em' : '1em', cursor: 'pointer' }}>
+                😊
+              </button>
+              {showReactions && (
+                <div style={{ position: 'absolute', bottom: '110%', right: 0, background: 'rgba(20,30,45,0.95)', border: '1px solid rgba(201,169,110,0.2)', borderRadius: 14, padding: '10px 12px', display: 'flex', gap: 6, flexWrap: 'wrap', maxWidth: isMobile ? 180 : 240, backdropFilter: 'blur(10px)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
+                  {REACTIONS.map(e => (
+                    <button key={e} onClick={() => { onReaction(e); setShowReactions(false) }}
+                      style={{ background: 'none', border: 'none', fontSize: isMobile ? '1.4em' : '1.6em', cursor: 'pointer', padding: '2px', borderRadius: 6, transition: 'transform .15s' }}
+                      onMouseEnter={ev => (ev.currentTarget.style.transform = 'scale(1.3)')}
+                      onMouseLeave={ev => (ev.currentTarget.style.transform = '')}>
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Chat panel */}
+        {(!isMobile || chatOpen) && (
+          <div style={{ width: isMobile ? '100%' : 300, height: isMobile ? 280 : 'auto', background: 'rgba(255,255,255,0.03)', borderLeft: isMobile ? 'none' : '1px solid rgba(255,255,255,0.07)', borderTop: isMobile ? '1px solid rgba(255,255,255,0.07)' : 'none', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <p style={{ margin: 0, color: 'rgba(255,255,255,0.4)', fontSize: '0.7em', letterSpacing: '0.1em', textTransform: 'uppercase' }}>💬 Live Chat</p>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {messages.length === 0 && (
+                <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.78em', textAlign: 'center', fontStyle: 'italic', marginTop: 20 }}>Belum ada chat. Mulai ngobrol!</p>
+              )}
+              {messages.map((m: ChatMessage) => (
+                <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: m.sender === myName ? 'flex-end' : 'flex-start' }}>
+                  <span style={{ fontSize: '0.62em', color: 'rgba(255,255,255,0.3)', marginBottom: 3 }}>{m.sender}</span>
+                  <div style={{ background: m.sender === myName ? 'rgba(201,169,110,0.2)' : 'rgba(255,255,255,0.07)', border: `1px solid ${m.sender === myName ? 'rgba(201,169,110,0.3)' : 'rgba(255,255,255,0.08)'}`, borderRadius: m.sender === myName ? '12px 12px 2px 12px' : '12px 12px 12px 2px', padding: '7px 11px', maxWidth: '85%' }}>
+                    <p style={{ margin: 0, color: m.sender === myName ? GOLD : CREAM, fontSize: '0.82em', lineHeight: 1.4 }}>{m.text}</p>
+                  </div>
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+            <div style={{ padding: '10px 12px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 8 }}>
+              <input
+                value={chatInput} onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && onSendChat()}
+                placeholder="Ketik pesan..."
+                style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '8px 12px', color: CREAM, fontSize: '0.82em', outline: 'none' }}
+              />
+              <button onClick={onSendChat} style={{ width: 36, height: 36, background: `linear-gradient(135deg, ${GOLD}, #a07840)`, border: 'none', borderRadius: 8, color: DARK, cursor: 'pointer', fontWeight: 900, fontSize: '0.9em', flexShrink: 0 }}>→</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <style>{`
+        @keyframes reactionFloat {
+          0% { opacity: 1; transform: translateY(0) scale(1); }
+          100% { opacity: 0; transform: translateY(-80px) scale(1.5); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+// ── INPUT COMPONENT ───────────────────────────────────────────────────────────
+function Input({ label, value, onChange, placeholder, mono }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; mono?: boolean }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <label style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.72em', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{label}</label>
+      <input
+        value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: CREAM, fontSize: mono ? '1.1em' : '0.9em', fontFamily: mono ? 'monospace' : 'inherit', outline: 'none', letterSpacing: mono ? '0.15em' : 'normal', transition: 'border .2s' }}
+        onFocus={e => (e.target.style.borderColor = GOLD)}
+        onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+      />
+    </div>
+  )
+}
