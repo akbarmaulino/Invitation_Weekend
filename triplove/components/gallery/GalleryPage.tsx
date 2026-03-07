@@ -93,11 +93,12 @@ export default function GalleryPage() {
   const isDateSearch = useMemo(() => {
     if (!search.trim()) return false
     const q = search.toLowerCase()
-    return Object.values(trips).some(t =>
-      (t.trip_date || '').includes(q) ||
-      (t.trip_day || '').toLowerCase().includes(q) ||
-      formatTanggalIndonesia(t.trip_date || '').toLowerCase().includes(q)
-    )
+    return Object.values(trips).some(t => {
+      const td = (t as TripHistory)
+      return (td.trip_date || '').includes(q) ||
+        (td.trip_day || '').toLowerCase().includes(q) ||
+        formatTanggalIndonesia(td.trip_date || '').toLowerCase().includes(q)
+    })
   }, [search, trips])
 
   const filtered = useMemo(() => allMedia.filter(m => {
@@ -167,6 +168,8 @@ export default function GalleryPage() {
         .track-item:hover{background:${BGM}!important}
         .film-frame-item .film-hover-overlay{opacity:0}.film-frame-item:hover .film-hover-overlay{opacity:1!important}.film-frame-item:hover img,.film-frame-item:hover video{opacity:1!important}
         .film-roll-card:hover{transform:translateY(-4px) scale(1.02)}.film-roll-card:hover .roll-play-btn{opacity:1!important}.film-roll-card:hover .roll-play-icon{background:rgba(0,0,0,0.15)!important}
+        .cassette-item:hover{transform:translateY(-10px) scale(1.04);filter:brightness(1.12);z-index:10}
+        .cassette-item:active{transform:translateY(-4px) scale(0.98)}
       `}} />
       <Navbar />
       <main style={{ maxWidth: 1080, margin: '0 auto', padding: '28px 16px 120px' }}>
@@ -1035,13 +1038,30 @@ function ReviewFormModal({ group, onClose }: { group: TripGroup; onClose: () => 
 
 
 // ── FILM STRIP MOODBOARD ──────────────────────────────────────────────────────
+
+// Warna kaset per index
+const CASSETTE_COLORS = [
+  { spine: '#c9563c', label: '#f5e6c8', accent: '#8b2e1a' },
+  { spine: '#2d6a8f', label: '#e8f4fd', accent: '#1a3f5c' },
+  { spine: '#5a7a3a', label: '#edf7e0', accent: '#2e4a18' },
+  { spine: '#7b4f8e', label: '#f5e8ff', accent: '#4a2060' },
+  { spine: '#c97c2a', label: '#fff3e0', accent: '#7a4510' },
+  { spine: '#3a7a6a', label: '#e0f5f0', accent: '#1a4a3a' },
+]
+
 function FilmStrip({ group, onClickItem, onClose }: {
   group: TripGroup; onClickItem: (item: MediaItem) => void; onClose: () => void
 }) {
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({})
   const doubled = useMemo(() => [...group.media, ...group.media], [group.media])
   const duration = Math.max(30, group.media.length * 7)
-  const holeCount = 50
+  const [isMobileFS, setIsMobileFS] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobileFS(window.innerWidth < 640)
+    check(); window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     const observer = new IntersectionObserver(entries => {
@@ -1057,131 +1077,226 @@ function FilmStrip({ group, onClickItem, onClose }: {
 
   const label = group.trip ? `${group.trip.trip_day}, ${formatTanggalIndonesia(group.trip.trip_date)}` : 'Kenangan'
   const sub = group.trip?.secret_message && group.trip.secret_message !== 'Tidak ada pesan rahasia.' ? group.trip.secret_message : `${group.media.length} foto`
+  const frameW = isMobileFS ? 180 : 300
+  const frameH = isMobileFS ? 160 : 240
+  const holeCount = isMobileFS ? 30 : 50
 
   return (
     <div style={{ width: '100%', animation: 'floatIn .35s ease' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 14px', flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <h3 style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '1.5em', color: P, margin: '0 0 2px', fontWeight: 400 }}>{label}</h3>
-          <p style={{ margin: 0, fontSize: '0.8em', color: MUTED, fontStyle: 'italic' }}>{sub}</p>
+          <h3 style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: isMobileFS ? '1.1em' : '1.5em', color: P, margin: '0 0 2px', fontWeight: 400 }}>{label}</h3>
+          <p style={{ margin: 0, fontSize: '0.78em', color: MUTED, fontStyle: 'italic' }}>{sub}</p>
         </div>
-        <button onClick={onClose} style={{ background: 'white', border: `1.5px solid ${S}`, borderRadius: 999, padding: '6px 16px', color: P, fontWeight: 700, cursor: 'pointer', fontSize: '0.8em', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <button onClick={onClose} style={{ background: 'white', border: `1.5px solid ${S}`, borderRadius: 999, padding: '6px 14px', color: P, fontWeight: 700, cursor: 'pointer', fontSize: '0.78em', display: 'flex', alignItems: 'center', gap: 5 }}>
           ‹ Lemari
         </button>
       </div>
 
-      {/* Film strip */}
       <div style={{ position: 'relative', width: '108%', left: '-4%', background: '#111', transform: 'rotate(-0.5deg)', boxShadow: '0 16px 50px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
-        {/* Top holes */}
-        <div style={{ display: 'flex', justifyContent: 'space-around', padding: '0 8px', height: 26, alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-around', padding: '0 8px', height: isMobileFS ? 20 : 26, alignItems: 'center' }}>
           {Array.from({ length: holeCount }).map((_, i) => (
-            <div key={i} style={{ width: 15, height: 11, background: '#fffdf7', borderRadius: 2, opacity: 0.75, flexShrink: 0 }} />
+            <div key={i} style={{ width: isMobileFS ? 10 : 15, height: isMobileFS ? 7 : 11, background: '#fffdf7', borderRadius: 2, opacity: 0.75, flexShrink: 0 }} />
           ))}
         </div>
-
-        {/* Scrolling track */}
         <div style={{ display: 'flex', alignItems: 'stretch', animation: `scrollFilm ${duration}s linear infinite`, willChange: 'transform', padding: '6px 0' }}>
           {doubled.map((item, i) => (
             <div key={i} className="film-frame-item" onClick={() => onClickItem(item)}
-              style={{ flexShrink: 0, width: 300, height: 240, position: 'relative', borderLeft: '2px solid #222', borderRight: '2px solid #222', cursor: 'pointer', overflow: 'hidden', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {item.type === 'photo' ? (
-                <img src={item.url} alt={item.ideaName} style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.9 }} loading="lazy" />
-              ) : (
-                <video ref={el => { videoRefs.current[`${item.id}-${i}`] = el }} src={item.url}
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.9 }} muted playsInline loop />
-              )}
-              <div className="film-hover-overlay" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, transparent 55%)', opacity: 0, transition: 'opacity .25s', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '10px 12px' }}>
-                <p style={{ color: 'white', fontWeight: 700, fontSize: '0.8em', margin: '0 0 2px', fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}>{item.ideaName}</p>
-                {item.rating > 0 && <span style={{ color: '#f59e0b', fontSize: '0.7em' }}>{'★'.repeat(item.rating)}</span>}
+              style={{ flexShrink: 0, width: frameW, height: frameH, position: 'relative', borderLeft: '2px solid #222', borderRight: '2px solid #222', cursor: 'pointer', overflow: 'hidden', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {item.type === 'photo'
+                ? <img src={item.url} alt={item.ideaName} style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.9 }} loading="lazy" />
+                : <video ref={el => { videoRefs.current[`${item.id}-${i}`] = el }} src={item.url} style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.9 }} muted playsInline loop />
+              }
+              <div className="film-hover-overlay" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, transparent 55%)', opacity: 0, transition: 'opacity .25s', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '8px 10px' }}>
+                <p style={{ color: 'white', fontWeight: 700, fontSize: '0.75em', margin: '0 0 2px', fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}>{item.ideaName}</p>
+                {item.rating > 0 && <span style={{ color: '#f59e0b', fontSize: '0.65em' }}>{'★'.repeat(item.rating)}</span>}
               </div>
-              {item.type === 'video' && <div style={{ position: 'absolute', top: 7, left: 8, background: 'rgba(0,0,0,0.65)', color: 'white', borderRadius: 4, padding: '2px 7px', fontSize: '0.62em', fontWeight: 700 }}>🎬</div>}
+              {item.type === 'video' && <div style={{ position: 'absolute', top: 6, left: 7, background: 'rgba(0,0,0,0.65)', color: 'white', borderRadius: 4, padding: '2px 6px', fontSize: '0.6em', fontWeight: 700 }}>🎬</div>}
             </div>
           ))}
         </div>
-
-        {/* Bottom holes */}
-        <div style={{ display: 'flex', justifyContent: 'space-around', padding: '0 8px', height: 26, alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-around', padding: '0 8px', height: isMobileFS ? 20 : 26, alignItems: 'center' }}>
           {Array.from({ length: holeCount }).map((_, i) => (
-            <div key={i} style={{ width: 15, height: 11, background: '#fffdf7', borderRadius: 2, opacity: 0.75, flexShrink: 0 }} />
+            <div key={i} style={{ width: isMobileFS ? 10 : 15, height: isMobileFS ? 7 : 11, background: '#fffdf7', borderRadius: 2, opacity: 0.75, flexShrink: 0 }} />
           ))}
         </div>
       </div>
-
-      <p style={{ textAlign: 'right', paddingRight: 8, marginTop: 10, fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '0.78em', color: MUTED }}>"Tumbuh bersama, selamanya..."</p>
+      <p style={{ textAlign: 'right', paddingRight: 8, marginTop: 10, fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '0.76em', color: MUTED }}>"Tumbuh bersama, selamanya..."</p>
     </div>
   )
 }
 
-function FilmStripMoodboard({ tripGroups, onClickItem }: { tripGroups: TripGroup[]; onClickItem: (item: MediaItem) => void }) {
+// ── CASSETTE SHELF ─────────────────────────────────────────────────────────────
+function CassetteShelf({ tripGroups, onClickItem }: { tripGroups: TripGroup[]; onClickItem: (item: MediaItem) => void }) {
   const [activeGroup, setActiveGroup] = useState<TripGroup | null>(null)
+  const [isMob, setIsMob] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMob(window.innerWidth < 640)
+    check(); window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   if (activeGroup) {
     return (
-      <div style={{ width: '100%', padding: '8px 0 20px', position: 'relative', backgroundImage: 'radial-gradient(rgba(3,37,76,0.07) 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+      <div style={{ width: '100%', padding: '8px 0 20px', backgroundImage: 'radial-gradient(rgba(3,37,76,0.07) 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
         <FilmStrip group={activeGroup} onClickItem={onClickItem} onClose={() => setActiveGroup(null)} />
       </div>
     )
   }
 
+  // How many cassettes per shelf row
+  const perRow = isMob ? 4 : 7
+  const rows: TripGroup[][] = []
+  for (let i = 0; i < tripGroups.length; i += perRow) {
+    rows.push(tripGroups.slice(i, i + perRow))
+  }
+
+  const cassetteW = isMob ? 52 : 72
+  const cassetteH = isMob ? 100 : 136
+  const shelfThickness = isMob ? 14 : 18
+  const shelfGap = isMob ? 18 : 24
+
   return (
-    <div style={{ width: '100%', padding: '8px 0 24px', backgroundImage: 'radial-gradient(rgba(3,37,76,0.07) 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+    <div style={{ width: '100%', padding: '16px 0 28px', backgroundImage: 'radial-gradient(rgba(3,37,76,0.07) 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
       {/* Title */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 24, paddingLeft: 4 }}>
-        <span style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '2em', color: P, fontWeight: 700 }}>Lemari Film</span>
-        <span style={{ fontSize: '0.82em', color: MUTED, fontStyle: 'italic' }}>— pilih roll untuk diputar</span>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: isMob ? 20 : 28, paddingLeft: 4, flexWrap: 'wrap' }}>
+        <span style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: isMob ? '1.6em' : '2em', color: P, fontWeight: 700 }}>Lemari Film</span>
+        <span style={{ fontSize: '0.78em', color: MUTED, fontStyle: 'italic' }}>— pilih kaset untuk diputar</span>
       </div>
 
-      {/* Film roll grid */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20 }}>
-        {tripGroups.map((group, gi) => {
-          const thumb = group.media.find(m => m.type === 'photo') || group.media[0]
-          const label = group.trip ? `${group.trip.trip_day}, ${formatTanggalIndonesia(group.trip.trip_date)}` : 'Kenangan'
-          const holeCount = 7
-          return (
-            <div key={group.trip?.id || gi} onClick={() => setActiveGroup(group)}
-              className="film-roll-card"
-              style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', width: 'calc(33.33% - 14px)', minWidth: 200, maxWidth: 300, transition: 'transform .2s', animation: `floatIn .3s ease ${gi * 0.06}s both` }}>
+      {/* The wooden shelf */}
+      <div style={{
+        background: 'linear-gradient(135deg, #e8d5b0 0%, #d4b896 40%, #c9a87a 100%)',
+        borderRadius: 12,
+        padding: isMob ? '16px 12px' : '24px 20px',
+        boxShadow: '0 8px 32px rgba(100,60,20,0.25), inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -2px 0 rgba(100,60,20,0.2)',
+        border: '2px solid #b8925a',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Wood grain overlay */}
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(139,90,43,0.04) 40px, rgba(139,90,43,0.04) 41px)', pointerEvents: 'none', borderRadius: 12 }} />
 
-              {/* Mini film strip preview */}
-              <div style={{ background: '#111', borderRadius: '6px 6px 0 0', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.35)' }}>
-                {/* Top holes */}
-                <div style={{ display: 'flex', justifyContent: 'space-around', padding: '3px 4px', alignItems: 'center' }}>
-                  {Array.from({ length: holeCount }).map((_, i) => <div key={i} style={{ width: 12, height: 8, background: '#fffdf7', borderRadius: 2, opacity: 0.7 }} />)}
-                </div>
-                {/* Thumbnail */}
-                <div style={{ height: 160, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderTop: '2px solid #222', borderBottom: '2px solid #222', position: 'relative' }}>
-                  {thumb ? (
-                    thumb.type === 'photo'
-                      ? <img src={thumb.url} alt={label} style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.88 }} />
-                      : <video src={thumb.url} style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.88 }} muted playsInline />
-                  ) : (
-                    <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '2em' }}>🎞️</span>
-                  )}
-                  {/* Play icon overlay */}
-                  <div className="roll-play-icon" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', transition: 'background .2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)', opacity: 0, transition: 'opacity .2s' }} className="roll-play-btn">
-                      <span style={{ color: 'white', fontSize: '1.1em', marginLeft: 3 }}>▶</span>
+        {/* Shelf rows */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: shelfGap + shelfThickness, position: 'relative' }}>
+          {rows.map((row, ri) => (
+            <div key={ri} style={{ position: 'relative' }}>
+              {/* Cassettes sitting on shelf */}
+              <div style={{ display: 'flex', gap: isMob ? 6 : 10, alignItems: 'flex-end', paddingBottom: 0, flexWrap: 'nowrap', overflowX: isMob ? 'auto' : 'visible', paddingLeft: 4 }}>
+                {row.map((group, gi) => {
+                  const globalIdx = ri * perRow + gi
+                  const colors = CASSETTE_COLORS[globalIdx % CASSETTE_COLORS.length]
+                  const label = group.trip
+                    ? `${group.trip.trip_day}, ${formatTanggalIndonesia(group.trip.trip_date)}`
+                    : 'Kenangan'
+                  const shortDate = group.trip?.trip_date
+                    ? new Date(group.trip.trip_date).getFullYear().toString()
+                    : ''
+                  const thumb = group.media.find(m => m.type === 'photo') || group.media[0]
+
+                  return (
+                    <div
+                      key={group.trip?.id || gi}
+                      className="cassette-item"
+                      onClick={() => setActiveGroup(group)}
+                      title={label}
+                      style={{
+                        flexShrink: 0,
+                        width: cassetteW,
+                        height: cassetteH,
+                        cursor: 'pointer',
+                        position: 'relative',
+                        transition: 'transform .2s ease, box-shadow .2s ease',
+                        display: 'flex',
+                        flexDirection: 'column',
+                      }}
+                    >
+                      {/* Cassette body */}
+                      <div style={{
+                        width: '100%',
+                        height: '100%',
+                        background: `linear-gradient(160deg, ${colors.spine} 0%, ${colors.accent} 100%)`,
+                        borderRadius: isMob ? '3px 3px 2px 2px' : '4px 4px 3px 3px',
+                        boxShadow: `2px 3px 10px rgba(0,0,0,0.35), inset 1px 0 0 rgba(255,255,255,0.15), inset -1px 0 0 rgba(0,0,0,0.2)`,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden',
+                        position: 'relative',
+                      }}>
+                        {/* Top accent strip */}
+                        <div style={{ height: isMob ? 6 : 8, background: 'rgba(0,0,0,0.25)', flexShrink: 0 }} />
+
+                        {/* Thumbnail window */}
+                        <div style={{
+                          margin: isMob ? '4px 4px' : '5px 6px',
+                          flex: 1,
+                          background: '#111',
+                          borderRadius: 2,
+                          overflow: 'hidden',
+                          boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.5)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          position: 'relative',
+                        }}>
+                          {thumb ? (
+                            <img src={thumb.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
+                          ) : (
+                            <span style={{ fontSize: isMob ? '1em' : '1.3em', opacity: 0.4 }}>🎞️</span>
+                          )}
+                        </div>
+
+                        {/* Label strip */}
+                        <div style={{
+                          background: colors.label,
+                          margin: isMob ? '0 4px 4px' : '0 5px 5px',
+                          borderRadius: 2,
+                          padding: isMob ? '2px 3px' : '3px 5px',
+                          flexShrink: 0,
+                        }}>
+                          <p style={{ margin: 0, fontSize: isMob ? '0.42em' : '0.5em', color: colors.accent, fontWeight: 800, fontFamily: "'Playfair Display', serif", fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.2 }}>
+                            {group.trip ? `${group.trip.trip_day?.slice(0,3)}` : 'KEN'}
+                          </p>
+                          <p style={{ margin: 0, fontSize: isMob ? '0.38em' : '0.45em', color: colors.accent, opacity: 0.75, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.1 }}>
+                            {shortDate}
+                          </p>
+                        </div>
+
+                        {/* Bottom ridge */}
+                        <div style={{ height: isMob ? 4 : 5, background: 'rgba(0,0,0,0.3)', flexShrink: 0 }} />
+                      </div>
                     </div>
-                  </div>
-                </div>
-                {/* Bottom holes */}
-                <div style={{ display: 'flex', justifyContent: 'space-around', padding: '3px 4px', alignItems: 'center' }}>
-                  {Array.from({ length: holeCount }).map((_, i) => <div key={i} style={{ width: 12, height: 8, background: '#fffdf7', borderRadius: 2, opacity: 0.7 }} />)}
-                </div>
+                  )
+                })}
               </div>
 
-              {/* Label below roll */}
-              <div style={{ background: 'white', borderRadius: '0 0 6px 6px', padding: '10px 12px', border: `1.5px solid ${S}`, borderTop: 'none' }}>
-                <p style={{ margin: '0 0 2px', fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '0.82em', color: P, fontWeight: 400 }}>{label}</p>
-                <p style={{ margin: 0, fontSize: '0.7em', color: MUTED }}>{group.media.length} foto{group.media.filter(m => m.type === 'video').length > 0 ? ` · ${group.media.filter(m => m.type === 'video').length} video` : ''}</p>
+              {/* Wooden shelf plank */}
+              <div style={{
+                height: shelfThickness,
+                background: 'linear-gradient(180deg, #a0713a 0%, #8b5e2a 50%, #7a4f1e 100%)',
+                borderRadius: '0 0 4px 4px',
+                boxShadow: '0 4px 12px rgba(80,40,10,0.35), inset 0 1px 0 rgba(255,220,160,0.3)',
+                position: 'relative',
+              }}>
+                {/* Shelf edge highlight */}
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'rgba(255,220,150,0.4)', borderRadius: '2px 2px 0 0' }} />
+                {/* Shelf wood grain */}
+                <div style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(100,50,10,0.08) 20px, rgba(100,50,10,0.08) 21px)', borderRadius: '0 0 4px 4px' }} />
               </div>
             </div>
-          )
-        })}
+          ))}
+        </div>
+
+        {/* Shelf back wall shadow */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(100,60,20,0.08) 0%, transparent 30%, transparent 70%, rgba(100,60,20,0.08) 100%)', borderRadius: 12, pointerEvents: 'none' }} />
       </div>
+
+      <p style={{ textAlign: 'right', paddingRight: 4, marginTop: 12, fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '0.76em', color: MUTED }}>"Kenangan terbaik tersimpan rapi di sini..."</p>
     </div>
   )
+}
+
+function FilmStripMoodboard({ tripGroups, onClickItem }: { tripGroups: TripGroup[]; onClickItem: (item: MediaItem) => void }) {
+  return <CassetteShelf tripGroups={tripGroups} onClickItem={onClickItem} />
 }
 
 // ── AUTO CAROUSEL ─────────────────────────────────────────────────────────────
