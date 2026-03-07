@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import Navbar from '@/components/ui/Navbar'
-import Image from 'next/image'
 import { useData } from '@/context/DataContext'
 import { supabase } from '@/lib/supabase'
 import { getPublicImageUrl, getPublicVideoUrl, formatTanggalIndonesia } from '@/lib/utils'
@@ -10,7 +9,6 @@ import type { IdeaReview, TripHistory } from '@/types/types'
 
 const P = '#03254c', S = '#c4e8ff', BG = '#d0efff', BGM = '#e1f3ff', MUTED = '#a0a0b5'
 
-// ─── Default playlist ─────────────────────────────────────────────────────────
 const DEFAULT_PLAYLIST = [
   { title: 'River Flows In You', artist: 'Yiruma', url: 'https://www.youtube.com/embed/7maJOI3QMu0?autoplay=1&controls=0' },
   { title: 'A Thousand Years', artist: 'The Piano Guys', url: 'https://www.youtube.com/embed/QgaTQ5-XfMM?autoplay=1&controls=0' },
@@ -23,31 +21,13 @@ const DEFAULT_PLAYLIST = [
 ]
 
 interface MediaItem {
-  id: string
-  type: 'photo' | 'video'
-  url: string
-  reviewerName: string
-  rating: number
-  reviewText: string
-  ideaName: string
-  categoryName: string
-  tripDate?: string
-  tripDay?: string
-  tripId?: string
+  id: string; type: 'photo' | 'video'; url: string
+  reviewerName: string; rating: number; reviewText: string
+  ideaName: string; categoryName: string
+  tripDate?: string; tripDay?: string; tripId?: string
 }
-
-interface TripGroup {
-  trip: TripHistory
-  media: MediaItem[]
-}
-
-interface DiaryNote {
-  id: string
-  trip_id: string
-  content: string
-  created_at: string
-}
-
+interface TripGroup { trip: TripHistory; media: MediaItem[] }
+interface DiaryNote { id: string; trip_id: string; content: string; created_at: string }
 type ViewMode = 'masonry' | 'timeline' | 'moodboard'
 
 export default function GalleryPage() {
@@ -61,8 +41,6 @@ export default function GalleryPage() {
   const [lightboxIdx, setLightboxIdx] = useState(0)
   const [diaryGroup, setDiaryGroup] = useState<TripGroup | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('timeline')
-
-  // Music player state
   const [playlist, setPlaylist] = useState(DEFAULT_PLAYLIST)
   const [currentTrack, setCurrentTrack] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -74,11 +52,11 @@ export default function GalleryPage() {
   const [showAddTrack, setShowAddTrack] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
-  function refreshNotes() {
+  const refreshNotes = useCallback(() => {
     supabase.from('diary_notes').select('*').then(({ data }) => {
       if (data) setDiaryNotes(data as DiaryNote[])
     })
-  }
+  }, [])
 
   useEffect(() => {
     loadAllData()
@@ -96,71 +74,57 @@ export default function GalleryPage() {
       const idea = ideas.find(i => i.id === r.idea_id)
       const trip = r.trip_id ? trips[r.trip_id] : undefined
       const base = {
-        id: r.id,
-        reviewerName: r.reviewer_name || 'Anonim',
-        rating: r.rating || 0,
-        reviewText: r.review_text || '',
-        ideaName: idea?.idea_name || 'Aktivitas',
-        categoryName: idea?.category_name || '',
-        tripDate: trip?.trip_date,
-        tripDay: trip?.trip_day,
-        tripId: r.trip_id || undefined,
+        id: r.id, reviewerName: r.reviewer_name || 'Anonim', rating: r.rating || 0,
+        reviewText: r.review_text || '', ideaName: idea?.idea_name || 'Aktivitas',
+        categoryName: idea?.category_name || '', tripDate: trip?.trip_date,
+        tripDay: trip?.trip_day, tripId: r.trip_id || undefined,
       }
       const photos = Array.isArray(r.photo_url) ? r.photo_url : r.photo_url ? [r.photo_url] : []
-      photos.forEach((url, i) => {
-        items.push({ ...base, id: `${r.id}-p${i}`, type: 'photo', url: getPublicImageUrl(url) })
-      })
-      if (r.video_url) {
-        const vurl = getPublicVideoUrl(r.video_url)
-        if (vurl) items.push({ ...base, id: `${r.id}-v`, type: 'video', url: vurl })
-      }
+      photos.forEach((url, i) => items.push({ ...base, id: `${r.id}-p${i}`, type: 'photo', url: getPublicImageUrl(url) }))
+      if (r.video_url) { const vurl = getPublicVideoUrl(r.video_url); if (vurl) items.push({ ...base, id: `${r.id}-v`, type: 'video', url: vurl }) }
     })
     return items.reverse()
   }, [reviews, ideas, trips])
 
   const categories = useMemo(() => ['all', ...Array.from(new Set(allMedia.map(m => m.categoryName).filter(Boolean)))], [allMedia])
 
+  // Check if the search text looks like a trip date/day (e.g. "minggu", "januari", "2025")
+  // If so, don't filter media by text — just show everything and let the date dropdown handle navigation
+  const isDateSearch = useMemo(() => {
+    if (!search.trim()) return false
+    const q = search.toLowerCase()
+    return Object.values(trips).some(t =>
+      (t.trip_date || '').includes(q) ||
+      (t.trip_day || '').toLowerCase().includes(q) ||
+      formatTanggalIndonesia(t.trip_date || '').toLowerCase().includes(q)
+    )
+  }, [search, trips])
+
   const filtered = useMemo(() => allMedia.filter(m => {
     if (filter !== 'all' && m.type !== filter) return false
     if (filterCat !== 'all' && m.categoryName !== filterCat) return false
-    if (search) {
-      const q = search.toLowerCase()
-      return m.ideaName.toLowerCase().includes(q) || m.reviewerName.toLowerCase().includes(q) || m.reviewText.toLowerCase().includes(q)
-    }
+    if (search && !isDateSearch) { const q = search.toLowerCase(); return m.ideaName.toLowerCase().includes(q) || m.reviewerName.toLowerCase().includes(q) || m.reviewText.toLowerCase().includes(q) }
     return true
-  }), [allMedia, filter, filterCat, search])
+  }), [allMedia, filter, filterCat, search, isDateSearch])
 
-  // Group by trip for timeline & moodboard
   const tripGroups = useMemo<TripGroup[]>(() => {
     const map: Record<string, TripGroup> = {}
     filtered.forEach(m => {
       const key = m.tripId || '__no_trip__'
-      if (!map[key]) {
-        const trip = m.tripId ? trips[m.tripId] : null
-        map[key] = { trip: trip as TripHistory, media: [] }
-      }
+      if (!map[key]) { const trip = m.tripId ? trips[m.tripId] : null; map[key] = { trip: trip as TripHistory, media: [] } }
       map[key].media.push(m)
     })
-    return Object.values(map)
-      .filter(g => g.media.length > 0)
-      .sort((a, b) => {
-        if (!a.trip?.trip_date) return 1
-        if (!b.trip?.trip_date) return -1
-        return b.trip.trip_date.localeCompare(a.trip.trip_date)
-      })
+    return Object.values(map).filter(g => g.media.length > 0).sort((a, b) => {
+      if (!a.trip?.trip_date) return 1; if (!b.trip?.trip_date) return -1
+      return b.trip.trip_date.localeCompare(a.trip.trip_date)
+    })
   }, [filtered, trips])
 
-  const openLightbox = useCallback((item: MediaItem) => {
-    const idx = filtered.indexOf(item)
-    setLightbox(item)
-    setLightboxIdx(idx)
-  }, [filtered])
-
+  const openLightbox = useCallback((item: MediaItem) => { setLightbox(item); setLightboxIdx(filtered.indexOf(item)) }, [filtered])
   const navLightbox = useCallback((dir: 1 | -1) => {
     const next = lightboxIdx + dir
     if (next < 0 || next >= filtered.length) return
-    setLightbox(filtered[next])
-    setLightboxIdx(next)
+    setLightbox(filtered[next]); setLightboxIdx(next)
   }, [lightboxIdx, filtered])
 
   useEffect(() => {
@@ -174,22 +138,14 @@ export default function GalleryPage() {
     return () => window.removeEventListener('keydown', handler)
   }, [lightbox, navLightbox])
 
-  const columns = useMemo(() => {
-    const cols: MediaItem[][] = [[], []]
-    filtered.forEach((item, i) => cols[i % 2].push(item))
-    return cols
-  }, [filtered])
+  const columns = useMemo(() => { const cols: MediaItem[][] = [[], []]; filtered.forEach((item, i) => cols[i % 2].push(item)); return cols }, [filtered])
 
   function addTrack() {
     if (!newTrackTitle || !newTrackUrl) return
-    const embedUrl = newTrackUrl.includes('youtube.com/watch?v=')
-      ? newTrackUrl.replace('watch?v=', 'embed/') + '?autoplay=1&controls=0'
-      : newTrackUrl.includes('youtu.be/')
-        ? 'https://www.youtube.com/embed/' + newTrackUrl.split('youtu.be/')[1] + '?autoplay=1&controls=0'
-        : newTrackUrl
+    const embedUrl = newTrackUrl.includes('youtube.com/watch?v=') ? newTrackUrl.replace('watch?v=', 'embed/') + '?autoplay=1&controls=0'
+      : newTrackUrl.includes('youtu.be/') ? 'https://www.youtube.com/embed/' + newTrackUrl.split('youtu.be/')[1] + '?autoplay=1&controls=0' : newTrackUrl
     setPlaylist(prev => [...prev, { title: newTrackTitle, artist: newTrackArtist, url: embedUrl }])
-    setNewTrackTitle(''); setNewTrackArtist(''); setNewTrackUrl('')
-    setShowAddTrack(false)
+    setNewTrackTitle(''); setNewTrackArtist(''); setNewTrackUrl(''); setShowAddTrack(false)
   }
 
   const track = playlist[currentTrack]
@@ -202,47 +158,36 @@ export default function GalleryPage() {
         @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
         @keyframes floatIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes scrollFilm{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+        @keyframes filmGlow{0%,100%{opacity:0.6}50%{opacity:1}}
         .media-card:hover .hover-overlay{opacity:1!important}
         .media-card:hover{transform:translateY(-4px)!important;box-shadow:0 12px 32px rgba(3,37,76,0.18)!important}
-        .timeline-entry{animation:fadeIn 0.5s ease both;animation-delay:var(--delay,0s)}.moodboard-card{animation:fadeIn 0.4s ease both;animation-delay:var(--delay,0s)}
+        .moodboard-card{animation:fadeIn 0.4s ease both;animation-delay:var(--delay,0s)}
         .player-btn:hover{background:rgba(255,255,255,0.2)!important}
         .track-item:hover{background:${BGM}!important}
+        .film-frame-item .film-hover-overlay{opacity:0}.film-frame-item:hover .film-hover-overlay{opacity:1!important}.film-frame-item:hover img,.film-frame-item:hover video{opacity:1!important}
+        .film-roll-card:hover{transform:translateY(-4px) scale(1.02)}.film-roll-card:hover .roll-play-btn{opacity:1!important}.film-roll-card:hover .roll-play-icon{background:rgba(0,0,0,0.15)!important}
       `}} />
-
       <Navbar />
-
       <main style={{ maxWidth: 1080, margin: '0 auto', padding: '28px 16px 120px' }}>
-
-        {/* Hero */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <h1 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: '2.4em', color: P, margin: '0 0 6px', letterSpacing: '-0.5px' }}>
-            📸 Galeri Kenangan
-          </h1>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: '2.4em', color: P, margin: '0 0 6px', letterSpacing: '-0.5px' }}>📸 Galeri Kenangan</h1>
           <p style={{ color: MUTED, margin: '0 0 4px', fontSize: '0.92em' }}>Semua momen indah kalian berdua</p>
-          <p style={{ color: P, fontWeight: 700, fontSize: '0.88em' }}>
-            {allMedia.filter(m=>m.type==='photo').length} foto · {allMedia.filter(m=>m.type==='video').length} video · {tripGroups.length} trip
-          </p>
+          <p style={{ color: P, fontWeight: 700, fontSize: '0.88em' }}>{allMedia.filter(m=>m.type==='photo').length} foto · {allMedia.filter(m=>m.type==='video').length} video · {tripGroups.length} trip</p>
         </div>
 
-        {/* Controls bar */}
         <div style={{ background: 'white', borderRadius: 20, border: `2px solid ${S}`, padding: '14px 18px', marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {/* View mode + type filter */}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            {/* View mode */}
             <div style={{ display: 'flex', gap: 4, background: BGM, borderRadius: 12, padding: 4 }}>
               {([['timeline','🕐 Timeline'],['moodboard','🎞️ Moodboard'],['masonry','⊞ Grid']] as [ViewMode,string][]).map(([v,l]) => (
                 <button key={v} onClick={() => setViewMode(v)} style={{ padding: '6px 14px', borderRadius: 9, border: 'none', fontWeight: 700, fontSize: '0.8em', cursor: 'pointer', background: viewMode === v ? P : 'transparent', color: viewMode === v ? 'white' : MUTED, transition: 'all .2s' }}>{l}</button>
               ))}
             </div>
-
             <div style={{ width: 1, height: 28, background: S }} />
-
-            {/* Type filter */}
             {[['all','Semua'],['photo','📷 Foto'],['video','🎬 Video']].map(([v,l]) => (
               <button key={v} onClick={() => setFilter(v as any)} style={{ padding: '6px 14px', borderRadius: 999, fontSize: '0.82em', fontWeight: 700, cursor: 'pointer', border: 'none', background: filter === v ? P : BGM, color: filter === v ? 'white' : P, transition: 'all .2s' }}>{l}</button>
             ))}
           </div>
-
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             <select value={filterCat} onChange={e => setFilterCat(e.target.value)} style={{ padding: '8px 14px', borderRadius: 12, border: `2px solid ${S}`, fontSize: '0.85em', color: P, background: 'white', outline: 'none', cursor: 'pointer' }}>
               <option value="all">Semua Kategori</option>
@@ -256,7 +201,6 @@ export default function GalleryPage() {
           </div>
         </div>
 
-        {/* Content */}
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
             <div style={{ width: 44, height: 44, border: `4px solid ${S}`, borderTopColor: P, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
@@ -268,7 +212,6 @@ export default function GalleryPage() {
             <p style={{ color: MUTED, fontSize: '0.88em', margin: 0 }}>{allMedia.length === 0 ? 'Tambahkan review dengan foto dulu!' : 'Coba ubah filter'}</p>
           </div>
         ) : viewMode === 'masonry' ? (
-          // ── MASONRY GRID ──────────────────────────────────────────────────
           <div style={{ display: 'flex', gap: 10 }}>
             {columns.map((col, ci) => (
               <div key={ci} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -277,52 +220,22 @@ export default function GalleryPage() {
             ))}
           </div>
         ) : viewMode === 'timeline' ? (
-          // ── DIARY BOOK VIEW ───────────────────────────────────────────────
-          <DiaryBook tripGroups={tripGroups} ideas={ideas} diaryNotes={diaryNotes} onRefreshNotes={refreshNotes} onOpenDiary={g => setDiaryGroup(g)} diaryGroup={diaryGroup} onCloseDiary={() => setDiaryGroup(null)} onOpenLightbox={openLightbox} />
-        ) : (
-          // ── MOODBOARD ─────────────────────────────────────────────────────
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {tripGroups.map((group, gi) => (
-              <div key={group.trip?.id || gi} className="moodboard-card" style={{ ['--delay' as any]: `${gi * 0.08}s`, background: 'white', borderRadius: 24, border: `2px solid ${S}`, overflow: 'hidden', boxShadow: '0 4px 20px rgba(3,37,76,0.08)' }}>
-                {/* Trip header */}
-                <div style={{ padding: '14px 20px', borderBottom: `1.5px solid ${S}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    {group.trip ? (
-                      <>
-                        <h3 style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontWeight: 400, fontSize: '1.05em', color: P, margin: '0 0 2px' }}>
-                          {group.trip.trip_day}, {formatTanggalIndonesia(group.trip.trip_date)}
-                        </h3>
-                        {group.trip.secret_message && group.trip.secret_message !== 'Tidak ada pesan rahasia.' && (
-                          <p style={{ margin: 0, fontSize: '0.75em', color: '#92400e', fontStyle: 'italic' }}>💌 {group.trip.secret_message}</p>
-                        )}
-                      </>
-                    ) : (
-                      <h3 style={{ fontWeight: 700, fontSize: '0.9em', color: MUTED, margin: 0 }}>Kenangan lainnya</h3>
-                    )}
-                  </div>
-                  <span style={{ padding: '4px 12px', borderRadius: 999, background: BGM, color: P, fontSize: '0.75em', fontWeight: 700, border: `1px solid ${S}` }}>{group.media.length} foto</span>
-                </div>
-
-                {/* Auto carousel */}
-                <AutoCarousel items={group.media} onClickItem={openLightbox} />
-              </div>
-            ))}
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <DiaryBook tripGroups={tripGroups} ideas={ideas} diaryNotes={diaryNotes} onRefreshNotes={refreshNotes} onOpenDiary={g => setDiaryGroup(g)} diaryGroup={diaryGroup} onCloseDiary={() => setDiaryGroup(null)} onOpenLightbox={openLightbox} search={search} onSearchChange={setSearch} />
           </div>
+        ) : (
+          <FilmStripMoodboard tripGroups={tripGroups} onClickItem={openLightbox} />
         )}
       </main>
 
-      {/* ── FLOATING MUSIC PLAYER ─────────────────────────────────────────── */}
+      {/* Music Player */}
       <div style={{ position: 'fixed', bottom: 24, right: 20, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
-
-        {/* Playlist panel */}
         {showPlaylist && (
           <div style={{ background: 'white', borderRadius: 20, border: `2px solid ${S}`, boxShadow: '0 8px 32px rgba(3,37,76,0.18)', width: 'min(300px, 90vw)', overflow: 'hidden', animation: 'floatIn .25s ease' }}>
             <div style={{ padding: '14px 16px', borderBottom: `1.5px solid ${S}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontWeight: 800, color: P, fontSize: '0.9em' }}>🎵 Playlist</span>
               <button onClick={() => setShowAddTrack(p => !p)} style={{ padding: '4px 10px', borderRadius: 8, background: showAddTrack ? P : BGM, color: showAddTrack ? 'white' : P, border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.75em' }}>+ Tambah</button>
             </div>
-
-            {/* Add track form */}
             {showAddTrack && (
               <div style={{ padding: '12px 16px', borderBottom: `1.5px solid ${S}`, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <input value={newTrackTitle} onChange={e => setNewTrackTitle(e.target.value)} placeholder="Judul lagu *" style={{ padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${S}`, fontSize: '0.82em', color: P, outline: 'none', width: '100%', boxSizing: 'border-box' }} />
@@ -331,66 +244,41 @@ export default function GalleryPage() {
                 <button onClick={addTrack} style={{ padding: '7px', borderRadius: 8, background: P, color: 'white', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.82em' }}>Tambah ke Playlist</button>
               </div>
             )}
-
-            {/* Track list */}
             <div style={{ maxHeight: 240, overflowY: 'auto' }}>
               {playlist.map((t, i) => (
                 <div key={i} className="track-item" onClick={() => { setCurrentTrack(i); setIsPlaying(true) }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', cursor: 'pointer', background: i === currentTrack ? BGM : 'white', transition: 'background .15s', borderBottom: `1px solid ${S}` }}>
-                  <span style={{ fontSize: '0.75em', color: i === currentTrack && isPlaying ? P : MUTED, fontWeight: 700, width: 18, flexShrink: 0 }}>
-                    {i === currentTrack && isPlaying ? '▶' : i + 1}
-                  </span>
+                  <span style={{ fontSize: '0.75em', color: i === currentTrack && isPlaying ? P : MUTED, fontWeight: 700, width: 18, flexShrink: 0 }}>{i === currentTrack && isPlaying ? '▶' : i + 1}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ margin: 0, fontWeight: 700, color: P, fontSize: '0.82em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</p>
                     <p style={{ margin: 0, color: MUTED, fontSize: '0.72em' }}>{t.artist}</p>
                   </div>
-                  {i === currentTrack && isPlaying && (
-                    <span style={{ animation: 'pulse 1s infinite', fontSize: '0.7em' }}>🎵</span>
-                  )}
+                  {i === currentTrack && isPlaying && <span style={{ animation: 'pulse 1s infinite', fontSize: '0.7em' }}>🎵</span>}
                 </div>
               ))}
             </div>
           </div>
         )}
-
-        {/* Player pill */}
         <div style={{ background: P, borderRadius: 999, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 6px 24px rgba(3,37,76,0.35)', minWidth: showPlayer ? 'min(260px, 80vw)' : 'auto', transition: 'all .3s ease' }}>
           {showPlayer ? (
             <>
-              {/* Track info */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ margin: 0, color: 'white', fontWeight: 700, fontSize: '0.8em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{track.title}</p>
                 <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', fontSize: '0.7em' }}>{track.artist}</p>
               </div>
-
-              {/* Controls */}
               <button className="player-btn" onClick={() => setCurrentTrack(p => (p - 1 + playlist.length) % playlist.length)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: 32, height: 32, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8em', transition: 'background .15s' }}>‹</button>
-              <button className="player-btn" onClick={() => setIsPlaying(p => !p)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 36, height: 36, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9em', transition: 'background .15s' }}>
-                {isPlaying ? '⏸' : '▶'}
-              </button>
+              <button className="player-btn" onClick={() => setIsPlaying(p => !p)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 36, height: 36, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9em', transition: 'background .15s' }}>{isPlaying ? '⏸' : '▶'}</button>
               <button className="player-btn" onClick={() => setCurrentTrack(p => (p + 1) % playlist.length)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: 32, height: 32, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8em', transition: 'background .15s' }}>›</button>
               <button className="player-btn" onClick={() => setShowPlaylist(p => !p)} style={{ background: showPlaylist ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: 32, height: 32, color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8em', transition: 'background .15s' }}>☰</button>
               <button className="player-btn" onClick={() => { setShowPlayer(false); setIsPlaying(false); setShowPlaylist(false) }} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: 28, height: 28, color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7em', transition: 'background .15s' }}>✕</button>
             </>
           ) : (
-            <button onClick={() => setShowPlayer(true)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: '0.85em', padding: 0 }}>
-              🎵 <span>Musik</span>
-            </button>
+            <button onClick={() => setShowPlayer(true)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: '0.85em', padding: 0 }}>🎵 <span>Musik</span></button>
           )}
         </div>
       </div>
 
-      {/* Hidden YouTube iframe for audio */}
-      {isPlaying && (
-        <iframe
-          ref={iframeRef}
-          src={track.url}
-          style={{ position: 'fixed', width: 0, height: 0, border: 'none', opacity: 0, pointerEvents: 'none' }}
-          allow="autoplay"
-          title="music-player"
-        />
-      )}
+      {isPlaying && <iframe ref={iframeRef} src={track.url} style={{ position: 'fixed', width: 0, height: 0, border: 'none', opacity: 0, pointerEvents: 'none' }} allow="autoplay" title="music-player" />}
 
-      {/* Lightbox */}
       {lightbox && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(3,37,76,0.96)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={e => { if (e.target === e.currentTarget) setLightbox(null) }}>
           {lightboxIdx > 0 && <button onClick={() => navLightbox(-1)} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 48, height: 48, fontSize: '1.4em', cursor: 'pointer', color: 'white', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>}
@@ -398,11 +286,7 @@ export default function GalleryPage() {
           <button onClick={() => setLightbox(null)} style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 40, height: 40, fontSize: '1.1em', cursor: 'pointer', color: 'white', zIndex: 10 }}>✕</button>
           <div style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', color: 'rgba(255,255,255,0.6)', fontSize: '0.82em', fontWeight: 600 }}>{lightboxIdx + 1} / {filtered.length}</div>
           <div style={{ maxWidth: 760, width: '100%', display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
-            {lightbox.type === 'photo' ? (
-              <img src={lightbox.url} alt={lightbox.ideaName} style={{ width: '100%', maxHeight: '65vh', objectFit: 'contain', borderRadius: 20, display: 'block' }} />
-            ) : (
-              <video src={lightbox.url} controls autoPlay style={{ width: '100%', maxHeight: '65vh', borderRadius: 20, background: '#000' }} />
-            )}
+            {lightbox.type === 'photo' ? <img src={lightbox.url} alt={lightbox.ideaName} style={{ width: '100%', maxHeight: '65vh', objectFit: 'contain', borderRadius: 20, display: 'block' }} /> : <video src={lightbox.url} controls autoPlay style={{ width: '100%', maxHeight: '65vh', borderRadius: 20, background: '#000' }} />}
             <div style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)', borderRadius: 16, padding: '14px 20px', width: '100%', border: '1px solid rgba(255,255,255,0.2)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
                 <div>
@@ -423,85 +307,156 @@ export default function GalleryPage() {
   )
 }
 
-// ── DIARY BOOK ────────────────────────────────────────────────────────────────
-function DiaryBook({ tripGroups, ideas, diaryNotes, onRefreshNotes, onOpenDiary, diaryGroup, onCloseDiary, onOpenLightbox }: {
-  tripGroups: TripGroup[]
-  ideas: any[]
-  diaryNotes: DiaryNote[]
-  onRefreshNotes: () => void
-  onOpenDiary: (g: TripGroup) => void
-  diaryGroup: TripGroup | null
-  onCloseDiary: () => void
-  onOpenLightbox: (item: MediaItem) => void
+// ── DIARY BOOK — single page, no left memo panel ──────────────────────────────
+function DiaryBook({ tripGroups, ideas, diaryNotes, onRefreshNotes, onOpenDiary, diaryGroup, onCloseDiary, onOpenLightbox, search, onSearchChange }: {
+  tripGroups: TripGroup[]; ideas: any[]; diaryNotes: DiaryNote[]; onRefreshNotes: () => void
+  onOpenDiary: (g: TripGroup) => void; diaryGroup: TripGroup | null; onCloseDiary: () => void; onOpenLightbox: (item: MediaItem) => void
+  search: string; onSearchChange: (v: string) => void
 }) {
   const [isMobile, setIsMobile] = useState(false)
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640)
-    check()
-    window.addEventListener('resize', check)
+    check(); window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  const perPage = isMobile ? 1 : 2
-  const [page, setPage] = useState(0)
-  const [flipping, setFlipping] = useState<'left'|'right'|null>(null)
-  const totalPages = Math.ceil(tripGroups.length / perPage)
+  const [flippedCount, setFlippedCount] = useState(0)
+  const [animating, setAnimating] = useState(false)
 
-  function flipTo(dir: 'left'|'right') {
-    const nextPage = dir === 'right' ? page + 1 : page - 1
-    if (nextPage < 0 || nextPage >= totalPages) return
-    setFlipping(dir)
-    setTimeout(() => { setPage(nextPage); setFlipping(null) }, 350)
+  // Trip date autocomplete — matches against the shared search prop
+  const tripDateMatches = useMemo(() => {
+    if (!search.trim()) return []
+    const q = search.toLowerCase()
+    return tripGroups.filter(g => {
+      const date = g.trip?.trip_date || ''; const day = g.trip?.trip_day || ''
+      return date.includes(q) || day.toLowerCase().includes(q) || formatTanggalIndonesia(date).toLowerCase().includes(q)
+    })
+  }, [search, tripGroups])
+
+  function flipForward() {
+    if (animating || flippedCount >= tripGroups.length) return
+    setAnimating(true); setFlippedCount(c => c + 1); setTimeout(() => setAnimating(false), 700)
+  }
+  function flipBackward() {
+    if (animating || flippedCount <= 0) return
+    setAnimating(true); setFlippedCount(c => c - 1); setTimeout(() => setAnimating(false), 700)
+  }
+  function jumpToTrip(g: TripGroup) {
+    const idx = tripGroups.findIndex(t => t.trip?.id === g.trip?.id)
+    if (idx === -1) return
+    setFlippedCount(idx); onSearchChange('')
   }
 
-  const leftTrip  = tripGroups[page * perPage]
-  const rightTrip = !isMobile ? tripGroups[page * perPage + 1] : undefined
-
-  function DiaryPage({ bg, paddingLeft, pageNum, trip, align }: { bg: string; paddingLeft: string; pageNum: number; trip: TripGroup | undefined; align: 'left'|'right' }) {
-    return (
-      <div style={{ flex: 1, background: bg, position: 'relative', padding: `20px ${align === 'right' ? '16px' : '16px'} 20px ${paddingLeft}`, display: 'flex', flexDirection: 'column', minHeight: isMobile ? 420 : undefined }}>
-        {Array.from({length: 18}).map((_,i) => (
-          <div key={i} style={{ position: 'absolute', left: align === 'left' ? 36 : 16, right: 16, top: 40 + i * 24, height: 1, background: 'rgba(180,160,120,0.18)', pointerEvents: 'none' }} />
-        ))}
-        {align === 'left' && <div style={{ position: 'absolute', left: 30, top: 0, bottom: 0, width: 2, background: 'rgba(220,60,60,0.22)' }} />}
-        {trip ? (
-          <BookPage group={trip} ideas={ideas} notes={diaryNotes.filter(n => n.trip_id === trip.trip?.id)} onRefreshNotes={onRefreshNotes} onClick={() => onOpenDiary(trip)} />
-        ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c9b99a', fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '0.9em' }}>halaman kosong</div>
-        )}
-        <div style={{ textAlign: align, fontSize: '0.68em', color: '#b8a88a', fontFamily: "'Playfair Display', serif", fontStyle: 'italic', marginTop: 'auto', paddingTop: 10 }}>{pageNum}</div>
-      </div>
-    )
-  }
+  const bookW = isMobile ? 320 : 440
+  const bookH = isMobile ? 480 : 560
 
   return (
     <>
+      <style>{`
+        .diary-page {
+          position: absolute; width: 100%; height: 100%; top: 0; left: 0;
+          transform-origin: left center; transform-style: preserve-3d;
+          transition: transform 0.9s cubic-bezier(0.645, 0.045, 0.355, 1);
+          cursor: pointer; will-change: transform;
+        }
+        .diary-page.is-flipped { transform: rotateY(-180deg); }
+        .diary-page-front, .diary-page-back {
+          position: absolute; width: 100%; height: 100%; top: 0; left: 0;
+          backface-visibility: hidden; -webkit-backface-visibility: hidden;
+          overflow: hidden; transform: translateZ(0); -webkit-transform: translateZ(0); isolation: isolate;
+        }
+        .diary-page-back {
+          transform: rotateY(180deg) translateZ(0); -webkit-transform: rotateY(180deg) translateZ(0);
+          background: #f4f1de; border-radius: 10px;
+        }
+        .diary-ruled-lines { position: absolute; inset: 0; pointer-events: none; }
+      `}</style>
+
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-        {/* Book spread */}
+
+        {/* Trip date autocomplete dropdown — appears when search matches a trip date */}
+        {tripDateMatches.length > 0 && (
+          <div style={{ width: '100%', maxWidth: bookW, position: 'relative' }}>
+            <div style={{ background: 'white', borderRadius: 14, boxShadow: '0 8px 32px rgba(3,37,76,0.18)', border: `1.5px solid ${S}`, zIndex: 50, maxHeight: 240, overflowY: 'auto' }}>
+              <div style={{ padding: '8px 16px 6px', fontSize: '0.7em', color: MUTED, fontWeight: 700, letterSpacing: '0.05em', borderBottom: `1px solid ${BGM}` }}>Langsung ke tanggal:</div>
+              {tripDateMatches.map(g => (
+                <button key={g.trip?.id} onClick={() => jumpToTrip(g)} style={{ width: '100%', padding: '10px 16px', background: 'none', border: 'none', borderBottom: `1px solid ${BGM}`, cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, color: P, fontSize: '0.85em' }}>{g.trip?.trip_day}, {formatTanggalIndonesia(g.trip?.trip_date || '')}</div>
+                    <div style={{ fontSize: '0.7em', color: MUTED }}>{g.media.length} foto</div>
+                  </div>
+                  <span style={{ color: P, fontSize: '0.9em' }}>→</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* THE BOOK */}
         <div style={{
-          display: 'flex', width: '100%', maxWidth: isMobile ? 400 : 860,
-          minHeight: isMobile ? 460 : 480,
-          borderRadius: isMobile ? 16 : 12, overflow: 'hidden',
-          boxShadow: '0 16px 48px rgba(3,37,76,0.2), 0 4px 12px rgba(3,37,76,0.1)',
-          transform: flipping === 'right' ? 'perspective(1200px) rotateY(-2deg)' : flipping === 'left' ? 'perspective(1200px) rotateY(2deg)' : 'none',
-          transition: 'transform .35s cubic-bezier(.25,.46,.45,.94)',
+          position: 'relative',
+          width: bookW,
+          height: bookH,
+          perspective: '2000px',
+          boxShadow: '0 24px 48px rgba(3,37,76,0.22), 0 8px 20px rgba(3,37,76,0.14)',
         }}>
-          <DiaryPage bg="#fdfaf5" paddingLeft="40px" pageNum={page * perPage + 1} trip={leftTrip} align="left" />
-          {!isMobile && <>
-            <div style={{ width: 10, background: 'linear-gradient(to right, #d4c4a0, #efe8d8, #d4c4a0)', flexShrink: 0 }} />
-            <DiaryPage bg="#fefcf8" paddingLeft="20px" pageNum={page * perPage + 2} trip={rightTrip} align="right" />
-          </>}
+          {/* Dark back base */}
+          <div style={{ position: 'absolute', inset: 0, background: '#2d1e16', borderRadius: 10 }} />
+
+          {/* Pages — rendered back to front so z-index works */}
+          {[...tripGroups].reverse().map((group, revIdx) => {
+            const idx = tripGroups.length - 1 - revIdx
+            const isFlipped = idx < flippedCount
+            const zIdx = isFlipped ? idx + 1 : tripGroups.length - idx + 1
+
+            return (
+              <div
+                key={group.trip?.id || idx}
+                className={`diary-page${isFlipped ? ' is-flipped' : ''}`}
+                style={{ zIndex: zIdx, pointerEvents: idx === flippedCount ? 'auto' : 'none' }}
+              >
+                {/* Front face */}
+                <div className="diary-page-front" style={{ background: idx % 2 === 0 ? '#fdfaf5' : '#fefcf8', borderRadius: '10px', cursor: 'default' }}>
+                  <div className="diary-ruled-lines">
+                    {Array.from({length: 22}).map((_,i) => (
+                      <div key={i} style={{ position: 'absolute', left: 40, right: 16, top: 36 + i * 24, height: 1, background: 'rgba(180,160,120,0.18)' }} />
+                    ))}
+                    <div style={{ position: 'absolute', left: 34, top: 0, bottom: 0, width: 2, background: 'rgba(220,60,60,0.2)' }} />
+                  </div>
+                  <div style={{ position: 'absolute', inset: 0, padding: '20px 16px 48px 44px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    <BookPage group={group} ideas={ideas} notes={diaryNotes.filter(n => n.trip_id === group.trip?.id)} onRefreshNotes={onRefreshNotes} onClick={() => onOpenDiary(group)} />
+                  </div>
+                  {/* Flip zone */}
+                  <div onClick={flipForward} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 16, cursor: 'pointer', background: 'linear-gradient(to top, rgba(200,180,140,0.12), transparent)' }}>
+                    <span style={{ fontSize: '0.62em', color: '#b8a88a', fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}>{idx + 1} · balik halaman ›</span>
+                  </div>
+                </div>
+                {/* Back face */}
+                <div className="diary-page-back" />
+              </div>
+            )
+          })}
+
+          {/* Cover */}
+          <div className={`diary-page${flippedCount > 0 ? ' is-flipped' : ''}`} style={{ zIndex: flippedCount > 0 ? 0 : tripGroups.length + 10, cursor: 'pointer' }} onClick={() => flippedCount === 0 ? flipForward() : undefined}>
+            <div className="diary-page-front" style={{ background: 'linear-gradient(135deg, #2d1e16 0%, #4a3728 100%)', borderRadius: '10px', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 16, padding: 32 }}>
+                <div style={{ border: '2px solid rgba(212,192,132,0.5)', padding: '24px 32px', borderRadius: 4, textAlign: 'center' }}>
+                  <h1 style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '1.8em', color: '#f5e6c8', margin: '0 0 8px', fontWeight: 400 }}>Diary Kenangan</h1>
+                  <p style={{ fontSize: '0.65em', letterSpacing: '0.25em', color: 'rgba(212,192,132,0.7)', margin: 0, textTransform: 'uppercase' }}>Momen indah kalian berdua</p>
+                </div>
+                <p style={{ fontSize: '0.65em', color: 'rgba(245,230,200,0.4)', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 16 }}>Ketuk untuk membuka ›</p>
+              </div>
+            </div>
+            <div className="diary-page-back" style={{ background: '#3a2618' }} />
+          </div>
         </div>
 
         {/* Navigation */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button onClick={() => flipTo('left')} disabled={page === 0}
-            style={{ padding: '9px 20px', borderRadius: 999, background: page === 0 ? '#e8dcc8' : P, color: page === 0 ? '#b8a88a' : 'white', border: 'none', fontWeight: 700, cursor: page === 0 ? 'not-allowed' : 'pointer', fontSize: '0.85em', transition: 'all .2s' }}
-          >‹ Sebelumnya</button>
-          <span style={{ fontSize: '0.78em', color: MUTED, fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}>{page + 1} / {totalPages}</span>
-          <button onClick={() => flipTo('right')} disabled={page >= totalPages - 1}
-            style={{ padding: '9px 20px', borderRadius: 999, background: page >= totalPages - 1 ? '#e8dcc8' : P, color: page >= totalPages - 1 ? '#b8a88a' : 'white', border: 'none', fontWeight: 700, cursor: page >= totalPages - 1 ? 'not-allowed' : 'pointer', fontSize: '0.85em', transition: 'all .2s' }}
-          >Berikutnya ›</button>
+          <button onClick={flipBackward} disabled={flippedCount === 0 || animating} style={{ padding: '9px 20px', borderRadius: 999, background: flippedCount === 0 ? '#e8dcc8' : P, color: flippedCount === 0 ? '#b8a88a' : 'white', border: 'none', fontWeight: 700, cursor: flippedCount === 0 ? 'not-allowed' : 'pointer', fontSize: '0.85em', transition: 'all .2s', boxShadow: flippedCount === 0 ? 'none' : '0 4px 14px rgba(3,37,76,0.25)' }}>‹ Kembali</button>
+          <span style={{ fontSize: '0.78em', color: MUTED, fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}>{flippedCount === 0 ? 'Tutup' : `${flippedCount} / ${tripGroups.length}`}</span>
+          <button onClick={flipForward} disabled={flippedCount >= tripGroups.length || animating} style={{ padding: '9px 20px', borderRadius: 999, background: flippedCount >= tripGroups.length ? '#e8dcc8' : P, color: flippedCount >= tripGroups.length ? '#b8a88a' : 'white', border: 'none', fontWeight: 700, cursor: flippedCount >= tripGroups.length ? 'not-allowed' : 'pointer', fontSize: '0.85em', transition: 'all .2s', boxShadow: flippedCount >= tripGroups.length ? 'none' : '0 4px 14px rgba(3,37,76,0.25)' }}>Buka ›</button>
         </div>
       </div>
 
@@ -588,20 +543,6 @@ function BookPage({ group, ideas, notes, onRefreshNotes, onClick }: { group: Tri
         </div>
       )}
 
-      {/* Diary notes */}
-      {notes.map(note => (
-        <div key={note.id} style={{ background: '#e8f4fd', padding: '6px 10px', borderRadius: 2, boxShadow: '2px 2px 6px rgba(0,0,0,0.1)', fontSize: '0.62em', color: '#1a3a5c', fontFamily: "'Playfair Display', serif", transform: `rotate(${note.id.charCodeAt(0) % 6 - 3}deg)`, alignSelf: 'flex-start', maxWidth: '85%', position: 'relative' }}>
-          📝 {note.content}
-          <button
-            onClick={async e => { e.stopPropagation(); await supabase.from('diary_notes').delete().eq('id', note.id); onRefreshNotes() }}
-            style={{ position: 'absolute', top: 2, right: 4, background: 'none', border: 'none', fontSize: '0.8em', cursor: 'pointer', color: '#999', lineHeight: 1 }}
-          >×</button>
-        </div>
-      ))}
-
-      {/* Add note inline */}
-      <NoteAdder tripId={group.trip?.id} onRefreshNotes={onRefreshNotes} />
-
       <p style={{ fontSize: '0.6em', color: '#c9b99a', textAlign: 'center', margin: 0, fontStyle: 'italic' }}>ketuk untuk lihat semua foto</p>
     </div>
   )
@@ -620,7 +561,7 @@ function PolaroidStack({ group, index, onClick }: { group: TripGroup; index: num
 
   return (
     <div
-      onClick={onClick}
+      onClick={e => { e.stopPropagation(); onClick() }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}
@@ -802,11 +743,11 @@ function DiaryModal({ group, notes, onRefreshNotes, onClose, onOpenLightbox }: {
   const [noteZ, setNoteZ] = useState<number[]>([])
   const maxZ = useRef(group.media.length + notes.length + 10)
 
-  // Sync notePos when notes change
+  // Sync notePos when notes change — use note IDs as dependency for accuracy
   useEffect(() => {
     setNotePos(prev => notes.map((n, i) => prev[i] || { x: sr(i * 31 + 5, 8, 70), y: sr(i * 19 + 9, 10, 60), rot: sr(i * 13 + 3, -8, 8) }))
     setNoteZ(prev => notes.map((_, i) => prev[i] || (group.media.length + i + 1)))
-  }, [notes.length])
+  }, [notes.map(n => n.id).join(',')])
 
   type DragTarget = { kind: 'photo' | 'note'; idx: number }
   const dragging = useRef<DragTarget | null>(null)
@@ -817,6 +758,9 @@ function DiaryModal({ group, notes, onRefreshNotes, onClose, onOpenLightbox }: {
 
   const [zoomedItem, setZoomedItem] = useState<MediaItem | null>(null)
   const [showReviewForm, setShowReviewForm] = useState(false)
+
+  // Refresh notes when modal opens so we always have latest data
+  useEffect(() => { onRefreshNotes() }, [])
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -873,7 +817,7 @@ function DiaryModal({ group, notes, onRefreshNotes, onClose, onOpenLightbox }: {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(3,37,76,0.9)', backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <div style={{ padding: '12px 16px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0, flexWrap: 'wrap', gap: 8 }}>
+      <div style={{ padding: '10px 12px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0, flexWrap: 'wrap', gap: 6 }}>
         <div>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontWeight: 400, fontSize: '1.2em', color: 'white', margin: '0 0 2px' }}>
             {group.trip ? `${group.trip.trip_day}, ${formatTanggalIndonesia(group.trip.trip_date)}` : 'Kenangan'}
@@ -910,7 +854,7 @@ function DiaryModal({ group, notes, onRefreshNotes, onClose, onOpenLightbox }: {
               onMouseDown={e => startDrag(e, 'photo', i, pos)}
               onTouchStart={e => startDrag(e, 'photo', i, pos)}
               onClick={e => { e.stopPropagation(); if (!hasMoved.current) setZoomedItem(item) }}
-              style={{ position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, transform: `rotate(${pos.rot}deg)`, zIndex: photoZ[i], cursor: 'grab', background: 'white', borderRadius: 4, boxShadow: '0 5px 20px rgba(0,0,0,0.4)', padding: '7px 7px 24px', width: 120, userSelect: 'none', touchAction: 'none' }}
+              style={{ position: 'absolute', left: `${pos.x}%`, top: `${pos.y}%`, transform: `rotate(${pos.rot}deg)`, zIndex: photoZ[i], cursor: 'grab', background: 'white', borderRadius: 4, boxShadow: '0 5px 20px rgba(0,0,0,0.4)', padding: '7px 7px 22px', width: 'clamp(90px, 22vw, 130px)', userSelect: 'none', touchAction: 'none' }}
             >
               {item.type === 'photo'
                 ? <div style={{ width: '100%', height: 108, background: '#f5f5f0', borderRadius: 2, overflow: 'hidden' }}><img src={item.url} alt={item.ideaName} draggable={false} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} /></div>
@@ -1028,7 +972,7 @@ function ReviewFormModal({ group, onClose }: { group: TripGroup; onClose: () => 
 
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div style={{ background: 'white', borderRadius: 20, padding: 'clamp(16px, 4vw, 28px)', width: '100%', maxWidth: 460, display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: 'white', borderRadius: 20, padding: 'clamp(14px, 4vw, 28px)', width: '100%', maxWidth: 460, display: 'flex', flexDirection: 'column', gap: 12, maxHeight: '92vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ margin: 0, fontFamily: "'Playfair Display', serif", fontStyle: 'italic', color: P, fontSize: '1.1em' }}>
             {existing ? 'Edit Review' : 'Tambah Review'}
@@ -1088,6 +1032,157 @@ function ReviewFormModal({ group, onClose }: { group: TripGroup; onClose: () => 
   )
 }
 
+
+
+// ── FILM STRIP MOODBOARD ──────────────────────────────────────────────────────
+function FilmStrip({ group, onClickItem, onClose }: {
+  group: TripGroup; onClickItem: (item: MediaItem) => void; onClose: () => void
+}) {
+  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({})
+  const doubled = useMemo(() => [...group.media, ...group.media], [group.media])
+  const duration = Math.max(30, group.media.length * 7)
+  const holeCount = 50
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const vid = e.target as HTMLVideoElement
+        if (e.isIntersecting) { vid.muted = true; vid.play().catch(() => {}) }
+        else vid.pause()
+      })
+    }, { threshold: 0.3 })
+    Object.values(videoRefs.current).forEach(v => { if (v) observer.observe(v) })
+    return () => observer.disconnect()
+  }, [doubled])
+
+  const label = group.trip ? `${group.trip.trip_day}, ${formatTanggalIndonesia(group.trip.trip_date)}` : 'Kenangan'
+  const sub = group.trip?.secret_message && group.trip.secret_message !== 'Tidak ada pesan rahasia.' ? group.trip.secret_message : `${group.media.length} foto`
+
+  return (
+    <div style={{ width: '100%', animation: 'floatIn .35s ease' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px 14px' }}>
+        <div>
+          <h3 style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '1.5em', color: P, margin: '0 0 2px', fontWeight: 400 }}>{label}</h3>
+          <p style={{ margin: 0, fontSize: '0.8em', color: MUTED, fontStyle: 'italic' }}>{sub}</p>
+        </div>
+        <button onClick={onClose} style={{ background: 'white', border: `1.5px solid ${S}`, borderRadius: 999, padding: '6px 16px', color: P, fontWeight: 700, cursor: 'pointer', fontSize: '0.8em', display: 'flex', alignItems: 'center', gap: 6 }}>
+          ‹ Lemari
+        </button>
+      </div>
+
+      {/* Film strip */}
+      <div style={{ position: 'relative', width: '108%', left: '-4%', background: '#111', transform: 'rotate(-0.5deg)', boxShadow: '0 16px 50px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+        {/* Top holes */}
+        <div style={{ display: 'flex', justifyContent: 'space-around', padding: '0 8px', height: 26, alignItems: 'center' }}>
+          {Array.from({ length: holeCount }).map((_, i) => (
+            <div key={i} style={{ width: 15, height: 11, background: '#fffdf7', borderRadius: 2, opacity: 0.75, flexShrink: 0 }} />
+          ))}
+        </div>
+
+        {/* Scrolling track */}
+        <div style={{ display: 'flex', alignItems: 'stretch', animation: `scrollFilm ${duration}s linear infinite`, willChange: 'transform', padding: '6px 0' }}>
+          {doubled.map((item, i) => (
+            <div key={i} className="film-frame-item" onClick={() => onClickItem(item)}
+              style={{ flexShrink: 0, width: 300, height: 240, position: 'relative', borderLeft: '2px solid #222', borderRight: '2px solid #222', cursor: 'pointer', overflow: 'hidden', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {item.type === 'photo' ? (
+                <img src={item.url} alt={item.ideaName} style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.9 }} loading="lazy" />
+              ) : (
+                <video ref={el => { videoRefs.current[`${item.id}-${i}`] = el }} src={item.url}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.9 }} muted playsInline loop />
+              )}
+              <div className="film-hover-overlay" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, transparent 55%)', opacity: 0, transition: 'opacity .25s', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '10px 12px' }}>
+                <p style={{ color: 'white', fontWeight: 700, fontSize: '0.8em', margin: '0 0 2px', fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}>{item.ideaName}</p>
+                {item.rating > 0 && <span style={{ color: '#f59e0b', fontSize: '0.7em' }}>{'★'.repeat(item.rating)}</span>}
+              </div>
+              {item.type === 'video' && <div style={{ position: 'absolute', top: 7, left: 8, background: 'rgba(0,0,0,0.65)', color: 'white', borderRadius: 4, padding: '2px 7px', fontSize: '0.62em', fontWeight: 700 }}>🎬</div>}
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom holes */}
+        <div style={{ display: 'flex', justifyContent: 'space-around', padding: '0 8px', height: 26, alignItems: 'center' }}>
+          {Array.from({ length: holeCount }).map((_, i) => (
+            <div key={i} style={{ width: 15, height: 11, background: '#fffdf7', borderRadius: 2, opacity: 0.75, flexShrink: 0 }} />
+          ))}
+        </div>
+      </div>
+
+      <p style={{ textAlign: 'right', paddingRight: 8, marginTop: 10, fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '0.78em', color: MUTED }}>"Tumbuh bersama, selamanya..."</p>
+    </div>
+  )
+}
+
+function FilmStripMoodboard({ tripGroups, onClickItem }: { tripGroups: TripGroup[]; onClickItem: (item: MediaItem) => void }) {
+  const [activeGroup, setActiveGroup] = useState<TripGroup | null>(null)
+
+  if (activeGroup) {
+    return (
+      <div style={{ width: '100%', padding: '8px 0 20px', position: 'relative', backgroundImage: 'radial-gradient(rgba(3,37,76,0.07) 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+        <FilmStrip group={activeGroup} onClickItem={onClickItem} onClose={() => setActiveGroup(null)} />
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ width: '100%', padding: '8px 0 24px', backgroundImage: 'radial-gradient(rgba(3,37,76,0.07) 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+      {/* Title */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 24, paddingLeft: 4 }}>
+        <span style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '2em', color: P, fontWeight: 700 }}>Lemari Film</span>
+        <span style={{ fontSize: '0.82em', color: MUTED, fontStyle: 'italic' }}>— pilih roll untuk diputar</span>
+      </div>
+
+      {/* Film roll grid */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20 }}>
+        {tripGroups.map((group, gi) => {
+          const thumb = group.media.find(m => m.type === 'photo') || group.media[0]
+          const label = group.trip ? `${group.trip.trip_day}, ${formatTanggalIndonesia(group.trip.trip_date)}` : 'Kenangan'
+          const holeCount = 7
+          return (
+            <div key={group.trip?.id || gi} onClick={() => setActiveGroup(group)}
+              className="film-roll-card"
+              style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', width: 'calc(33.33% - 14px)', minWidth: 200, maxWidth: 300, transition: 'transform .2s', animation: `floatIn .3s ease ${gi * 0.06}s both` }}>
+
+              {/* Mini film strip preview */}
+              <div style={{ background: '#111', borderRadius: '6px 6px 0 0', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.35)' }}>
+                {/* Top holes */}
+                <div style={{ display: 'flex', justifyContent: 'space-around', padding: '3px 4px', alignItems: 'center' }}>
+                  {Array.from({ length: holeCount }).map((_, i) => <div key={i} style={{ width: 12, height: 8, background: '#fffdf7', borderRadius: 2, opacity: 0.7 }} />)}
+                </div>
+                {/* Thumbnail */}
+                <div style={{ height: 160, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderTop: '2px solid #222', borderBottom: '2px solid #222', position: 'relative' }}>
+                  {thumb ? (
+                    thumb.type === 'photo'
+                      ? <img src={thumb.url} alt={label} style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.88 }} />
+                      : <video src={thumb.url} style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.88 }} muted playsInline />
+                  ) : (
+                    <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '2em' }}>🎞️</span>
+                  )}
+                  {/* Play icon overlay */}
+                  <div className="roll-play-icon" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', transition: 'background .2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)', opacity: 0, transition: 'opacity .2s' }} className="roll-play-btn">
+                      <span style={{ color: 'white', fontSize: '1.1em', marginLeft: 3 }}>▶</span>
+                    </div>
+                  </div>
+                </div>
+                {/* Bottom holes */}
+                <div style={{ display: 'flex', justifyContent: 'space-around', padding: '3px 4px', alignItems: 'center' }}>
+                  {Array.from({ length: holeCount }).map((_, i) => <div key={i} style={{ width: 12, height: 8, background: '#fffdf7', borderRadius: 2, opacity: 0.7 }} />)}
+                </div>
+              </div>
+
+              {/* Label below roll */}
+              <div style={{ background: 'white', borderRadius: '0 0 6px 6px', padding: '10px 12px', border: `1.5px solid ${S}`, borderTop: 'none' }}>
+                <p style={{ margin: '0 0 2px', fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '0.82em', color: P, fontWeight: 400 }}>{label}</p>
+                <p style={{ margin: 0, fontSize: '0.7em', color: MUTED }}>{group.media.length} foto{group.media.filter(m => m.type === 'video').length > 0 ? ` · ${group.media.filter(m => m.type === 'video').length} video` : ''}</p>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 // ── AUTO CAROUSEL ─────────────────────────────────────────────────────────────
 function AutoCarousel({ items, onClickItem }: { items: MediaItem[]; onClickItem: (item: MediaItem) => void }) {
