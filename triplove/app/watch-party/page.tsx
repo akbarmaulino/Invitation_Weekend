@@ -49,12 +49,9 @@ export default function WatchPartyPage() {
   const [chatInput, setChatInput] = useState('')
   const [elapsed, setElapsed] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
-
-  // showScreen: hanya true untuk PARTNER (bukan host)
-  // screenActive: true kalau host sedang share
   const [showScreen, setShowScreen] = useState(false)
-  const [screenActive, setScreenActive] = useState(false)
   const [needsInteraction, setNeedsInteraction] = useState(false)
+  const [screenActive, setScreenActive] = useState(false)
 
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -95,7 +92,7 @@ export default function WatchPartyPage() {
 
     ch.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        await ch.track({ name: myName, host: isHost, onlineAt: new Date().toISOString() })
+        await ch.track({ name: myName, host: isHost })
       }
     })
 
@@ -132,38 +129,29 @@ export default function WatchPartyPage() {
       }
     } else {
       if (payload.type === 'offer') {
-        if (pcRef.current) pcRef.current.close()
-
         const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
         pcRef.current = pc
-
         pc.onicecandidate = (e: RTCPeerConnectionIceEvent) => {
           if (e.candidate) broadcastWebRTC({ type: 'candidate', candidate: e.candidate })
         }
-
         pc.ontrack = (e: RTCTrackEvent) => {
           if (e.streams[0]) {
             streamRef.current = e.streams[0]
-            // FIX: hanya partner yang set showScreen=true
             setShowScreen(true)
             setNeedsInteraction(true)
             setTimeout(() => {
               if (videoRef.current) {
                 videoRef.current.srcObject = e.streams[0]
                 videoRef.current.muted = true
-                videoRef.current.play().catch(err => console.warn('[WP] autoplay blocked:', err))
+                videoRef.current.play().catch(() => {})
               }
             }, 200)
           }
         }
-
         await pc.setRemoteDescription(new RTCSessionDescription(payload.sdp))
         if (payload.candidates) {
-          payload.candidates.forEach((c: any) => {
-            pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {})
-          })
+          payload.candidates.forEach((c: any) => pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {}))
         }
-
         const answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
         broadcastWebRTC({ type: 'answer', sdp: pc.localDescription })
@@ -179,8 +167,15 @@ export default function WatchPartyPage() {
       streamRef.current = stream
       stream.getVideoTracks()[0].onended = () => stopScreenShare()
 
-      // FIX: Host TIDAK set showScreen — biar tidak looping/capture diri sendiri
-      // Host cukup tahu screenActive = true
+      // Host bisa lihat preview stream-nya sendiri, muted biar tidak feedback suara
+      setShowScreen(true)
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          videoRef.current.muted = true
+          videoRef.current.play().catch(() => {})
+        }
+      }, 200)
 
       const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
       pcRef.current = pc
@@ -199,7 +194,7 @@ export default function WatchPartyPage() {
       broadcastWebRTC({ type: 'offer', sdp: pc.localDescription, candidates: collectedCandidates })
       setScreenActive(true)
     } catch (e) {
-      console.error('[WP] startScreenShare error:', e)
+      console.error(e)
     }
   }
 
@@ -210,16 +205,6 @@ export default function WatchPartyPage() {
     streamRef.current = null
     setShowScreen(false)
     setScreenActive(false)
-    setNeedsInteraction(false)
-  }
-
-  function handleTapToPlay() {
-    if (!videoRef.current) return
-    videoRef.current.muted = false
-    videoRef.current.play().catch(() => {
-      if (videoRef.current) videoRef.current.muted = true
-      videoRef.current?.play().catch(console.warn)
-    })
     setNeedsInteraction(false)
   }
 
@@ -264,6 +249,16 @@ export default function WatchPartyPage() {
     supabase.channel(`watch:${roomCode}`).send({ type: 'broadcast', event: 'reaction', payload: r })
   }
 
+  function handleTapToPlay() {
+    if (!videoRef.current) return
+    videoRef.current.muted = false
+    videoRef.current.play().catch(() => {
+      if (videoRef.current) videoRef.current.muted = true
+      videoRef.current?.play().catch(() => {})
+    })
+    setNeedsInteraction(false)
+  }
+
   // ── RENDER ───────────────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: DARK, fontFamily: "'Georgia', serif", position: 'relative', overflow: 'hidden' }}>
@@ -301,7 +296,8 @@ export default function WatchPartyPage() {
             screenActive={screenActive}
             onStartScreen={startScreenShare} onStopScreen={stopScreenShare}
             showScreen={showScreen}
-            needsInteraction={needsInteraction} onTapToPlay={handleTapToPlay}
+            needsInteraction={needsInteraction}
+            onTapToPlay={handleTapToPlay}
             videoRef={videoRef} chatEndRef={chatEndRef}
           />
         )}
@@ -436,8 +432,7 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
           {/* Screen area */}
           <div style={{ flex: 1, position: 'relative', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: isMobile ? 220 : 0 }}>
 
-            {/* Video — hanya muncul untuk partner (showScreen=true) */}
-            {showScreen && (
+            {showScreen ? (
               <>
                 <video
                   ref={videoRef}
@@ -446,38 +441,31 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
                   muted
                   style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                 />
-                {/* Tap to unmute overlay — Android fix */}
-                {needsInteraction && (
+                {/* Tap to unmute — hanya muncul untuk partner, bukan host */}
+                {needsInteraction && !isHost && (
                   <div
                     onClick={onTapToPlay}
-                    style={{ position: 'absolute', inset: 0, zIndex: 10, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                    style={{ position: 'absolute', inset: 0, zIndex: 10, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                   >
-                    <div style={{ background: 'rgba(0,0,0,0.75)', border: `1px solid ${GOLD}`, borderRadius: 999, padding: '14px 28px', color: CREAM, fontSize: '0.95em', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ background: 'rgba(0,0,0,0.8)', border: `1px solid ${GOLD}`, borderRadius: 999, padding: '14px 28px', color: CREAM, fontSize: '0.95em', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', gap: 10, boxShadow: `0 0 24px ${GOLD}44` }}>
                       <span style={{ fontSize: '1.3em' }}>🔊</span> Tap untuk suara
                     </div>
                   </div>
                 )}
+                {/* Live badge untuk host */}
+                {isHost && screenActive && (
+                  <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(239,68,68,0.5)', borderRadius: 99, backdropFilter: 'blur(6px)' }}>
+                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 6px #ef4444' }} />
+                    <span style={{ color: '#ef4444', fontSize: '0.7em', fontWeight: 700, letterSpacing: '0.08em' }}>LIVE</span>
+                  </div>
+                )}
               </>
-            )}
-
-            {/* Placeholder saat tidak ada stream */}
-            {!showScreen && (
+            ) : (
               <div style={{ textAlign: 'center', padding: 24 }}>
                 <div style={{ fontSize: isMobile ? '3em' : '5em', marginBottom: 12, opacity: 0.3 }}>🎞️</div>
                 <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.82em', lineHeight: 1.6, maxWidth: 280, margin: '0 auto' }}>
-                  {isHost
-                    ? screenActive
-                      ? 'Kamu sedang share screen ke pasangan'
-                      : 'Klik Share Screen di bawah untuk mulai streaming'
-                    : 'Menunggu host mulai share screen...'}
+                  {isHost ? 'Klik Share Screen di bawah untuk mulai streaming ke pasangan' : 'Menunggu host mulai share screen...'}
                 </p>
-                {/* Kalau host lagi share, tampilkan indikator */}
-                {isHost && screenActive && (
-                  <div style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 99 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 8px #ef4444' }} />
-                    <span style={{ color: '#ef4444', fontSize: '0.78em' }}>Live</span>
-                  </div>
-                )}
               </div>
             )}
 
@@ -491,15 +479,12 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
 
           {/* Controls bar */}
           <div style={{ padding: isMobile ? '10px 12px' : '14px 20px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 14, flexWrap: 'wrap' }}>
-            {/* Timer */}
             <div style={{ fontFamily: 'monospace', fontSize: isMobile ? '1em' : '1.2em', color: GOLD, fontWeight: 700, minWidth: 60 }}>{fmtTime(elapsed)}</div>
 
-            {/* Play/Pause */}
             <button onClick={onTogglePlay} style={{ width: isMobile ? 38 : 44, height: isMobile ? 38 : 44, borderRadius: '50%', background: `linear-gradient(135deg, ${GOLD}, #a07840)`, border: 'none', color: DARK, fontSize: isMobile ? '1em' : '1.2em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(201,169,110,0.35)', flexShrink: 0 }}>
               {isPlaying ? '⏸' : '▶'}
             </button>
 
-            {/* Screen share (host only) */}
             {isHost && (
               <button
                 onClick={screenActive ? onStopScreen : onStartScreen}
@@ -508,7 +493,6 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
               </button>
             )}
 
-            {/* Reactions */}
             <div style={{ marginLeft: 'auto', position: 'relative' }}>
               <button onClick={() => setShowReactions(r => !r)}
                 style={{ padding: isMobile ? '6px 10px' : '7px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: 'rgba(255,255,255,0.8)', fontSize: isMobile ? '0.9em' : '1em', cursor: 'pointer' }}>
