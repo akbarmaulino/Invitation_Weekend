@@ -80,21 +80,21 @@ export default function Navbar() {
         padding: '8px 8px calc(8px + env(safe-area-inset-bottom))',
         display: 'none',
       }} className="nav-mobile-bottom">
-        <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', width: '100%' }}>
           {NAV_ITEMS.map(({ href, label, icon }) => {
             const isActive = pathname === href
             return (
               <Link key={href} href={href} style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                padding: '6px 12px', borderRadius: 12,
-                textDecoration: 'none',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                padding: '4px 6px', borderRadius: 10,
+                textDecoration: 'none', flex: 1,
                 background: isActive ? 'rgba(255,255,255,0.12)' : 'transparent',
                 transition: 'all 0.2s',
-                minWidth: 56,
+                minWidth: 0,
               }}>
-                <span style={{ fontSize: '1.3em', lineHeight: 1 }}>{icon}</span>
-                <span style={{ fontSize: '0.65em', fontWeight: 700, color: isActive ? 'white' : 'rgba(255,255,255,0.5)', letterSpacing: 0.2 }}>{label}</span>
-                {isActive && <div style={{ width: 4, height: 4, borderRadius: '50%', background: S, marginTop: -2 }} />}
+                <span style={{ fontSize: '1.15em', lineHeight: 1 }}>{icon}</span>
+                <span className="nav-label" style={{ fontSize: '0.55em', fontWeight: 700, color: isActive ? 'white' : 'rgba(255,255,255,0.5)', letterSpacing: 0.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center' }}>{label}</span>
+                {isActive && <div style={{ width: 3, height: 3, borderRadius: '50%', background: S, marginTop: -1 }} />}
               </Link>
             )
           })}
@@ -111,6 +111,9 @@ export default function Navbar() {
           .nav-desktop { display: none !important; }
           .nav-mobile-top { display: block !important; }
           .nav-mobile-bottom { display: flex !important; }
+        }
+        @media (max-width: 380px) {
+          .nav-label { display: none !important; }
         }
       `}} />
     </>
