@@ -392,6 +392,9 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
   const [showReactions, setShowReactions] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [chatOpen, setChatOpen] = useState(true)
+  const [toast, setToast] = useState<{ sender: string; text: string } | null>(null)
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const prevMsgCountRef = useRef(0)
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -399,8 +402,19 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
     return () => window.removeEventListener('resize', check)
   }, [])
 
+  // Notif toast saat ada pesan masuk dari partner
+  useEffect(() => {
+    if (messages.length <= prevMsgCountRef.current) { prevMsgCountRef.current = messages.length; return }
+    const latest = messages[messages.length - 1]
+    prevMsgCountRef.current = messages.length
+    if (latest.sender === myName) return
+    setToast({ sender: latest.sender, text: latest.text })
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    toastTimerRef.current = setTimeout(() => setToast(null), 3500)
+  }, [messages])
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Top bar */}
       <div style={{ padding: '12px 16px', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(201,169,110,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -547,10 +561,36 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
         )}
       </div>
 
+      {/* Chat toast notification */}
+      {toast && (
+        <div
+          onClick={() => { setToast(null); setChatOpen(true) }}
+          style={{
+            position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+            background: 'rgba(13,27,42,0.92)', border: `1px solid ${GOLD}44`,
+            borderRadius: 14, padding: '10px 16px', display: 'flex', alignItems: 'center',
+            gap: 10, backdropFilter: 'blur(12px)', boxShadow: `0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px ${GOLD}22`,
+            cursor: 'pointer', zIndex: 999, animation: 'toastIn 0.3s ease',
+            maxWidth: 'calc(100vw - 48px)', minWidth: 220,
+          }}
+        >
+          <div style={{ width: 32, height: 32, borderRadius: '50%', background: `linear-gradient(135deg, ${GOLD}55, ${GOLD}22)`, border: `1px solid ${GOLD}66`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9em', flexShrink: 0 }}>💬</div>
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <p style={{ margin: 0, color: GOLD, fontSize: '0.7em', fontWeight: 700, letterSpacing: '0.04em' }}>{toast.sender}</p>
+            <p style={{ margin: 0, color: CREAM, fontSize: '0.8em', opacity: 0.85, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{toast.text}</p>
+          </div>
+          <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '0.7em', flexShrink: 0 }}>✕</span>
+        </div>
+      )}
+
       <style>{`
         @keyframes reactionFloat {
           0% { opacity: 1; transform: translateY(0) scale(1); }
           100% { opacity: 0; transform: translateY(-80px) scale(1.5); }
+        }
+        @keyframes toastIn {
+          0% { opacity: 0; transform: translateX(-50%) translateY(12px); }
+          100% { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
       `}</style>
     </div>
