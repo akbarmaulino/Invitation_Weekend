@@ -42,14 +42,18 @@ export default function SettingsPage() {
 
 // ─── PLACES TAB ───────────────────────────────────────────────────────────────
 function PlacesTab() {
-  const [ideas, setIdeas]         = useState<TripIdea[]>([])
-  const [cities, setCities]       = useState<City[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [search, setSearch]       = useState('')
+  const [ideas, setIdeas]           = useState<TripIdea[]>([])
+  const [cities, setCities]         = useState<City[]>([])
+  const [categories, setCategories] = useState<{type_key: string; category: string; subtype: string}[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [search, setSearch]         = useState('')
   const [filterCity, setFilterCity] = useState('all')
-  const [openCat, setOpenCat]     = useState<string|null>(null)
-  const [toast, setToast]         = useState<{msg:string;type:any}|null>(null)
-  const [dialog, setDialog]       = useState<{msg:string;onConfirm:()=>void}|null>(null)
+  const [openCat, setOpenCat]       = useState<string|null>(null)
+  const [toast, setToast]           = useState<{msg:string;type:any}|null>(null)
+  const [dialog, setDialog]         = useState<{msg:string;onConfirm:()=>void}|null>(null)
+  const [editIdea, setEditIdea]     = useState<TripIdea | null>(null)
+  const [editForm, setEditForm]     = useState({ name: '', city_id: '', type_key: '' })
+  const [editSaving, setEditSaving] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -60,14 +64,10 @@ function PlacesTab() {
       supabase.from('cities').select('*').order('display_order'),
       supabase.from('idea_categories').select('type_key, category, subtype'),
     ])
-    setIdeas(ir.data || [])
-    setCities(cr.data || [])
-    // Build lookup maps
     const cityMap: Record<string, string> = {}
     ;(cr.data || []).forEach((c: any) => { cityMap[c.id] = c.name })
     const catMap: Record<string, {category: string; subtype: string}> = {}
     ;(catr.data || []).forEach((c: any) => { catMap[c.type_key] = { category: c.category, subtype: c.subtype } })
-    // Enrich ideas with city_name, category_name, subtype_name
     const enriched = (ir.data || []).map((idea: any) => ({
       ...idea,
       city_name: idea.city_id ? cityMap[idea.city_id] || null : null,
@@ -75,6 +75,8 @@ function PlacesTab() {
       subtype_name: idea.type_key ? catMap[idea.type_key]?.subtype || 'Umum' : 'Umum',
     }))
     setIdeas(enriched)
+    setCities(cr.data || [])
+    setCategories(catr.data || [])
     setLoading(false)
   }
 
@@ -91,6 +93,31 @@ function PlacesTab() {
     })
   }
 
+  function handleEdit(idea: TripIdea) {
+    setEditIdea(idea)
+    setEditForm({
+      name: idea.idea_name,
+      city_id: idea.city_id || '',
+      type_key: idea.type_key || '',
+    })
+  }
+
+  async function handleEditSave() {
+    if (!editIdea) return
+    if (!editForm.name.trim()) return setToast({ msg: 'Nama tidak boleh kosong!', type: 'warn' })
+    setEditSaving(true)
+    const { error } = await supabase.from('trip_ideas_v2').update({
+      idea_name: editForm.name.trim(),
+      city_id: editForm.city_id || null,
+      type_key: editForm.type_key || editIdea.type_key,
+    }).eq('id', editIdea.id)
+    setEditSaving(false)
+    if (error) return setToast({ msg: 'Gagal menyimpan', type: 'error' })
+    setToast({ msg: 'Tersimpan! ✅', type: 'success' })
+    setEditIdea(null)
+    load()
+  }
+
   const filtered = useMemo(() => ideas.filter(i => {
     if (filterCity !== 'all' && (i.city_id || '__none__') !== filterCity) return false
     if (search) {
@@ -100,7 +127,6 @@ function PlacesTab() {
     return true
   }), [ideas, search, filterCity])
 
-  // Group by category → subtype
   const grouped = useMemo(() => {
     const catMap: Record<string, Record<string, TripIdea[]>> = {}
     filtered.forEach(i => {
@@ -123,10 +149,9 @@ function PlacesTab() {
       <div style={card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
           <h2 style={{ fontWeight: 800, color: P, margin: 0, fontSize: '1em' }}>📍 Semua Tempat ({totalFiltered}/{ideas.length})</h2>
-          <span style={{ fontSize: '0.78em', color: MUTED }}>Klik 🗑️ untuk menghapus</span>
+          <span style={{ fontSize: '0.78em', color: MUTED }}>Klik ✏️ untuk edit, 🗑️ untuk hapus</span>
         </div>
 
-        {/* Search + filter kota */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 180, position: 'relative' }}>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Cari nama tempat..." style={{ ...inp, paddingRight: search ? 32 : 13 }} />
@@ -148,7 +173,6 @@ function PlacesTab() {
               const catTotal = Object.values(subtypes).flat().length
               return (
                 <div key={catName} style={{ borderRadius: 14, border: `2px solid ${isOpen ? P : S}`, overflow: 'hidden', transition: 'border-color .2s' }}>
-                  {/* Category header */}
                   <div
                     onClick={() => setOpenCat(isOpen ? null : catName)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: isOpen ? BGM : 'white', cursor: 'pointer', userSelect: 'none' }}
@@ -158,18 +182,15 @@ function PlacesTab() {
                     <span style={{ fontSize: '0.75em', color: MUTED }}>{catTotal} tempat</span>
                   </div>
 
-                  {/* Subtypes */}
                   {isOpen && (
                     <div style={{ borderTop: `1.5px solid ${S}`, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {Object.entries(subtypes).map(([subName, subIdeas]) => (
                         <div key={subName}>
-                          {/* Subtype label */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, paddingLeft: 4 }}>
                             <div style={{ width: 3, height: 11, borderRadius: 99, background: S, flexShrink: 0 }} />
                             <span style={{ fontSize: '0.72em', fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.6 }}>{subName}</span>
                             <span style={{ fontSize: '0.68em', color: MUTED }}>({subIdeas.length})</span>
                           </div>
-                          {/* Ideas in subtype */}
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             {subIdeas.map(idea => (
                               <div key={idea.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, background: 'white', border: `1.5px solid ${S}` }}>
@@ -185,7 +206,10 @@ function PlacesTab() {
                                     <span style={{ fontSize: '0.7em', color: P, background: BGM, padding: '1px 7px', borderRadius: 999, border: `1px solid ${S}`, marginTop: 2, display: 'inline-block' }}>📍 {idea.city_name}</span>
                                   )}
                                 </div>
-                                <button onClick={() => handleDelete(idea)} style={{ padding: '6px 10px', borderRadius: 8, background: '#fff1f2', color: '#f43f5e', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.8em', flexShrink: 0 }}>🗑️</button>
+                                <div style={{ display: 'flex', gap: 6 }}>
+                                  <button onClick={() => handleEdit(idea)} style={{ padding: '6px 10px', borderRadius: 8, background: BGM, color: P, border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.8em', flexShrink: 0 }}>✏️</button>
+                                  <button onClick={() => handleDelete(idea)} style={{ padding: '6px 10px', borderRadius: 8, background: '#fff1f2', color: '#f43f5e', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.8em', flexShrink: 0 }}>🗑️</button>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -199,6 +223,49 @@ function PlacesTab() {
           </div>
         )}
       </div>
+
+      {/* Edit Modal */}
+      {editIdea && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(3,37,76,0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={e => { if (e.target === e.currentTarget) setEditIdea(null) }}
+        >
+          <div style={{ background: 'white', borderRadius: 24, border: `2px solid ${S}`, width: '100%', maxWidth: 460, padding: 24, boxShadow: '0 16px 48px rgba(3,37,76,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ fontWeight: 800, color: P, margin: 0, fontSize: '1.05em' }}>✏️ Edit Tempat</h3>
+              <button onClick={() => setEditIdea(null)} style={{ background: BGM, border: `1.5px solid ${S}`, borderRadius: 999, padding: '4px 12px', fontWeight: 700, cursor: 'pointer', color: P }}>✕</button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={{ fontSize: '0.72em', fontWeight: 700, color: MUTED, display: 'block', marginBottom: 4 }}>Nama Tempat *</label>
+                <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} style={inp} />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.72em', fontWeight: 700, color: MUTED, display: 'block', marginBottom: 4 }}>Kota</label>
+                <select value={editForm.city_id} onChange={e => setEditForm(f => ({ ...f, city_id: e.target.value }))} style={inp}>
+                  <option value=''>Tanpa Kota</option>
+                  {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.72em', fontWeight: 700, color: MUTED, display: 'block', marginBottom: 4 }}>Kategori / Sub-tipe</label>
+                <select value={editForm.type_key} onChange={e => setEditForm(f => ({ ...f, type_key: e.target.value }))} style={inp}>
+                  <option value=''>Pilih...</option>
+                  {categories.map(c => (
+                    <option key={c.type_key} value={c.type_key}>{c.category} — {c.subtype}</option>
+                  ))}
+                </select>
+              </div>
+              <button onClick={handleEditSave} disabled={editSaving} style={{
+                padding: '12px', borderRadius: 12, marginTop: 4,
+                background: editSaving ? BGM : P,
+                color: editSaving ? MUTED : 'white',
+                border: 'none', fontWeight: 800, cursor: editSaving ? 'not-allowed' : 'pointer',
+                fontSize: '0.95em', boxShadow: editSaving ? 'none' : '0 4px 14px rgba(3,37,76,0.25)',
+              }}>{editSaving ? '⏳ Menyimpan...' : '💾 Simpan Perubahan'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
