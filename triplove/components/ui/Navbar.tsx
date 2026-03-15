@@ -12,7 +12,7 @@ const MAIN_ITEMS = [
   { href: '/gallery',     label: 'Gallery',     icon: '📸' },
   { href: '/history',     label: 'History',     icon: '📖' },
   { href: '/games',       label: 'Games',       icon: '🎮' },
-  { href: '/locations',   label: 'Locations',   icon: '🗺️' },
+  // { href: '/locations',   label: 'Locations',   icon: '🗺️' },
 ]
 
 const SETTINGS = { href: '/settings', label: 'Settings', icon: '⚙️' }
