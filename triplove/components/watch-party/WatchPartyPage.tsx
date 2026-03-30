@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-
+import { useRouter } from 'next/navigation'
 // ── TYPES ─────────────────────────────────────────────────────────────────────
 interface ChatMessage { id: string; sender: string; text: string; ts: number }
 interface Reaction { id: string; emoji: string; x: number; y: number; ts: number }
@@ -59,6 +59,27 @@ export default function WatchPartyPage() {
   const chatEndRef = useRef<HTMLDivElement | null>(null)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const playStartRef = useRef<number>(0)
+
+
+
+  // ── RESET ────────────────────────────────────────────────────────────────────
+  function resetToLobby() {
+    stopScreenShare()
+    setPhase('lobby')
+    setRoomCode('')
+    setJoinCode('')
+    setIsHost(false)
+    setPartnerOnline(false)
+    setMessages([])
+    setReactions([])
+    setChatInput('')
+    setElapsed(0)
+    setIsPlaying(false)
+    setShowScreen(false)
+    setNeedsInteraction(false)
+    setScreenActive(false)
+    setError('')
+  }
 
   // ── SUPABASE REALTIME ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -167,7 +188,6 @@ export default function WatchPartyPage() {
       streamRef.current = stream
       stream.getVideoTracks()[0].onended = () => stopScreenShare()
 
-      // Host bisa lihat preview stream-nya sendiri, muted biar tidak feedback suara
       setShowScreen(true)
       setTimeout(() => {
         if (videoRef.current) {
@@ -262,9 +282,7 @@ export default function WatchPartyPage() {
   // ── RENDER ───────────────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: DARK, fontFamily: "'Georgia', serif", position: 'relative', overflow: 'hidden' }}>
-      {/* Grain overlay */}
       <div style={{ position: 'fixed', inset: 0, backgroundImage: 'url("https://www.transparenttextures.com/patterns/stardust.png")', opacity: 0.08, pointerEvents: 'none', zIndex: 0 }} />
-      {/* Radial glow */}
       <div style={{ position: 'fixed', top: '20%', left: '50%', transform: 'translateX(-50%)', width: '60vw', height: '40vh', background: `radial-gradient(ellipse, rgba(201,169,110,0.08) 0%, transparent 70%)`, pointerEvents: 'none', zIndex: 0 }} />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
@@ -282,6 +300,7 @@ export default function WatchPartyPage() {
             roomCode={roomCode} filmTitle={filmTitle}
             partnerOnline={partnerOnline}
             onStart={() => setPhase('party')}
+            onBack={resetToLobby}
           />
         )}
         {phase === 'party' && (
@@ -299,6 +318,7 @@ export default function WatchPartyPage() {
             needsInteraction={needsInteraction}
             onTapToPlay={handleTapToPlay}
             videoRef={videoRef} chatEndRef={chatEndRef}
+            onBack={resetToLobby}
           />
         )}
       </div>
@@ -309,8 +329,23 @@ export default function WatchPartyPage() {
 // ── LOBBY SCREEN ──────────────────────────────────────────────────────────────
 function LobbyScreen({ myName, setMyName, filmTitle, setFilmTitle, joinCode, setJoinCode, onCreate, onJoin, error }: any) {
   const [tab, setTab] = useState<'create' | 'join'>('create')
+  const router = useRouter()
+
+const back = () => {
+  router.push('/') // ganti dengan URL tujuan
+}
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
+            {/* Back button */}
+      <button
+        onClick={back}
+        style={{ position: 'fixed', top: 16, left: 16, padding: '8px 16px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 99, color: 'rgba(255,255,255,0.5)', fontSize: '0.78em', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'all .2s', zIndex: 10 }}
+        onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.1)'; (e.currentTarget as any).style.color = CREAM }}
+        onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as any).style.color = 'rgba(255,255,255,0.5)' }}
+      >
+        ← Keluar
+      </button>
+      
       <div style={{ textAlign: 'center', marginBottom: 40 }}>
         <div style={{ fontSize: '3em', marginBottom: 8 }}>🎬</div>
         <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(1.8em, 5vw, 2.8em)', color: CREAM, margin: '0 0 8px', fontWeight: 400, letterSpacing: '-0.5px' }}>
@@ -352,7 +387,7 @@ function LobbyScreen({ myName, setMyName, filmTitle, setFilmTitle, joinCode, set
 }
 
 // ── WAITING SCREEN ────────────────────────────────────────────────────────────
-function WaitingScreen({ roomCode, filmTitle, partnerOnline, onStart }: any) {
+function WaitingScreen({ roomCode, filmTitle, partnerOnline, onStart, onBack }: any) {
   const [copied, setCopied] = useState(false)
   function copyCode() {
     navigator.clipboard.writeText(roomCode)
@@ -360,6 +395,17 @@ function WaitingScreen({ roomCode, filmTitle, partnerOnline, onStart }: any) {
   }
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', textAlign: 'center' }}>
+
+      {/* Back button */}
+      <button
+        onClick={onBack}
+        style={{ position: 'fixed', top: 16, left: 16, padding: '8px 16px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 99, color: 'rgba(255,255,255,0.5)', fontSize: '0.78em', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'all .2s', zIndex: 10 }}
+        onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.1)'; (e.currentTarget as any).style.color = CREAM }}
+        onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as any).style.color = 'rgba(255,255,255,0.5)' }}
+      >
+        ← Keluar
+      </button>
+
       <div style={{ fontSize: '2.5em', marginBottom: 16 }}>🎞️</div>
       <h2 style={{ fontFamily: "'Playfair Display', serif", color: CREAM, fontSize: 'clamp(1.3em, 4vw, 1.8em)', margin: '0 0 6px', fontWeight: 400 }}>Menunggu pasangan...</h2>
       <p style={{ color: GOLD, fontStyle: 'italic', margin: '0 0 36px', fontSize: '0.9em', opacity: 0.8 }}>{filmTitle}</p>
@@ -388,11 +434,12 @@ function WaitingScreen({ roomCode, filmTitle, partnerOnline, onStart }: any) {
 }
 
 // ── PARTY SCREEN ──────────────────────────────────────────────────────────────
-function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions, chatInput, setChatInput, onSendChat, onReaction, elapsed, isPlaying, onTogglePlay, partnerOnline, screenActive, onStartScreen, onStopScreen, showScreen, needsInteraction, onTapToPlay, videoRef, chatEndRef }: any) {
+function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions, chatInput, setChatInput, onSendChat, onReaction, elapsed, isPlaying, onTogglePlay, partnerOnline, screenActive, onStartScreen, onStopScreen, showScreen, needsInteraction, onTapToPlay, videoRef, chatEndRef, onBack }: any) {
   const [showReactions, setShowReactions] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [chatOpen, setChatOpen] = useState(true)
   const [toast, setToast] = useState<{ sender: string; text: string } | null>(null)
+  const [confirmBack, setConfirmBack] = useState(false)
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null)
   const prevMsgCountRef = useRef(0)
 
@@ -402,7 +449,6 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // Notif toast saat ada pesan masuk dari partner
   useEffect(() => {
     if (messages.length <= prevMsgCountRef.current) { prevMsgCountRef.current = messages.length; return }
     const latest = messages[messages.length - 1]
@@ -415,9 +461,41 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+      {/* Confirm back dialog */}
+      {confirmBack && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'rgba(13,27,42,0.98)', border: `1px solid ${GOLD}44`, borderRadius: 20, padding: '28px 28px', maxWidth: 340, width: '100%', textAlign: 'center' }}>
+            <div style={{ fontSize: '2em', marginBottom: 12 }}>🚪</div>
+            <h3 style={{ color: CREAM, fontFamily: "'Playfair Display', serif", fontWeight: 400, margin: '0 0 8px', fontSize: '1.2em' }}>Keluar dari room?</h3>
+            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.82em', margin: '0 0 24px', lineHeight: 1.6 }}>Session akan berakhir dan kamu kembali ke halaman awal.</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setConfirmBack(false)}
+                style={{ flex: 1, padding: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: 'rgba(255,255,255,0.6)', fontSize: '0.85em', cursor: 'pointer' }}
+              >Batal</button>
+              <button
+                onClick={onBack}
+                style={{ flex: 1, padding: '10px', background: `linear-gradient(135deg, ${GOLD}, #a07840)`, border: 'none', borderRadius: 10, color: DARK, fontWeight: 800, fontSize: '0.85em', cursor: 'pointer' }}
+              >Keluar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top bar */}
       <div style={{ padding: '12px 16px', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(201,169,110,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+
+          {/* Back button */}
+          <button
+            onClick={() => setConfirmBack(true)}
+            style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', fontSize: '0.85em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all .2s' }}
+            onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.12)'; (e.currentTarget as any).style.color = CREAM }}
+            onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as any).style.color = 'rgba(255,255,255,0.5)' }}
+            title="Keluar dari room"
+          >←</button>
+
           <span style={{ fontSize: '1.2em' }}>🎬</span>
           <div>
             <p style={{ margin: 0, color: CREAM, fontWeight: 700, fontSize: '0.9em', fontFamily: "'Playfair Display', serif", fontStyle: 'italic' }}>{filmTitle}</p>
@@ -442,31 +520,18 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
 
         {/* Left: screen + controls */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
-
-          {/* Screen area */}
           <div style={{ flex: 1, position: 'relative', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: isMobile ? 220 : 0 }}>
 
             {showScreen ? (
               <>
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-                />
-                {/* Tap to unmute — hanya muncul untuk partner, bukan host */}
+                <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
                 {needsInteraction && !isHost && (
-                  <div
-                    onClick={onTapToPlay}
-                    style={{ position: 'absolute', inset: 0, zIndex: 10, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                  >
+                  <div onClick={onTapToPlay} style={{ position: 'absolute', inset: 0, zIndex: 10, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                     <div style={{ background: 'rgba(0,0,0,0.8)', border: `1px solid ${GOLD}`, borderRadius: 999, padding: '14px 28px', color: CREAM, fontSize: '0.95em', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', gap: 10, boxShadow: `0 0 24px ${GOLD}44` }}>
                       <span style={{ fontSize: '1.3em' }}>🔊</span> Tap untuk suara
                     </div>
                   </div>
                 )}
-                {/* Live badge untuk host */}
                 {isHost && screenActive && (
                   <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(239,68,68,0.5)', borderRadius: 99, backdropFilter: 'blur(6px)' }}>
                     <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 6px #ef4444' }} />
@@ -483,44 +548,28 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
               </div>
             )}
 
-            {/* Floating reactions */}
             {reactions.map((r: Reaction) => (
-              <div key={r.id} style={{ position: 'absolute', left: `${r.x}%`, top: `${r.y}%`, fontSize: isMobile ? '1.8em' : '2.4em', animation: 'reactionFloat 3s ease forwards', pointerEvents: 'none', zIndex: 20 }}>
-                {r.emoji}
-              </div>
+              <div key={r.id} style={{ position: 'absolute', left: `${r.x}%`, top: `${r.y}%`, fontSize: isMobile ? '1.8em' : '2.4em', animation: 'reactionFloat 3s ease forwards', pointerEvents: 'none', zIndex: 20 }}>{r.emoji}</div>
             ))}
           </div>
 
-          {/* Controls bar */}
+          {/* Controls */}
           <div style={{ padding: isMobile ? '10px 12px' : '14px 20px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 14, flexWrap: 'wrap' }}>
             <div style={{ fontFamily: 'monospace', fontSize: isMobile ? '1em' : '1.2em', color: GOLD, fontWeight: 700, minWidth: 60 }}>{fmtTime(elapsed)}</div>
-
             <button onClick={onTogglePlay} style={{ width: isMobile ? 38 : 44, height: isMobile ? 38 : 44, borderRadius: '50%', background: `linear-gradient(135deg, ${GOLD}, #a07840)`, border: 'none', color: DARK, fontSize: isMobile ? '1em' : '1.2em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(201,169,110,0.35)', flexShrink: 0 }}>
               {isPlaying ? '⏸' : '▶'}
             </button>
-
             {isHost && (
-              <button
-                onClick={screenActive ? onStopScreen : onStartScreen}
-                style={{ padding: isMobile ? '6px 12px' : '7px 16px', background: screenActive ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.07)', border: `1px solid ${screenActive ? '#ef4444' : 'rgba(255,255,255,0.15)'}`, borderRadius: 8, color: screenActive ? '#ef4444' : 'rgba(255,255,255,0.7)', fontSize: '0.75em', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
+              <button onClick={screenActive ? onStopScreen : onStartScreen} style={{ padding: isMobile ? '6px 12px' : '7px 16px', background: screenActive ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.07)', border: `1px solid ${screenActive ? '#ef4444' : 'rgba(255,255,255,0.15)'}`, borderRadius: 8, color: screenActive ? '#ef4444' : 'rgba(255,255,255,0.7)', fontSize: '0.75em', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
                 {screenActive ? '⏹ Stop Share' : '🖥️ Share Screen'}
               </button>
             )}
-
             <div style={{ marginLeft: 'auto', position: 'relative' }}>
-              <button onClick={() => setShowReactions(r => !r)}
-                style={{ padding: isMobile ? '6px 10px' : '7px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: 'rgba(255,255,255,0.8)', fontSize: isMobile ? '0.9em' : '1em', cursor: 'pointer' }}>
-                😊
-              </button>
+              <button onClick={() => setShowReactions(r => !r)} style={{ padding: isMobile ? '6px 10px' : '7px 14px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: 'rgba(255,255,255,0.8)', fontSize: isMobile ? '0.9em' : '1em', cursor: 'pointer' }}>😊</button>
               {showReactions && (
                 <div style={{ position: 'absolute', bottom: '110%', right: 0, background: 'rgba(20,30,45,0.95)', border: '1px solid rgba(201,169,110,0.2)', borderRadius: 14, padding: '10px 12px', display: 'flex', gap: 6, flexWrap: 'wrap', maxWidth: isMobile ? 180 : 240, backdropFilter: 'blur(10px)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
                   {REACTIONS.map(e => (
-                    <button key={e} onClick={() => { onReaction(e); setShowReactions(false) }}
-                      style={{ background: 'none', border: 'none', fontSize: isMobile ? '1.4em' : '1.6em', cursor: 'pointer', padding: '2px', borderRadius: 6, transition: 'transform .15s' }}
-                      onMouseEnter={ev => (ev.currentTarget.style.transform = 'scale(1.3)')}
-                      onMouseLeave={ev => (ev.currentTarget.style.transform = '')}>
-                      {e}
-                    </button>
+                    <button key={e} onClick={() => { onReaction(e); setShowReactions(false) }} style={{ background: 'none', border: 'none', fontSize: isMobile ? '1.4em' : '1.6em', cursor: 'pointer', padding: '2px', borderRadius: 6, transition: 'transform .15s' }} onMouseEnter={ev => (ev.currentTarget.style.transform = 'scale(1.3)')} onMouseLeave={ev => (ev.currentTarget.style.transform = '')}>{e}</button>
                   ))}
                 </div>
               )}
@@ -528,7 +577,7 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
           </div>
         </div>
 
-        {/* Right: Chat panel */}
+        {/* Chat panel */}
         {(!isMobile || chatOpen) && (
           <div style={{ width: isMobile ? '100%' : 300, height: isMobile ? 280 : 'auto', background: 'rgba(255,255,255,0.03)', borderLeft: isMobile ? 'none' : '1px solid rgba(255,255,255,0.07)', borderTop: isMobile ? '1px solid rgba(255,255,255,0.07)' : 'none', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
@@ -549,31 +598,16 @@ function PartyScreen({ myName, filmTitle, isHost, roomCode, messages, reactions,
               <div ref={chatEndRef} />
             </div>
             <div style={{ padding: '10px 12px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 8 }}>
-              <input
-                value={chatInput} onChange={e => setChatInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && onSendChat()}
-                placeholder="Ketik pesan..."
-                style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '8px 12px', color: CREAM, fontSize: '0.82em', outline: 'none' }}
-              />
+              <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && onSendChat()} placeholder="Ketik pesan..." style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '8px 12px', color: CREAM, fontSize: '0.82em', outline: 'none' }} />
               <button onClick={onSendChat} style={{ width: 36, height: 36, background: `linear-gradient(135deg, ${GOLD}, #a07840)`, border: 'none', borderRadius: 8, color: DARK, cursor: 'pointer', fontWeight: 900, fontSize: '0.9em', flexShrink: 0 }}>→</button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Chat toast notification */}
+      {/* Chat toast */}
       {toast && (
-        <div
-          onClick={() => { setToast(null); setChatOpen(true) }}
-          style={{
-            position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
-            background: 'rgba(13,27,42,0.92)', border: `1px solid ${GOLD}44`,
-            borderRadius: 14, padding: '10px 16px', display: 'flex', alignItems: 'center',
-            gap: 10, backdropFilter: 'blur(12px)', boxShadow: `0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px ${GOLD}22`,
-            cursor: 'pointer', zIndex: 999, animation: 'toastIn 0.3s ease',
-            maxWidth: 'calc(100vw - 48px)', minWidth: 220,
-          }}
-        >
+        <div onClick={() => { setToast(null); setChatOpen(true) }} style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: 'rgba(13,27,42,0.92)', border: `1px solid ${GOLD}44`, borderRadius: 14, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, backdropFilter: 'blur(12px)', boxShadow: `0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px ${GOLD}22`, cursor: 'pointer', zIndex: 999, animation: 'toastIn 0.3s ease', maxWidth: 'calc(100vw - 48px)', minWidth: 220 }}>
           <div style={{ width: 32, height: 32, borderRadius: '50%', background: `linear-gradient(135deg, ${GOLD}55, ${GOLD}22)`, border: `1px solid ${GOLD}66`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9em', flexShrink: 0 }}>💬</div>
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <p style={{ margin: 0, color: GOLD, fontSize: '0.7em', fontWeight: 700, letterSpacing: '0.04em' }}>{toast.sender}</p>
@@ -602,12 +636,7 @@ function Input({ label, value, onChange, placeholder, mono }: { label: string; v
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <label style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.72em', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{label}</label>
-      <input
-        value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-        style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: CREAM, fontSize: mono ? '1.1em' : '0.9em', fontFamily: mono ? 'monospace' : 'inherit', outline: 'none', letterSpacing: mono ? '0.15em' : 'normal', transition: 'border .2s' }}
-        onFocus={e => (e.target.style.borderColor = GOLD)}
-        onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
-      />
+      <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: CREAM, fontSize: mono ? '1.1em' : '0.9em', fontFamily: mono ? 'monospace' : 'inherit', outline: 'none', letterSpacing: mono ? '0.15em' : 'normal', transition: 'border .2s' }} onFocus={e => (e.target.style.borderColor = GOLD)} onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
     </div>
   )
 }
