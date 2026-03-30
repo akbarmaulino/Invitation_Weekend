@@ -830,10 +830,6 @@ function DiaryModal({ group, notes, onRefreshNotes, onClose, onOpenLightbox }: {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {/* Add memo button */}
           <NoteAdder tripId={group.trip?.id} onRefreshNotes={onRefreshNotes} dark />
-          <button
-            onClick={() => setShowReviewForm(true)}
-            style={{ padding: '6px 12px', borderRadius: 20, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', fontSize: '0.72em', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}
-          >✏️ Review</button>
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '50%', width: 36, height: 36, color: 'white', fontSize: '1em', cursor: 'pointer', flexShrink: 0 }}>✕</button>
         </div>
       </div>

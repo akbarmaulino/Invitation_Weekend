@@ -17,27 +17,17 @@ interface Props {
 }
 
 export default function ActivityArea({ ideas, categories, cities, ideaRatings, selectedIds, searchQuery, tripDate, onToggle, onViewDetail }: Props) {
-  if (!tripDate) return (
-    <div style={{ textAlign: 'center', padding: '56px 24px', borderRadius: 20, background: T.white, border: `2px dashed ${T.skyMid}` }}>
-      <p style={{ fontSize: '2.5em', margin: '0 0 12px' }}>🗓️</p>
-      <p style={{ fontWeight: 700, color: T.navy, margin: '0 0 5px', fontSize: '0.95em' }}>Pilih tanggal trip dulu yuk!</p>
-      <p style={{ color: T.muted, fontSize: '0.82em', margin: 0 }}>Isi tanggal di atas untuk mulai pilih aktivitas</p>
-    </div>
-  )
 
+  // ✅ Semua hooks di atas — tidak ada early return sebelum ini
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return ideas
     const q = searchQuery.toLowerCase()
-    return ideas.filter(i => i.idea_name?.toLowerCase().includes(q) || i.category_name?.toLowerCase().includes(q) || i.subtype_name?.toLowerCase().includes(q))
+    return ideas.filter(i =>
+      i.idea_name?.toLowerCase().includes(q) ||
+      i.category_name?.toLowerCase().includes(q) ||
+      i.subtype_name?.toLowerCase().includes(q)
+    )
   }, [ideas, searchQuery])
-
-  if (filtered.length === 0) return (
-    <div style={{ textAlign: 'center', padding: '56px 24px', borderRadius: 20, background: T.white, border: `2px dashed ${T.skyMid}` }}>
-      <p style={{ fontSize: '2em', margin: '0 0 8px' }}>🔍</p>
-      <p style={{ color: T.navy, fontWeight: 700, margin: 0, fontSize: '0.93em' }}>Tidak ada hasil</p>
-      <p style={{ color: T.muted, fontSize: '0.8em', margin: '5px 0 0' }}>Coba kata kunci lain</p>
-    </div>
-  )
 
   const grouped = useMemo(() => {
     const cityMap: Record<string, { city: any; cats: Record<string, { cat: string; subtypes: Record<string, TripIdea[]> }> }> = {}
@@ -51,8 +41,29 @@ export default function ActivityArea({ ideas, categories, cities, ideaRatings, s
       if (!cityMap[cityId].cats[catName].subtypes[subtype]) cityMap[cityId].cats[catName].subtypes[subtype] = []
       cityMap[cityId].cats[catName].subtypes[subtype].push(idea)
     })
-    return Object.values(cityMap).sort((a, b) => { if (!a.city) return 1; if (!b.city) return -1; return (a.city.display_order||0) - (b.city.display_order||0) })
+    return Object.values(cityMap).sort((a, b) => {
+      if (!a.city) return 1
+      if (!b.city) return -1
+      return (a.city.display_order || 0) - (b.city.display_order || 0)
+    })
   }, [filtered, cities])
+
+  // ✅ Early returns SETELAH semua hooks
+  if (!tripDate) return (
+    <div style={{ textAlign: 'center', padding: '56px 24px', borderRadius: 20, background: T.white, border: `2px dashed ${T.skyMid}` }}>
+      <p style={{ fontSize: '2.5em', margin: '0 0 12px' }}>🗓️</p>
+      <p style={{ fontWeight: 700, color: T.navy, margin: '0 0 5px', fontSize: '0.95em' }}>Pilih tanggal trip dulu yuk!</p>
+      <p style={{ color: T.muted, fontSize: '0.82em', margin: 0 }}>Isi tanggal di atas untuk mulai pilih aktivitas</p>
+    </div>
+  )
+
+  if (filtered.length === 0) return (
+    <div style={{ textAlign: 'center', padding: '56px 24px', borderRadius: 20, background: T.white, border: `2px dashed ${T.skyMid}` }}>
+      <p style={{ fontSize: '2em', margin: '0 0 8px' }}>🔍</p>
+      <p style={{ color: T.navy, fontWeight: 700, margin: 0, fontSize: '0.93em' }}>Tidak ada hasil</p>
+      <p style={{ color: T.muted, fontSize: '0.8em', margin: '5px 0 0' }}>Coba kata kunci lain</p>
+    </div>
+  )
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
