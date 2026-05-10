@@ -3393,7 +3393,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist
 var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/supabase.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/utils.ts [app-client] (ecmascript)");
 ;
-var _s = __turbopack_context__.k.signature();
+var _s = __turbopack_context__.k.signature(), _s1 = __turbopack_context__.k.signature();
 'use client';
 ;
 ;
@@ -3420,7 +3420,7 @@ const inp = {
     outline: 'none',
     boxSizing: 'border-box'
 };
-const label = {
+const labelStyle = {
     fontSize: '0.7em',
     fontWeight: 700,
     color: T.muted,
@@ -3429,6 +3429,220 @@ const label = {
     textTransform: 'uppercase',
     letterSpacing: 0.5
 };
+function SearchableSelect({ options, value, onChange, placeholder = 'Pilih...', disabled = false, clearable = true }) {
+    _s();
+    const [open, setOpen] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [query, setQuery] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
+    const containerRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const inputRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const selected = options.find((o)=>o.value === value) ?? null;
+    const filtered = query.trim() ? options.filter((o)=>o.label.toLowerCase().includes(query.toLowerCase())) : options;
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "SearchableSelect.useEffect": ()=>{
+            function handleClick(e) {
+                if (containerRef.current && !containerRef.current.contains(e.target)) {
+                    setOpen(false);
+                    setQuery('');
+                }
+            }
+            document.addEventListener('mousedown', handleClick);
+            return ({
+                "SearchableSelect.useEffect": ()=>document.removeEventListener('mousedown', handleClick)
+            })["SearchableSelect.useEffect"];
+        }
+    }["SearchableSelect.useEffect"], []);
+    function handleOpen() {
+        if (disabled) return;
+        setOpen(true);
+        setQuery('');
+        setTimeout(()=>inputRef.current?.focus(), 50);
+    }
+    function handleSelect(opt) {
+        onChange(opt.value);
+        setOpen(false);
+        setQuery('');
+    }
+    function handleClear(e) {
+        e.stopPropagation();
+        onChange('');
+        setOpen(false);
+        setQuery('');
+    }
+    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+        ref: containerRef,
+        style: {
+            position: 'relative'
+        },
+        children: [
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                onClick: handleOpen,
+                style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    border: `1.5px solid ${open ? T.navyLight : T.sky}`,
+                    borderRadius: 10,
+                    background: disabled ? T.skyLight : T.white,
+                    height: 38,
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    boxShadow: open ? `0 0 0 3px ${T.skyMid}66` : 'none',
+                    transition: 'border-color .15s, box-shadow .15s',
+                    opacity: disabled ? 0.6 : 1,
+                    overflow: 'hidden'
+                },
+                children: [
+                    open ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                        ref: inputRef,
+                        value: query,
+                        onChange: (e)=>setQuery(e.target.value),
+                        onClick: (e)=>e.stopPropagation(),
+                        placeholder: "Cari...",
+                        style: {
+                            flex: 1,
+                            border: 'none',
+                            outline: 'none',
+                            padding: '0 12px',
+                            fontSize: '0.87em',
+                            color: T.navy,
+                            background: 'transparent',
+                            height: '100%'
+                        }
+                    }, void 0, false, {
+                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                        lineNumber: 98,
+                        columnNumber: 11
+                    }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                        style: {
+                            flex: 1,
+                            padding: '0 12px',
+                            fontSize: '0.87em',
+                            color: selected ? T.navy : T.mutedLight,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                        },
+                        children: selected ? selected.label : placeholder
+                    }, void 0, false, {
+                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                        lineNumber: 112,
+                        columnNumber: 11
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            paddingRight: 8,
+                            gap: 2,
+                            flexShrink: 0
+                        },
+                        children: [
+                            clearable && selected && !open && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                onClick: handleClear,
+                                style: {
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: T.mutedLight,
+                                    fontSize: '0.75em',
+                                    padding: '2px 4px',
+                                    lineHeight: 1,
+                                    borderRadius: 4
+                                },
+                                title: "Hapus pilihan",
+                                children: "✕"
+                            }, void 0, false, {
+                                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                lineNumber: 123,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                style: {
+                                    color: T.mutedLight,
+                                    fontSize: '0.65em',
+                                    transform: open ? 'rotate(180deg)' : 'rotate(0)',
+                                    transition: 'transform .15s'
+                                },
+                                children: "▼"
+                            }, void 0, false, {
+                                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                lineNumber: 129,
+                                columnNumber: 11
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                        lineNumber: 121,
+                        columnNumber: 9
+                    }, this)
+                ]
+            }, void 0, true, {
+                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                lineNumber: 84,
+                columnNumber: 7
+            }, this),
+            open && !disabled && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                style: {
+                    position: 'absolute',
+                    top: 'calc(100% + 4px)',
+                    left: 0,
+                    right: 0,
+                    background: T.white,
+                    border: `1.5px solid ${T.sky}`,
+                    borderRadius: 10,
+                    boxShadow: '0 8px 24px rgba(3,37,76,0.12)',
+                    zIndex: 999,
+                    maxHeight: 220,
+                    overflowY: 'auto',
+                    padding: 4
+                },
+                children: filtered.length === 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                    style: {
+                        padding: '10px 12px',
+                        fontSize: '0.82em',
+                        color: T.mutedLight,
+                        textAlign: 'center'
+                    },
+                    children: "Tidak ada hasil"
+                }, void 0, false, {
+                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                    lineNumber: 143,
+                    columnNumber: 13
+                }, this) : filtered.map((opt)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        onClick: ()=>handleSelect(opt),
+                        style: {
+                            padding: '8px 12px',
+                            borderRadius: 6,
+                            fontSize: '0.87em',
+                            cursor: 'pointer',
+                            color: opt.value === value ? T.white : T.navy,
+                            background: opt.value === value ? T.navy : 'transparent',
+                            transition: 'background .1s'
+                        },
+                        onMouseEnter: (e)=>{
+                            if (opt.value !== value) e.currentTarget.style.background = T.skyLight;
+                        },
+                        onMouseLeave: (e)=>{
+                            if (opt.value !== value) e.currentTarget.style.background = 'transparent';
+                        },
+                        children: opt.label
+                    }, opt.value, false, {
+                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                        lineNumber: 148,
+                        columnNumber: 15
+                    }, this))
+            }, void 0, false, {
+                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                lineNumber: 135,
+                columnNumber: 9
+            }, this)
+        ]
+    }, void 0, true, {
+        fileName: "[project]/components/home/AddIdeaModal.tsx",
+        lineNumber: 82,
+        columnNumber: 5
+    }, this);
+}
+_s(SearchableSelect, "HnmJtCySOGeYoUXLBWUuqTAx4M8=");
+_c = SearchableSelect;
 const emptyLocation = ()=>({
         name: '',
         address: '',
@@ -3440,7 +3654,7 @@ const emptyLocation = ()=>({
         notes: ''
     });
 function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
-    _s();
+    _s1();
     const [name, setName] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
     const [cat, setCat] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
     const [catCustom, setCatCustom] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
@@ -3457,6 +3671,37 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
         ...new Set(categories.map((c)=>c.category))
     ];
     const subtypesForCat = categories.filter((c)=>c.category === cat);
+    const catOptions = [
+        ...uniqueCats.map((c)=>({
+                label: c,
+                value: c
+            })),
+        {
+            label: '➕ Tambah baru...',
+            value: '__custom__'
+        }
+    ];
+    const subOptions = cat && cat !== '__custom__' ? [
+        ...subtypesForCat.map((s)=>({
+                label: s.subtype,
+                value: s.type_key
+            })),
+        {
+            label: '➕ Tambah baru...',
+            value: '__custom__'
+        }
+    ] : [
+        {
+            label: '➕ Tambah baru...',
+            value: '__custom__'
+        }
+    ];
+    const cityOptions = [
+        ...cities.map((c)=>({
+                label: c.name,
+                value: c.id
+            }))
+    ];
     const updateLoc = (idx, field, val)=>{
         setLocations((prev)=>prev.map((l, i)=>i === idx ? {
                     ...l,
@@ -3494,9 +3739,7 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                 });
             }
             const typeKey = sub === '__custom__' ? finalSub.toLowerCase().replace(/\s+/g, '_') : sub;
-            // Build locations array — only include if user toggled location section
             const locPayload = showLoc ? locations.filter((l)=>l.name.trim() || l.address.trim()) : null;
-            // Use first location's fields as top-level columns too (for backward compat)
             const firstLoc = locPayload?.[0];
             const { error } = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('trip_ideas_v2').insert([
                 {
@@ -3506,7 +3749,6 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                     photo_url: imageUrl,
                     city_id: city || null,
                     locations: locPayload && locPayload.length > 0 ? locPayload : null,
-                    // top-level columns from first location
                     address: firstLoc?.address || null,
                     maps_url: firstLoc?.maps_url || null,
                     phone: firstLoc?.phone || null,
@@ -3574,7 +3816,7 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                 children: "➕ Tambah Ide Baru"
                             }, void 0, false, {
                                 fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                lineNumber: 143,
+                                lineNumber: 308,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -3596,13 +3838,13 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                 children: "✕"
                             }, void 0, false, {
                                 fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                lineNumber: 144,
+                                lineNumber: 309,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/home/AddIdeaModal.tsx",
-                        lineNumber: 142,
+                        lineNumber: 307,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3615,11 +3857,11 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 children: [
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                        style: label,
+                                        style: labelStyle,
                                         children: "Nama Tempat *"
                                     }, void 0, false, {
                                         fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                        lineNumber: 151,
+                                        lineNumber: 316,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -3629,61 +3871,37 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                         style: inp
                                     }, void 0, false, {
                                         fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                        lineNumber: 152,
+                                        lineNumber: 317,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                lineNumber: 150,
+                                lineNumber: 315,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 children: [
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                        style: label,
+                                        style: labelStyle,
                                         children: "Kategori *"
                                     }, void 0, false, {
                                         fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                        lineNumber: 157,
+                                        lineNumber: 322,
                                         columnNumber: 15
                                     }, this),
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(SearchableSelect, {
+                                        options: catOptions,
                                         value: cat,
-                                        onChange: (e)=>{
-                                            setCat(e.target.value);
+                                        onChange: (val)=>{
+                                            setCat(val);
                                             setSub('');
+                                            setSubCustom('');
                                         },
-                                        style: inp,
-                                        children: [
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                value: "",
-                                                children: "Pilih..."
-                                            }, void 0, false, {
-                                                fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                lineNumber: 159,
-                                                columnNumber: 17
-                                            }, this),
-                                            uniqueCats.map((c)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                    value: c,
-                                                    children: c
-                                                }, c, false, {
-                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                    lineNumber: 160,
-                                                    columnNumber: 38
-                                                }, this)),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                value: "__custom__",
-                                                children: "➕ Tambah baru..."
-                                            }, void 0, false, {
-                                                fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                lineNumber: 161,
-                                                columnNumber: 17
-                                            }, this)
-                                        ]
-                                    }, void 0, true, {
+                                        placeholder: "Pilih kategori..."
+                                    }, void 0, false, {
                                         fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                        lineNumber: 158,
+                                        lineNumber: 323,
                                         columnNumber: 15
                                     }, this),
                                     cat === '__custom__' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -3696,62 +3914,37 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                         }
                                     }, void 0, false, {
                                         fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                        lineNumber: 164,
+                                        lineNumber: 330,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                lineNumber: 156,
+                                lineNumber: 321,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 children: [
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                        style: label,
+                                        style: labelStyle,
                                         children: "Sub-tipe *"
                                     }, void 0, false, {
                                         fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                        lineNumber: 170,
+                                        lineNumber: 337,
                                         columnNumber: 15
                                     }, this),
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(SearchableSelect, {
+                                        options: subOptions,
                                         value: sub,
-                                        onChange: (e)=>setSub(e.target.value),
-                                        disabled: !cat,
-                                        style: {
-                                            ...inp,
-                                            opacity: !cat ? 0.5 : 1
+                                        onChange: (val)=>{
+                                            setSub(val);
+                                            setSubCustom('');
                                         },
-                                        children: [
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                value: "",
-                                                children: "Pilih..."
-                                            }, void 0, false, {
-                                                fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                lineNumber: 172,
-                                                columnNumber: 17
-                                            }, this),
-                                            cat !== '__custom__' && subtypesForCat.map((s)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                    value: s.type_key,
-                                                    children: s.subtype
-                                                }, s.type_key, false, {
-                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                    lineNumber: 173,
-                                                    columnNumber: 66
-                                                }, this)),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                value: "__custom__",
-                                                children: "➕ Tambah baru..."
-                                            }, void 0, false, {
-                                                fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                lineNumber: 174,
-                                                columnNumber: 17
-                                            }, this)
-                                        ]
-                                    }, void 0, true, {
+                                        placeholder: cat ? 'Pilih sub-tipe...' : 'Pilih kategori dulu',
+                                        disabled: !cat
+                                    }, void 0, false, {
                                         fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                        lineNumber: 171,
+                                        lineNumber: 338,
                                         columnNumber: 15
                                     }, this),
                                     sub === '__custom__' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -3764,66 +3957,49 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                         }
                                     }, void 0, false, {
                                         fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                        lineNumber: 177,
+                                        lineNumber: 346,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                lineNumber: 169,
+                                lineNumber: 336,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 children: [
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                        style: label,
+                                        style: labelStyle,
                                         children: "Kota"
                                     }, void 0, false, {
                                         fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                        lineNumber: 183,
+                                        lineNumber: 353,
                                         columnNumber: 15
                                     }, this),
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(SearchableSelect, {
+                                        options: cityOptions,
                                         value: city,
-                                        onChange: (e)=>setCity(e.target.value),
-                                        style: inp,
-                                        children: [
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                value: "",
-                                                children: "Tanpa Kota"
-                                            }, void 0, false, {
-                                                fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                lineNumber: 185,
-                                                columnNumber: 17
-                                            }, this),
-                                            cities.map((c)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                    value: c.id,
-                                                    children: c.name
-                                                }, c.id, false, {
-                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                    lineNumber: 186,
-                                                    columnNumber: 34
-                                                }, this))
-                                        ]
-                                    }, void 0, true, {
+                                        onChange: setCity,
+                                        placeholder: "Tanpa Kota"
+                                    }, void 0, false, {
                                         fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                        lineNumber: 184,
+                                        lineNumber: 354,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                lineNumber: 182,
+                                lineNumber: 352,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 children: [
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                        style: label,
+                                        style: labelStyle,
                                         children: "Foto (Opsional)"
                                     }, void 0, false, {
                                         fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                        lineNumber: 192,
+                                        lineNumber: 364,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -3837,13 +4013,13 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                         }
                                     }, void 0, false, {
                                         fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                        lineNumber: 193,
+                                        lineNumber: 365,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                lineNumber: 191,
+                                lineNumber: 363,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3874,7 +4050,7 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                                 children: "📍 Detail Lokasi (Opsional)"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                lineNumber: 208,
+                                                lineNumber: 381,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3885,13 +4061,13 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                                 children: showLoc ? '▲ Sembunyikan' : '▼ Tampilkan'
                                             }, void 0, false, {
                                                 fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                lineNumber: 209,
+                                                lineNumber: 382,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                        lineNumber: 198,
+                                        lineNumber: 371,
                                         columnNumber: 15
                                     }, this),
                                     showLoc && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3930,7 +4106,7 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                    lineNumber: 219,
+                                                                    lineNumber: 390,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 locations.length > 1 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -3946,13 +4122,13 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                                                     children: "✕ Hapus"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                    lineNumber: 221,
+                                                                    lineNumber: 392,
                                                                     columnNumber: 27
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                            lineNumber: 218,
+                                                            lineNumber: 389,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3965,11 +4141,11 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                                            style: label,
+                                                                            style: labelStyle,
                                                                             children: "Nama Lokasi *"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                            lineNumber: 227,
+                                                                            lineNumber: 397,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -3979,23 +4155,23 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                                                             style: inp
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                            lineNumber: 228,
+                                                                            lineNumber: 398,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                    lineNumber: 226,
+                                                                    lineNumber: 396,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                                            style: label,
+                                                                            style: labelStyle,
                                                                             children: "Alamat"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                            lineNumber: 231,
+                                                                            lineNumber: 401,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("textarea", {
@@ -4010,13 +4186,13 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                                                             }
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                            lineNumber: 232,
+                                                                            lineNumber: 402,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                    lineNumber: 230,
+                                                                    lineNumber: 400,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4029,11 +4205,11 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                                             children: [
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                                                    style: label,
+                                                                                    style: labelStyle,
                                                                                     children: "No. Telepon"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                                    lineNumber: 237,
+                                                                                    lineNumber: 406,
                                                                                     columnNumber: 29
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -4043,23 +4219,23 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                                                                     style: inp
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                                    lineNumber: 238,
+                                                                                    lineNumber: 407,
                                                                                     columnNumber: 29
                                                                                 }, this)
                                                                             ]
                                                                         }, void 0, true, {
                                                                             fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                            lineNumber: 236,
+                                                                            lineNumber: 405,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                                             children: [
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                                                    style: label,
+                                                                                    style: labelStyle,
                                                                                     children: "Jam Buka"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                                    lineNumber: 241,
+                                                                                    lineNumber: 410,
                                                                                     columnNumber: 29
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -4069,23 +4245,23 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                                                                     style: inp
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                                    lineNumber: 242,
+                                                                                    lineNumber: 411,
                                                                                     columnNumber: 29
                                                                                 }, this)
                                                                             ]
                                                                         }, void 0, true, {
                                                                             fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                            lineNumber: 240,
+                                                                            lineNumber: 409,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                                             children: [
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                                                    style: label,
+                                                                                    style: labelStyle,
                                                                                     children: "Kisaran Harga"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                                    lineNumber: 245,
+                                                                                    lineNumber: 414,
                                                                                     columnNumber: 29
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -4095,23 +4271,23 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                                                                     style: inp
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                                    lineNumber: 246,
+                                                                                    lineNumber: 415,
                                                                                     columnNumber: 29
                                                                                 }, this)
                                                                             ]
                                                                         }, void 0, true, {
                                                                             fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                            lineNumber: 244,
+                                                                            lineNumber: 413,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                                             children: [
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                                                    style: label,
+                                                                                    style: labelStyle,
                                                                                     children: "Website"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                                    lineNumber: 249,
+                                                                                    lineNumber: 418,
                                                                                     columnNumber: 29
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -4121,29 +4297,29 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                                                                     style: inp
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                                    lineNumber: 250,
+                                                                                    lineNumber: 419,
                                                                                     columnNumber: 29
                                                                                 }, this)
                                                                             ]
                                                                         }, void 0, true, {
                                                                             fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                            lineNumber: 248,
+                                                                            lineNumber: 417,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                    lineNumber: 235,
+                                                                    lineNumber: 404,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                                            style: label,
+                                                                            style: labelStyle,
                                                                             children: "Link Google Maps"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                            lineNumber: 254,
+                                                                            lineNumber: 423,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -4153,23 +4329,23 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                                                             style: inp
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                            lineNumber: 255,
+                                                                            lineNumber: 424,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                    lineNumber: 253,
+                                                                    lineNumber: 422,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                                     children: [
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                                            style: label,
+                                                                            style: labelStyle,
                                                                             children: "Catatan"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                            lineNumber: 258,
+                                                                            lineNumber: 427,
                                                                             columnNumber: 27
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("textarea", {
@@ -4184,25 +4360,25 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                                                             }
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                            lineNumber: 259,
+                                                                            lineNumber: 428,
                                                                             columnNumber: 27
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                                    lineNumber: 257,
+                                                                    lineNumber: 426,
                                                                     columnNumber: 25
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                            lineNumber: 225,
+                                                            lineNumber: 395,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, idx, true, {
                                                     fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                    lineNumber: 215,
+                                                    lineNumber: 388,
                                                     columnNumber: 21
                                                 }, this)),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4221,25 +4397,25 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                                                 children: "➕ Tambah Lokasi Lain"
                                             }, void 0, false, {
                                                 fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                                lineNumber: 267,
+                                                lineNumber: 433,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                        lineNumber: 213,
+                                        lineNumber: 386,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/components/home/AddIdeaModal.tsx",
-                                lineNumber: 197,
+                                lineNumber: 370,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/components/home/AddIdeaModal.tsx",
-                        lineNumber: 147,
+                        lineNumber: 312,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4262,30 +4438,31 @@ function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
                         children: saving ? '⏳ Menyimpan...' : '💾 Simpan Ide'
                     }, void 0, false, {
                         fileName: "[project]/components/home/AddIdeaModal.tsx",
-                        lineNumber: 282,
+                        lineNumber: 443,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/home/AddIdeaModal.tsx",
-                lineNumber: 139,
+                lineNumber: 304,
                 columnNumber: 9
             }, this)
         }, void 0, false, {
             fileName: "[project]/components/home/AddIdeaModal.tsx",
-            lineNumber: 138,
+            lineNumber: 303,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/components/home/AddIdeaModal.tsx",
-        lineNumber: 134,
+        lineNumber: 299,
         columnNumber: 5
     }, this);
 }
-_s(AddIdeaModal, "HY/uhAlymxdl2UOuvrqrqh3jup4=");
-_c = AddIdeaModal;
-var _c;
-__turbopack_context__.k.register(_c, "AddIdeaModal");
+_s1(AddIdeaModal, "HY/uhAlymxdl2UOuvrqrqh3jup4=");
+_c1 = AddIdeaModal;
+var _c, _c1;
+__turbopack_context__.k.register(_c, "SearchableSelect");
+__turbopack_context__.k.register(_c1, "AddIdeaModal");
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
     __turbopack_context__.k.registerExports(__turbopack_context__.m, globalThis.$RefreshHelpers$);
 }

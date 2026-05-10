@@ -41,6 +41,7 @@ export default function HomePage() {
   const [isEditMode, setIsEditMode]       = useState(false)
   const [toast, setToast]                 = useState<{ msg: string; type: any } | null>(null)
   const ideasLoaded = useRef(false)
+  const handleCloseToast = useCallback(() => setToast(null), [])
 
   useEffect(() => {
     loadAllData()
@@ -122,7 +123,7 @@ export default function HomePage() {
         .sticky-bar { transition: box-shadow .2s; }
       `}</style>
 
-      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      {toast && <Toast message={toast.msg} type={toast.type} onClose={handleCloseToast} />}
       <Navbar />
 
       {/* Sticky control bar */}

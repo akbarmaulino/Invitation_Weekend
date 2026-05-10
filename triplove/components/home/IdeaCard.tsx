@@ -20,6 +20,7 @@ interface Props {
 
 export default function IdeaCard({ idea, isSelected, rating, onToggle, onViewDetail }: Props) {
   const [hovered, setHovered] = useState(false)
+  const [imgError, setImgError] = useState(false)
 
   return (
     <div
@@ -44,11 +45,15 @@ export default function IdeaCard({ idea, isSelected, rating, onToggle, onViewDet
       {/* Full-bleed photo */}
       <div style={{ position: 'absolute', inset: 0, background: T.sky }}>
         <Image
-          src={getPublicImageUrl(idea.photo_url)}
+          src={imgError || !idea.photo_url 
+            ? '/placeholder.jpg'  // ← sediakan gambar fallback di public/
+            : getPublicImageUrl(idea.photo_url)
+          }
           alt={idea.idea_name}
           fill
           style={{ objectFit: 'cover', transition: 'transform .3s ease', transform: hovered ? 'scale(1.04)' : 'scale(1)' }}
           unoptimized
+          onError={() => setImgError(true)}  // ← tambah ini
         />
       </div>
 

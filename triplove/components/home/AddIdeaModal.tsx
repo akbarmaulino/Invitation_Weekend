@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { uploadImage } from '@/lib/utils'
 import type { IdeaCategory, City } from '@/types/types'
@@ -17,12 +17,162 @@ const inp: React.CSSProperties = {
   outline: 'none', boxSizing: 'border-box',
 }
 
-const label: React.CSSProperties = {
+const labelStyle: React.CSSProperties = {
   fontSize: '0.7em', fontWeight: 700, color: T.muted,
   display: 'block', marginBottom: 5,
   textTransform: 'uppercase', letterSpacing: 0.5,
 }
 
+// ── CUSTOM SEARCHABLE SELECT ──────────────────────────────────────────────────
+interface SelectOption { label: string; value: string }
+
+interface SearchableSelectProps {
+  options: SelectOption[]
+  value: string
+  onChange: (val: string) => void
+  placeholder?: string
+  disabled?: boolean
+  clearable?: boolean
+}
+
+function SearchableSelect({ options, value, onChange, placeholder = 'Pilih...', disabled = false, clearable = true }: SearchableSelectProps) {
+  const [open, setOpen]       = useState(false)
+  const [query, setQuery]     = useState('')
+  const containerRef          = useRef<HTMLDivElement>(null)
+  const inputRef              = useRef<HTMLInputElement>(null)
+
+  const selected = options.find(o => o.value === value) ?? null
+
+  const filtered = query.trim()
+    ? options.filter(o => o.label.toLowerCase().includes(query.toLowerCase()))
+    : options
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+        setQuery('')
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  function handleOpen() {
+    if (disabled) return
+    setOpen(true)
+    setQuery('')
+    setTimeout(() => inputRef.current?.focus(), 50)
+  }
+
+  function handleSelect(opt: SelectOption) {
+    onChange(opt.value)
+    setOpen(false)
+    setQuery('')
+  }
+
+  function handleClear(e: React.MouseEvent) {
+    e.stopPropagation()
+    onChange('')
+    setOpen(false)
+    setQuery('')
+  }
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative' }}>
+      {/* Control */}
+      <div
+        onClick={handleOpen}
+        style={{
+          display: 'flex', alignItems: 'center',
+          border: `1.5px solid ${open ? T.navyLight : T.sky}`,
+          borderRadius: 10, background: disabled ? T.skyLight : T.white,
+          height: 38, cursor: disabled ? 'not-allowed' : 'pointer',
+          boxShadow: open ? `0 0 0 3px ${T.skyMid}66` : 'none',
+          transition: 'border-color .15s, box-shadow .15s',
+          opacity: disabled ? 0.6 : 1,
+          overflow: 'hidden',
+        }}
+      >
+        {open ? (
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onClick={e => e.stopPropagation()}
+            placeholder="Cari..."
+            style={{
+              flex: 1, border: 'none', outline: 'none',
+              padding: '0 12px', fontSize: '0.87em',
+              color: T.navy, background: 'transparent',
+              height: '100%',
+            }}
+          />
+        ) : (
+          <span style={{
+            flex: 1, padding: '0 12px', fontSize: '0.87em',
+            color: selected ? T.navy : T.mutedLight,
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>
+            {selected ? selected.label : placeholder}
+          </span>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', paddingRight: 8, gap: 2, flexShrink: 0 }}>
+          {clearable && selected && !open && (
+            <button
+              onClick={handleClear}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.mutedLight, fontSize: '0.75em', padding: '2px 4px', lineHeight: 1, borderRadius: 4 }}
+              title="Hapus pilihan"
+            >✕</button>
+          )}
+          <span style={{ color: T.mutedLight, fontSize: '0.65em', transform: open ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform .15s' }}>▼</span>
+        </div>
+      </div>
+
+      {/* Dropdown */}
+      {open && !disabled && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+          background: T.white, border: `1.5px solid ${T.sky}`,
+          borderRadius: 10, boxShadow: '0 8px 24px rgba(3,37,76,0.12)',
+          zIndex: 999, maxHeight: 220, overflowY: 'auto',
+          padding: 4,
+        }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: '10px 12px', fontSize: '0.82em', color: T.mutedLight, textAlign: 'center' }}>
+              Tidak ada hasil
+            </div>
+          ) : (
+            filtered.map(opt => (
+              <div
+                key={opt.value}
+                onClick={() => handleSelect(opt)}
+                style={{
+                  padding: '8px 12px', borderRadius: 6,
+                  fontSize: '0.87em', cursor: 'pointer',
+                  color: opt.value === value ? T.white : T.navy,
+                  background: opt.value === value ? T.navy : 'transparent',
+                  transition: 'background .1s',
+                }}
+                onMouseEnter={e => {
+                  if (opt.value !== value) (e.currentTarget as HTMLDivElement).style.background = T.skyLight
+                }}
+                onMouseLeave={e => {
+                  if (opt.value !== value) (e.currentTarget as HTMLDivElement).style.background = 'transparent'
+                }}
+              >
+                {opt.label}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── LOCATION ENTRY ────────────────────────────────────────────────────────────
 interface LocationEntry {
   name: string
   address: string
@@ -40,6 +190,7 @@ const emptyLocation = (): LocationEntry => ({
   website: '', maps_url: '', notes: '',
 })
 
+// ── PROPS ─────────────────────────────────────────────────────────────────────
 interface Props {
   categories: IdeaCategory[]
   cities: City[]
@@ -48,6 +199,7 @@ interface Props {
   onToast: (msg: string, type: any) => void
 }
 
+// ── MAIN COMPONENT ────────────────────────────────────────────────────────────
 export default function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }: Props) {
   const [name, setName]           = useState('')
   const [cat, setCat]             = useState('')
@@ -62,6 +214,22 @@ export default function AddIdeaModal({ categories, cities, onClose, onSaved, onT
 
   const uniqueCats     = [...new Set(categories.map(c => c.category))]
   const subtypesForCat = categories.filter(c => c.category === cat)
+
+  const catOptions: SelectOption[] = [
+    ...uniqueCats.map(c => ({ label: c, value: c })),
+    { label: '➕ Tambah baru...', value: '__custom__' },
+  ]
+
+  const subOptions: SelectOption[] = cat && cat !== '__custom__'
+    ? [
+        ...subtypesForCat.map(s => ({ label: s.subtype, value: s.type_key })),
+        { label: '➕ Tambah baru...', value: '__custom__' },
+      ]
+    : [{ label: '➕ Tambah baru...', value: '__custom__' }]
+
+  const cityOptions: SelectOption[] = [
+    ...cities.map(c => ({ label: c.name, value: c.id })),
+  ]
 
   const updateLoc = (idx: number, field: keyof LocationEntry, val: string) => {
     setLocations(prev => prev.map((l, i) => i === idx ? { ...l, [field]: val } : l))
@@ -95,12 +263,10 @@ export default function AddIdeaModal({ categories, cities, onClose, onSaved, onT
         ? finalSub.toLowerCase().replace(/\s+/g, '_')
         : sub
 
-      // Build locations array — only include if user toggled location section
       const locPayload = showLoc
         ? locations.filter(l => l.name.trim() || l.address.trim())
         : null
 
-      // Use first location's fields as top-level columns too (for backward compat)
       const firstLoc = locPayload?.[0]
 
       const { error } = await supabase.from('trip_ideas_v2').insert([{
@@ -110,7 +276,6 @@ export default function AddIdeaModal({ categories, cities, onClose, onSaved, onT
         photo_url:     imageUrl,
         city_id:       city || null,
         locations:     locPayload && locPayload.length > 0 ? locPayload : null,
-        // top-level columns from first location
         address:       firstLoc?.address || null,
         maps_url:      firstLoc?.maps_url || null,
         phone:         firstLoc?.phone || null,
@@ -148,52 +313,60 @@ export default function AddIdeaModal({ categories, cities, onClose, onSaved, onT
 
             {/* Nama */}
             <div>
-              <label style={label}>Nama Tempat *</label>
+              <label style={labelStyle}>Nama Tempat *</label>
               <input value={name} onChange={e => setName(e.target.value)} placeholder='misal: Braga Permai' style={inp} />
             </div>
 
             {/* Kategori */}
             <div>
-              <label style={label}>Kategori *</label>
-              <select value={cat} onChange={e => { setCat(e.target.value); setSub('') }} style={inp}>
-                <option value=''>Pilih...</option>
-                {uniqueCats.map(c => <option key={c} value={c}>{c}</option>)}
-                <option value='__custom__'>➕ Tambah baru...</option>
-              </select>
+              <label style={labelStyle}>Kategori *</label>
+              <SearchableSelect
+                options={catOptions}
+                value={cat}
+                onChange={val => { setCat(val); setSub(''); setSubCustom('') }}
+                placeholder="Pilih kategori..."
+              />
               {cat === '__custom__' && (
-                <input value={catCustom} onChange={e => setCatCustom(e.target.value)} placeholder='Nama kategori baru' style={{ ...inp, marginTop: 7 }} />
+                <input value={catCustom} onChange={e => setCatCustom(e.target.value)}
+                  placeholder='Nama kategori baru' style={{ ...inp, marginTop: 7 }} />
               )}
             </div>
 
             {/* Sub-tipe */}
             <div>
-              <label style={label}>Sub-tipe *</label>
-              <select value={sub} onChange={e => setSub(e.target.value)} disabled={!cat} style={{ ...inp, opacity: !cat ? 0.5 : 1 }}>
-                <option value=''>Pilih...</option>
-                {cat !== '__custom__' && subtypesForCat.map(s => <option key={s.type_key} value={s.type_key}>{s.subtype}</option>)}
-                <option value='__custom__'>➕ Tambah baru...</option>
-              </select>
+              <label style={labelStyle}>Sub-tipe *</label>
+              <SearchableSelect
+                options={subOptions}
+                value={sub}
+                onChange={val => { setSub(val); setSubCustom('') }}
+                placeholder={cat ? 'Pilih sub-tipe...' : 'Pilih kategori dulu'}
+                disabled={!cat}
+              />
               {sub === '__custom__' && (
-                <input value={subCustom} onChange={e => setSubCustom(e.target.value)} placeholder='Nama sub-tipe baru' style={{ ...inp, marginTop: 7 }} />
+                <input value={subCustom} onChange={e => setSubCustom(e.target.value)}
+                  placeholder='Nama sub-tipe baru' style={{ ...inp, marginTop: 7 }} />
               )}
             </div>
 
             {/* Kota */}
             <div>
-              <label style={label}>Kota</label>
-              <select value={city} onChange={e => setCity(e.target.value)} style={inp}>
-                <option value=''>Tanpa Kota</option>
-                {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <label style={labelStyle}>Kota</label>
+              <SearchableSelect
+                options={cityOptions}
+                value={city}
+                onChange={setCity}
+                placeholder="Tanpa Kota"
+              />
             </div>
 
             {/* Foto */}
             <div>
-              <label style={label}>Foto (Opsional)</label>
-              <input type='file' accept='image/*' onChange={e => setFile(e.target.files?.[0] || null)} style={{ fontSize: '0.8em', color: T.navy, width: '100%' }} />
+              <label style={labelStyle}>Foto (Opsional)</label>
+              <input type='file' accept='image/*' onChange={e => setFile(e.target.files?.[0] || null)}
+                style={{ fontSize: '0.8em', color: T.navy, width: '100%' }} />
             </div>
 
-            {/* ─── Detail Lokasi Toggle ─── */}
+            {/* Detail Lokasi Toggle */}
             <div style={{ borderTop: `1.5px dashed ${T.sky}`, paddingTop: 12, marginTop: 2 }}>
               <button
                 onClick={() => setShowLoc(v => !v)}
@@ -213,65 +386,53 @@ export default function AddIdeaModal({ categories, cities, onClose, onSaved, onT
                 <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {locations.map((loc, idx) => (
                     <div key={idx} style={{ background: T.skyLight, borderRadius: 12, border: `1.5px solid ${T.sky}`, padding: '14px 14px 10px' }}>
-
-                      {/* Location header */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                         <span style={{ fontWeight: 700, color: T.navy, fontSize: '0.82em' }}>Lokasi {idx + 1}</span>
                         {locations.length > 1 && (
                           <button onClick={() => removeLoc(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8em', fontWeight: 700 }}>✕ Hapus</button>
                         )}
                       </div>
-
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <div>
-                          <label style={label}>Nama Lokasi *</label>
+                          <label style={labelStyle}>Nama Lokasi *</label>
                           <input value={loc.name} onChange={e => updateLoc(idx, 'name', e.target.value)} placeholder='misal: Lokasi Utama' style={inp} />
                         </div>
                         <div>
-                          <label style={label}>Alamat</label>
-                          <textarea value={loc.address} onChange={e => updateLoc(idx, 'address', e.target.value)} placeholder='Jl. ...' rows={2}
-                            style={{ ...inp, resize: 'vertical', fontFamily: 'inherit' }} />
+                          <label style={labelStyle}>Alamat</label>
+                          <textarea value={loc.address} onChange={e => updateLoc(idx, 'address', e.target.value)} placeholder='Jl. ...' rows={2} style={{ ...inp, resize: 'vertical', fontFamily: 'inherit' }} />
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                           <div>
-                            <label style={label}>No. Telepon</label>
+                            <label style={labelStyle}>No. Telepon</label>
                             <input value={loc.phone} onChange={e => updateLoc(idx, 'phone', e.target.value)} placeholder='08xx...' style={inp} />
                           </div>
                           <div>
-                            <label style={label}>Jam Buka</label>
+                            <label style={labelStyle}>Jam Buka</label>
                             <input value={loc.opening_hours} onChange={e => updateLoc(idx, 'opening_hours', e.target.value)} placeholder='10:00 - 22:00' style={inp} />
                           </div>
                           <div>
-                            <label style={label}>Kisaran Harga</label>
+                            <label style={labelStyle}>Kisaran Harga</label>
                             <input value={loc.price_range} onChange={e => updateLoc(idx, 'price_range', e.target.value)} placeholder='25.000 - 200.000' style={inp} />
                           </div>
                           <div>
-                            <label style={label}>Website</label>
+                            <label style={labelStyle}>Website</label>
                             <input value={loc.website} onChange={e => updateLoc(idx, 'website', e.target.value)} placeholder='https://...' style={inp} />
                           </div>
                         </div>
                         <div>
-                          <label style={label}>Link Google Maps</label>
+                          <label style={labelStyle}>Link Google Maps</label>
                           <input value={loc.maps_url} onChange={e => updateLoc(idx, 'maps_url', e.target.value)} placeholder='https://maps.app.goo.gl/...' style={inp} />
                         </div>
                         <div>
-                          <label style={label}>Catatan</label>
-                          <textarea value={loc.notes} onChange={e => updateLoc(idx, 'notes', e.target.value)} placeholder='Tips, info tambahan...' rows={2}
-                            style={{ ...inp, resize: 'vertical', fontFamily: 'inherit' }} />
+                          <label style={labelStyle}>Catatan</label>
+                          <textarea value={loc.notes} onChange={e => updateLoc(idx, 'notes', e.target.value)} placeholder='Tips, info tambahan...' rows={2} style={{ ...inp, resize: 'vertical', fontFamily: 'inherit' }} />
                         </div>
                       </div>
                     </div>
                   ))}
-
-                  {/* Add location button */}
                   <button
                     onClick={addLoc}
-                    style={{
-                      padding: '8px 14px', borderRadius: 10,
-                      background: T.white, border: `1.5px dashed ${T.skyMid}`,
-                      color: T.muted, fontWeight: 600, cursor: 'pointer',
-                      fontSize: '0.82em', width: '100%',
-                    }}
+                    style={{ padding: '8px 14px', borderRadius: 10, background: T.white, border: `1.5px dashed ${T.skyMid}`, color: T.muted, fontWeight: 600, cursor: 'pointer', fontSize: '0.82em', width: '100%' }}
                   >➕ Tambah Lokasi Lain</button>
                 </div>
               )}
