@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 const P = '#03254c', S = '#c4e8ff'
 
 const MAIN_ITEMS = [
-  { href: '/',            label: 'Home',        icon: '🏠' },
+  { href: '/home',        label: 'Home',        icon: '🏠' },
   { href: '/statistics',  label: 'Statistics',  icon: '📊' },
   { href: '/watch-party', label: 'Watch Party', icon: '🍿' },
   { href: '/gallery',     label: 'Gallery',     icon: '📸' },

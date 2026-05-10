@@ -4,12 +4,19 @@ import { createContext, useContext, useState, useCallback, useRef, ReactNode } f
 import { supabase } from '@/lib/supabase'
 import type { City, IdeaCategory, TripIdea, IdeaReview, IdeaRating } from '@/types/types'
 
+interface TripHistory {
+  id: string
+  trip_date: string | null
+  trip_day: string | null
+}
+
 interface DataContextType {
   ideas: TripIdea[]
   categories: IdeaCategory[]
   cities: City[]
   reviews: IdeaReview[]
   ideaRatings: Record<string, IdeaRating>
+  tripHistories: TripHistory[]
   loading: boolean
   loadAllData: () => Promise<void>
   loadReviews: () => Promise<void>
@@ -17,7 +24,7 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType>({
   ideas: [], categories: [], cities: [], reviews: [],
-  ideaRatings: {}, loading: false,
+  ideaRatings: {}, tripHistories: [], loading: false,
   loadAllData: async () => {}, loadReviews: async () => {},
 })
 
@@ -37,28 +44,31 @@ function computeRatings(list: IdeaReview[]): Record<string, IdeaRating> {
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [ideas, setIdeas]             = useState<TripIdea[]>([])
-  const [categories, setCategories]   = useState<IdeaCategory[]>([])
-  const [cities, setCities]           = useState<City[]>([])
-  const [reviews, setReviews]         = useState<IdeaReview[]>([])
-  const [ideaRatings, setIdeaRatings] = useState<Record<string, IdeaRating>>({})
-  const [loading, setLoading]         = useState(false)
-  const loadingRef                    = useRef(false)
+  const [ideas, setIdeas]               = useState<TripIdea[]>([])
+  const [categories, setCategories]     = useState<IdeaCategory[]>([])
+  const [cities, setCities]             = useState<City[]>([])
+  const [reviews, setReviews]           = useState<IdeaReview[]>([])
+  const [ideaRatings, setIdeaRatings]   = useState<Record<string, IdeaRating>>({})
+  const [tripHistories, setTripHistories] = useState<TripHistory[]>([])
+  const [loading, setLoading]           = useState(false)
+  const loadingRef                      = useRef(false)
 
   const loadAllData = useCallback(async () => {
     if (loadingRef.current) return
     loadingRef.current = true
     setLoading(true)
     try {
-      const [citiesRes, catsRes, ideasRes, reviewsRes] = await Promise.all([
+      const [citiesRes, catsRes, ideasRes, reviewsRes, tripHistRes] = await Promise.all([
         supabase.from('cities').select('*').order('display_order', { ascending: true }),
         supabase.from('idea_categories').select('*'),
         supabase.from('trip_ideas_v2').select('*, idea_categories(category, subtype, icon, photo_url)').order('created_at', { ascending: false }),
         supabase.from('idea_reviews').select('*'),
+        supabase.from('trip_history').select('id, trip_date, trip_day'),
       ])
 
       setCities((citiesRes.data as City[]) || [])
       setCategories((catsRes.data as IdeaCategory[]) || [])
+      setTripHistories((tripHistRes.data as TripHistory[]) || [])
 
       const mapped: TripIdea[] = ((ideasRes.data as any[]) || []).map(i => ({
         ...i,
@@ -91,7 +101,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <DataContext.Provider value={{ ideas, categories, cities, reviews, ideaRatings, loading, loadAllData, loadReviews }}>
+    <DataContext.Provider value={{ ideas, categories, cities, reviews, ideaRatings, tripHistories, loading, loadAllData, loadReviews }}>
       {children}
     </DataContext.Provider>
   )

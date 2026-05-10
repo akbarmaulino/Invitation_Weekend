@@ -479,7 +479,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist
 var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/supabase.ts [app-client] (ecmascript)");
 ;
 const IMAGE_BUCKET = 'trip-ideas-images';
-const VIDEO_BUCKET = 'trip-ideas-videos';
+const VIDEO_BUCKET = 'trip-videos';
 function getPublicImageUrl(photoUrl) {
     let urlToProcess = Array.isArray(photoUrl) ? photoUrl[0] : photoUrl;
     if (!urlToProcess) return '/placeholder.jpg';
@@ -3381,6 +3381,1092 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
     __turbopack_context__.k.registerExports(__turbopack_context__.m, globalThis.$RefreshHelpers$);
 }
 }),
+"[project]/components/home/AddIdeaModal.tsx [app-client] (ecmascript)", ((__turbopack_context__) => {
+"use strict";
+
+__turbopack_context__.s([
+    "default",
+    ()=>AddIdeaModal
+]);
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/jsx-dev-runtime.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/supabase.ts [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/utils.ts [app-client] (ecmascript)");
+;
+var _s = __turbopack_context__.k.signature(), _s1 = __turbopack_context__.k.signature();
+'use client';
+;
+;
+;
+const T = {
+    navy: '#03254c',
+    navyMid: '#1a4d7a',
+    navyLight: '#2563a8',
+    sky: '#c4e8ff',
+    skyLight: '#e1f3ff',
+    skyMid: '#a8d8f0',
+    white: '#ffffff',
+    muted: '#6b8cae',
+    mutedLight: '#a0bcd4'
+};
+const inp = {
+    width: '100%',
+    padding: '9px 12px',
+    border: `1.5px solid ${T.sky}`,
+    borderRadius: 10,
+    fontSize: '0.87em',
+    color: T.navy,
+    background: T.white,
+    outline: 'none',
+    boxSizing: 'border-box'
+};
+const labelStyle = {
+    fontSize: '0.7em',
+    fontWeight: 700,
+    color: T.muted,
+    display: 'block',
+    marginBottom: 5,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5
+};
+function SearchableSelect({ options, value, onChange, placeholder = 'Pilih...', disabled = false, clearable = true }) {
+    _s();
+    const [open, setOpen] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [query, setQuery] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
+    const containerRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const inputRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const selected = options.find((o)=>o.value === value) ?? null;
+    const filtered = query.trim() ? options.filter((o)=>o.label.toLowerCase().includes(query.toLowerCase())) : options;
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "SearchableSelect.useEffect": ()=>{
+            function handleClick(e) {
+                if (containerRef.current && !containerRef.current.contains(e.target)) {
+                    setOpen(false);
+                    setQuery('');
+                }
+            }
+            document.addEventListener('mousedown', handleClick);
+            return ({
+                "SearchableSelect.useEffect": ()=>document.removeEventListener('mousedown', handleClick)
+            })["SearchableSelect.useEffect"];
+        }
+    }["SearchableSelect.useEffect"], []);
+    function handleOpen() {
+        if (disabled) return;
+        setOpen(true);
+        setQuery('');
+        setTimeout(()=>inputRef.current?.focus(), 50);
+    }
+    function handleSelect(opt) {
+        onChange(opt.value);
+        setOpen(false);
+        setQuery('');
+    }
+    function handleClear(e) {
+        e.stopPropagation();
+        onChange('');
+        setOpen(false);
+        setQuery('');
+    }
+    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+        ref: containerRef,
+        style: {
+            position: 'relative'
+        },
+        children: [
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                onClick: handleOpen,
+                style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    border: `1.5px solid ${open ? T.navyLight : T.sky}`,
+                    borderRadius: 10,
+                    background: disabled ? T.skyLight : T.white,
+                    height: 38,
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    boxShadow: open ? `0 0 0 3px ${T.skyMid}66` : 'none',
+                    transition: 'border-color .15s, box-shadow .15s',
+                    opacity: disabled ? 0.6 : 1,
+                    overflow: 'hidden'
+                },
+                children: [
+                    open ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                        ref: inputRef,
+                        value: query,
+                        onChange: (e)=>setQuery(e.target.value),
+                        onClick: (e)=>e.stopPropagation(),
+                        placeholder: "Cari...",
+                        style: {
+                            flex: 1,
+                            border: 'none',
+                            outline: 'none',
+                            padding: '0 12px',
+                            fontSize: '0.87em',
+                            color: T.navy,
+                            background: 'transparent',
+                            height: '100%'
+                        }
+                    }, void 0, false, {
+                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                        lineNumber: 98,
+                        columnNumber: 11
+                    }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                        style: {
+                            flex: 1,
+                            padding: '0 12px',
+                            fontSize: '0.87em',
+                            color: selected ? T.navy : T.mutedLight,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                        },
+                        children: selected ? selected.label : placeholder
+                    }, void 0, false, {
+                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                        lineNumber: 112,
+                        columnNumber: 11
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            paddingRight: 8,
+                            gap: 2,
+                            flexShrink: 0
+                        },
+                        children: [
+                            clearable && selected && !open && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                onClick: handleClear,
+                                style: {
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: T.mutedLight,
+                                    fontSize: '0.75em',
+                                    padding: '2px 4px',
+                                    lineHeight: 1,
+                                    borderRadius: 4
+                                },
+                                title: "Hapus pilihan",
+                                children: "✕"
+                            }, void 0, false, {
+                                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                lineNumber: 123,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                style: {
+                                    color: T.mutedLight,
+                                    fontSize: '0.65em',
+                                    transform: open ? 'rotate(180deg)' : 'rotate(0)',
+                                    transition: 'transform .15s'
+                                },
+                                children: "▼"
+                            }, void 0, false, {
+                                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                lineNumber: 129,
+                                columnNumber: 11
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                        lineNumber: 121,
+                        columnNumber: 9
+                    }, this)
+                ]
+            }, void 0, true, {
+                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                lineNumber: 84,
+                columnNumber: 7
+            }, this),
+            open && !disabled && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                style: {
+                    position: 'absolute',
+                    top: 'calc(100% + 4px)',
+                    left: 0,
+                    right: 0,
+                    background: T.white,
+                    border: `1.5px solid ${T.sky}`,
+                    borderRadius: 10,
+                    boxShadow: '0 8px 24px rgba(3,37,76,0.12)',
+                    zIndex: 999,
+                    maxHeight: 220,
+                    overflowY: 'auto',
+                    padding: 4
+                },
+                children: filtered.length === 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                    style: {
+                        padding: '10px 12px',
+                        fontSize: '0.82em',
+                        color: T.mutedLight,
+                        textAlign: 'center'
+                    },
+                    children: "Tidak ada hasil"
+                }, void 0, false, {
+                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                    lineNumber: 143,
+                    columnNumber: 13
+                }, this) : filtered.map((opt)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        onClick: ()=>handleSelect(opt),
+                        style: {
+                            padding: '8px 12px',
+                            borderRadius: 6,
+                            fontSize: '0.87em',
+                            cursor: 'pointer',
+                            color: opt.value === value ? T.white : T.navy,
+                            background: opt.value === value ? T.navy : 'transparent',
+                            transition: 'background .1s'
+                        },
+                        onMouseEnter: (e)=>{
+                            if (opt.value !== value) e.currentTarget.style.background = T.skyLight;
+                        },
+                        onMouseLeave: (e)=>{
+                            if (opt.value !== value) e.currentTarget.style.background = 'transparent';
+                        },
+                        children: opt.label
+                    }, opt.value, false, {
+                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                        lineNumber: 148,
+                        columnNumber: 15
+                    }, this))
+            }, void 0, false, {
+                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                lineNumber: 135,
+                columnNumber: 9
+            }, this)
+        ]
+    }, void 0, true, {
+        fileName: "[project]/components/home/AddIdeaModal.tsx",
+        lineNumber: 82,
+        columnNumber: 5
+    }, this);
+}
+_s(SearchableSelect, "HnmJtCySOGeYoUXLBWUuqTAx4M8=");
+_c = SearchableSelect;
+const emptyLocation = ()=>({
+        name: '',
+        address: '',
+        phone: '',
+        opening_hours: '',
+        price_range: '',
+        website: '',
+        maps_url: '',
+        notes: ''
+    });
+function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }) {
+    _s1();
+    const [name, setName] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
+    const [cat, setCat] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
+    const [catCustom, setCatCustom] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
+    const [sub, setSub] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
+    const [subCustom, setSubCustom] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
+    const [city, setCity] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
+    const [file, setFile] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    const [saving, setSaving] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [showLoc, setShowLoc] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [locations, setLocations] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([
+        emptyLocation()
+    ]);
+    const uniqueCats = [
+        ...new Set(categories.map((c)=>c.category))
+    ];
+    const subtypesForCat = categories.filter((c)=>c.category === cat);
+    const catOptions = [
+        ...uniqueCats.map((c)=>({
+                label: c,
+                value: c
+            })),
+        {
+            label: '➕ Tambah baru...',
+            value: '__custom__'
+        }
+    ];
+    const subOptions = cat && cat !== '__custom__' ? [
+        ...subtypesForCat.map((s)=>({
+                label: s.subtype,
+                value: s.type_key
+            })),
+        {
+            label: '➕ Tambah baru...',
+            value: '__custom__'
+        }
+    ] : [
+        {
+            label: '➕ Tambah baru...',
+            value: '__custom__'
+        }
+    ];
+    const cityOptions = [
+        ...cities.map((c)=>({
+                label: c.name,
+                value: c.id
+            }))
+    ];
+    const updateLoc = (idx, field, val)=>{
+        setLocations((prev)=>prev.map((l, i)=>i === idx ? {
+                    ...l,
+                    [field]: val
+                } : l));
+    };
+    const addLoc = ()=>setLocations((prev)=>[
+                ...prev,
+                emptyLocation()
+            ]);
+    const removeLoc = (idx)=>setLocations((prev)=>prev.filter((_, i)=>i !== idx));
+    const handleSave = async ()=>{
+        const finalName = name.trim();
+        const finalCat = cat === '__custom__' ? catCustom.trim() : cat;
+        const finalSub = sub === '__custom__' ? subCustom.trim() : sub;
+        if (!finalName) return onToast('Nama tidak boleh kosong!', 'warn');
+        if (!finalCat) return onToast('Pilih atau isi kategori!', 'warn');
+        if (!finalSub) return onToast('Pilih atau isi sub-tipe!', 'warn');
+        setSaving(true);
+        try {
+            let imageUrl = null;
+            if (file) imageUrl = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["uploadImage"])(file, 'anon');
+            if (cat === '__custom__' || sub === '__custom__') {
+                const tk = finalSub.toLowerCase().replace(/\s+/g, '_');
+                await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('idea_categories').upsert([
+                    {
+                        category: finalCat,
+                        subtype: finalSub,
+                        type_key: tk,
+                        icon: '📍',
+                        photo_url: null
+                    }
+                ], {
+                    onConflict: 'type_key'
+                });
+            }
+            const typeKey = sub === '__custom__' ? finalSub.toLowerCase().replace(/\s+/g, '_') : sub;
+            const locPayload = showLoc ? locations.filter((l)=>l.name.trim() || l.address.trim()) : null;
+            const firstLoc = locPayload?.[0];
+            const { error } = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('trip_ideas_v2').insert([
+                {
+                    idea_name: finalName,
+                    type_key: typeKey,
+                    day_of_week: '',
+                    photo_url: imageUrl,
+                    city_id: city || null,
+                    locations: locPayload && locPayload.length > 0 ? locPayload : null,
+                    address: firstLoc?.address || null,
+                    maps_url: firstLoc?.maps_url || null,
+                    phone: firstLoc?.phone || null,
+                    opening_hours: firstLoc?.opening_hours || null,
+                    price_range: firstLoc?.price_range || null,
+                    website: firstLoc?.website || null,
+                    notes: firstLoc?.notes || null
+                }
+            ]);
+            if (error) throw error;
+            onSaved();
+            onToast('Ide berhasil ditambahkan! 🎉', 'success');
+        } catch  {
+            onToast('Gagal menyimpan. Coba lagi.', 'error');
+        } finally{
+            setSaving(false);
+        }
+    };
+    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+        style: {
+            position: 'fixed',
+            inset: 0,
+            zIndex: 50,
+            background: 'rgba(3,37,76,0.38)',
+            backdropFilter: 'blur(5px)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            padding: '24px 16px',
+            overflowY: 'auto'
+        },
+        onClick: (e)=>{
+            if (e.target === e.currentTarget) onClose();
+        },
+        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+            style: {
+                background: T.white,
+                borderRadius: 20,
+                border: `1.5px solid ${T.sky}`,
+                boxShadow: '0 20px 60px rgba(3,37,76,.2)',
+                width: '100%',
+                maxWidth: 480,
+                margin: 'auto'
+            },
+            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                style: {
+                    padding: '20px 22px 24px'
+                },
+                children: [
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        style: {
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: 18
+                        },
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
+                                style: {
+                                    color: T.navy,
+                                    fontWeight: 800,
+                                    margin: 0,
+                                    fontSize: '1.02em'
+                                },
+                                children: "➕ Tambah Ide Baru"
+                            }, void 0, false, {
+                                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                lineNumber: 308,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                onClick: onClose,
+                                style: {
+                                    background: T.skyLight,
+                                    border: `1px solid ${T.sky}`,
+                                    borderRadius: 999,
+                                    width: 28,
+                                    height: 28,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    color: T.navy,
+                                    fontWeight: 700,
+                                    fontSize: '0.8em'
+                                },
+                                children: "✕"
+                            }, void 0, false, {
+                                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                lineNumber: 309,
+                                columnNumber: 13
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                        lineNumber: 307,
+                        columnNumber: 11
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        style: {
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 11
+                        },
+                        children: [
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                        style: labelStyle,
+                                        children: "Nama Tempat *"
+                                    }, void 0, false, {
+                                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                        lineNumber: 316,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                        value: name,
+                                        onChange: (e)=>setName(e.target.value),
+                                        placeholder: "misal: Braga Permai",
+                                        style: inp
+                                    }, void 0, false, {
+                                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                        lineNumber: 317,
+                                        columnNumber: 15
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                lineNumber: 315,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                        style: labelStyle,
+                                        children: "Kategori *"
+                                    }, void 0, false, {
+                                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                        lineNumber: 322,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(SearchableSelect, {
+                                        options: catOptions,
+                                        value: cat,
+                                        onChange: (val)=>{
+                                            setCat(val);
+                                            setSub('');
+                                            setSubCustom('');
+                                        },
+                                        placeholder: "Pilih kategori..."
+                                    }, void 0, false, {
+                                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                        lineNumber: 323,
+                                        columnNumber: 15
+                                    }, this),
+                                    cat === '__custom__' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                        value: catCustom,
+                                        onChange: (e)=>setCatCustom(e.target.value),
+                                        placeholder: "Nama kategori baru",
+                                        style: {
+                                            ...inp,
+                                            marginTop: 7
+                                        }
+                                    }, void 0, false, {
+                                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                        lineNumber: 330,
+                                        columnNumber: 17
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                lineNumber: 321,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                        style: labelStyle,
+                                        children: "Sub-tipe *"
+                                    }, void 0, false, {
+                                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                        lineNumber: 337,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(SearchableSelect, {
+                                        options: subOptions,
+                                        value: sub,
+                                        onChange: (val)=>{
+                                            setSub(val);
+                                            setSubCustom('');
+                                        },
+                                        placeholder: cat ? 'Pilih sub-tipe...' : 'Pilih kategori dulu',
+                                        disabled: !cat
+                                    }, void 0, false, {
+                                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                        lineNumber: 338,
+                                        columnNumber: 15
+                                    }, this),
+                                    sub === '__custom__' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                        value: subCustom,
+                                        onChange: (e)=>setSubCustom(e.target.value),
+                                        placeholder: "Nama sub-tipe baru",
+                                        style: {
+                                            ...inp,
+                                            marginTop: 7
+                                        }
+                                    }, void 0, false, {
+                                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                        lineNumber: 346,
+                                        columnNumber: 17
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                lineNumber: 336,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                        style: labelStyle,
+                                        children: "Kota"
+                                    }, void 0, false, {
+                                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                        lineNumber: 353,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(SearchableSelect, {
+                                        options: cityOptions,
+                                        value: city,
+                                        onChange: setCity,
+                                        placeholder: "Tanpa Kota"
+                                    }, void 0, false, {
+                                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                        lineNumber: 354,
+                                        columnNumber: 15
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                lineNumber: 352,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                        style: labelStyle,
+                                        children: "Foto (Opsional)"
+                                    }, void 0, false, {
+                                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                        lineNumber: 364,
+                                        columnNumber: 15
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                        type: "file",
+                                        accept: "image/*",
+                                        onChange: (e)=>setFile(e.target.files?.[0] || null),
+                                        style: {
+                                            fontSize: '0.8em',
+                                            color: T.navy,
+                                            width: '100%'
+                                        }
+                                    }, void 0, false, {
+                                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                        lineNumber: 365,
+                                        columnNumber: 15
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                lineNumber: 363,
+                                columnNumber: 13
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                style: {
+                                    borderTop: `1.5px dashed ${T.sky}`,
+                                    paddingTop: 12,
+                                    marginTop: 2
+                                },
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                        onClick: ()=>setShowLoc((v)=>!v),
+                                        style: {
+                                            width: '100%',
+                                            padding: '9px 14px',
+                                            borderRadius: 10,
+                                            background: showLoc ? T.skyLight : T.white,
+                                            border: `1.5px solid ${T.sky}`,
+                                            color: T.navy,
+                                            fontWeight: 700,
+                                            cursor: 'pointer',
+                                            fontSize: '0.84em',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between'
+                                        },
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                children: "📍 Detail Lokasi (Opsional)"
+                                            }, void 0, false, {
+                                                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                lineNumber: 381,
+                                                columnNumber: 17
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                style: {
+                                                    fontSize: '0.75em',
+                                                    color: T.muted
+                                                },
+                                                children: showLoc ? '▲ Sembunyikan' : '▼ Tampilkan'
+                                            }, void 0, false, {
+                                                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                lineNumber: 382,
+                                                columnNumber: 17
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                        lineNumber: 371,
+                                        columnNumber: 15
+                                    }, this),
+                                    showLoc && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        style: {
+                                            marginTop: 10,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: 14
+                                        },
+                                        children: [
+                                            locations.map((loc, idx)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                    style: {
+                                                        background: T.skyLight,
+                                                        borderRadius: 12,
+                                                        border: `1.5px solid ${T.sky}`,
+                                                        padding: '14px 14px 10px'
+                                                    },
+                                                    children: [
+                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                            style: {
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center',
+                                                                marginBottom: 10
+                                                            },
+                                                            children: [
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                    style: {
+                                                                        fontWeight: 700,
+                                                                        color: T.navy,
+                                                                        fontSize: '0.82em'
+                                                                    },
+                                                                    children: [
+                                                                        "Lokasi ",
+                                                                        idx + 1
+                                                                    ]
+                                                                }, void 0, true, {
+                                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                    lineNumber: 390,
+                                                                    columnNumber: 25
+                                                                }, this),
+                                                                locations.length > 1 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                                                    onClick: ()=>removeLoc(idx),
+                                                                    style: {
+                                                                        background: 'none',
+                                                                        border: 'none',
+                                                                        color: '#ef4444',
+                                                                        cursor: 'pointer',
+                                                                        fontSize: '0.8em',
+                                                                        fontWeight: 700
+                                                                    },
+                                                                    children: "✕ Hapus"
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                    lineNumber: 392,
+                                                                    columnNumber: 27
+                                                                }, this)
+                                                            ]
+                                                        }, void 0, true, {
+                                                            fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                            lineNumber: 389,
+                                                            columnNumber: 23
+                                                        }, this),
+                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                            style: {
+                                                                display: 'flex',
+                                                                flexDirection: 'column',
+                                                                gap: 8
+                                                            },
+                                                            children: [
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                    children: [
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                                                            style: labelStyle,
+                                                                            children: "Nama Lokasi *"
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                            lineNumber: 397,
+                                                                            columnNumber: 27
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                                                            value: loc.name,
+                                                                            onChange: (e)=>updateLoc(idx, 'name', e.target.value),
+                                                                            placeholder: "misal: Lokasi Utama",
+                                                                            style: inp
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                            lineNumber: 398,
+                                                                            columnNumber: 27
+                                                                        }, this)
+                                                                    ]
+                                                                }, void 0, true, {
+                                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                    lineNumber: 396,
+                                                                    columnNumber: 25
+                                                                }, this),
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                    children: [
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                                                            style: labelStyle,
+                                                                            children: "Alamat"
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                            lineNumber: 401,
+                                                                            columnNumber: 27
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("textarea", {
+                                                                            value: loc.address,
+                                                                            onChange: (e)=>updateLoc(idx, 'address', e.target.value),
+                                                                            placeholder: "Jl. ...",
+                                                                            rows: 2,
+                                                                            style: {
+                                                                                ...inp,
+                                                                                resize: 'vertical',
+                                                                                fontFamily: 'inherit'
+                                                                            }
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                            lineNumber: 402,
+                                                                            columnNumber: 27
+                                                                        }, this)
+                                                                    ]
+                                                                }, void 0, true, {
+                                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                    lineNumber: 400,
+                                                                    columnNumber: 25
+                                                                }, this),
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                    style: {
+                                                                        display: 'grid',
+                                                                        gridTemplateColumns: '1fr 1fr',
+                                                                        gap: 8
+                                                                    },
+                                                                    children: [
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                            children: [
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                                                                    style: labelStyle,
+                                                                                    children: "No. Telepon"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                                    lineNumber: 406,
+                                                                                    columnNumber: 29
+                                                                                }, this),
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                                                                    value: loc.phone,
+                                                                                    onChange: (e)=>updateLoc(idx, 'phone', e.target.value),
+                                                                                    placeholder: "08xx...",
+                                                                                    style: inp
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                                    lineNumber: 407,
+                                                                                    columnNumber: 29
+                                                                                }, this)
+                                                                            ]
+                                                                        }, void 0, true, {
+                                                                            fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                            lineNumber: 405,
+                                                                            columnNumber: 27
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                            children: [
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                                                                    style: labelStyle,
+                                                                                    children: "Jam Buka"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                                    lineNumber: 410,
+                                                                                    columnNumber: 29
+                                                                                }, this),
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                                                                    value: loc.opening_hours,
+                                                                                    onChange: (e)=>updateLoc(idx, 'opening_hours', e.target.value),
+                                                                                    placeholder: "10:00 - 22:00",
+                                                                                    style: inp
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                                    lineNumber: 411,
+                                                                                    columnNumber: 29
+                                                                                }, this)
+                                                                            ]
+                                                                        }, void 0, true, {
+                                                                            fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                            lineNumber: 409,
+                                                                            columnNumber: 27
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                            children: [
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                                                                    style: labelStyle,
+                                                                                    children: "Kisaran Harga"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                                    lineNumber: 414,
+                                                                                    columnNumber: 29
+                                                                                }, this),
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                                                                    value: loc.price_range,
+                                                                                    onChange: (e)=>updateLoc(idx, 'price_range', e.target.value),
+                                                                                    placeholder: "25.000 - 200.000",
+                                                                                    style: inp
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                                    lineNumber: 415,
+                                                                                    columnNumber: 29
+                                                                                }, this)
+                                                                            ]
+                                                                        }, void 0, true, {
+                                                                            fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                            lineNumber: 413,
+                                                                            columnNumber: 27
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                            children: [
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                                                                    style: labelStyle,
+                                                                                    children: "Website"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                                    lineNumber: 418,
+                                                                                    columnNumber: 29
+                                                                                }, this),
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                                                                    value: loc.website,
+                                                                                    onChange: (e)=>updateLoc(idx, 'website', e.target.value),
+                                                                                    placeholder: "https://...",
+                                                                                    style: inp
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                                    lineNumber: 419,
+                                                                                    columnNumber: 29
+                                                                                }, this)
+                                                                            ]
+                                                                        }, void 0, true, {
+                                                                            fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                            lineNumber: 417,
+                                                                            columnNumber: 27
+                                                                        }, this)
+                                                                    ]
+                                                                }, void 0, true, {
+                                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                    lineNumber: 404,
+                                                                    columnNumber: 25
+                                                                }, this),
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                    children: [
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                                                            style: labelStyle,
+                                                                            children: "Link Google Maps"
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                            lineNumber: 423,
+                                                                            columnNumber: 27
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                                                            value: loc.maps_url,
+                                                                            onChange: (e)=>updateLoc(idx, 'maps_url', e.target.value),
+                                                                            placeholder: "https://maps.app.goo.gl/...",
+                                                                            style: inp
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                            lineNumber: 424,
+                                                                            columnNumber: 27
+                                                                        }, this)
+                                                                    ]
+                                                                }, void 0, true, {
+                                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                    lineNumber: 422,
+                                                                    columnNumber: 25
+                                                                }, this),
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                    children: [
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                                                            style: labelStyle,
+                                                                            children: "Catatan"
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                            lineNumber: 427,
+                                                                            columnNumber: 27
+                                                                        }, this),
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("textarea", {
+                                                                            value: loc.notes,
+                                                                            onChange: (e)=>updateLoc(idx, 'notes', e.target.value),
+                                                                            placeholder: "Tips, info tambahan...",
+                                                                            rows: 2,
+                                                                            style: {
+                                                                                ...inp,
+                                                                                resize: 'vertical',
+                                                                                fontFamily: 'inherit'
+                                                                            }
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                            lineNumber: 428,
+                                                                            columnNumber: 27
+                                                                        }, this)
+                                                                    ]
+                                                                }, void 0, true, {
+                                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                                    lineNumber: 426,
+                                                                    columnNumber: 25
+                                                                }, this)
+                                                            ]
+                                                        }, void 0, true, {
+                                                            fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                            lineNumber: 395,
+                                                            columnNumber: 23
+                                                        }, this)
+                                                    ]
+                                                }, idx, true, {
+                                                    fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                    lineNumber: 388,
+                                                    columnNumber: 21
+                                                }, this)),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                                onClick: addLoc,
+                                                style: {
+                                                    padding: '8px 14px',
+                                                    borderRadius: 10,
+                                                    background: T.white,
+                                                    border: `1.5px dashed ${T.skyMid}`,
+                                                    color: T.muted,
+                                                    fontWeight: 600,
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.82em',
+                                                    width: '100%'
+                                                },
+                                                children: "➕ Tambah Lokasi Lain"
+                                            }, void 0, false, {
+                                                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                                lineNumber: 433,
+                                                columnNumber: 19
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                        lineNumber: 386,
+                                        columnNumber: 17
+                                    }, this)
+                                ]
+                            }, void 0, true, {
+                                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                                lineNumber: 370,
+                                columnNumber: 13
+                            }, this)
+                        ]
+                    }, void 0, true, {
+                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                        lineNumber: 312,
+                        columnNumber: 11
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                        onClick: handleSave,
+                        disabled: saving,
+                        style: {
+                            width: '100%',
+                            marginTop: 16,
+                            padding: '12px',
+                            borderRadius: 11,
+                            background: saving ? T.sky : `linear-gradient(135deg, ${T.navy}, ${T.navyMid})`,
+                            color: saving ? T.muted : T.white,
+                            border: 'none',
+                            fontWeight: 700,
+                            cursor: saving ? 'not-allowed' : 'pointer',
+                            fontSize: '0.9em',
+                            boxShadow: saving ? 'none' : '0 4px 14px rgba(3,37,76,.2)',
+                            transition: 'all .15s'
+                        },
+                        children: saving ? '⏳ Menyimpan...' : '💾 Simpan Ide'
+                    }, void 0, false, {
+                        fileName: "[project]/components/home/AddIdeaModal.tsx",
+                        lineNumber: 443,
+                        columnNumber: 11
+                    }, this)
+                ]
+            }, void 0, true, {
+                fileName: "[project]/components/home/AddIdeaModal.tsx",
+                lineNumber: 304,
+                columnNumber: 9
+            }, this)
+        }, void 0, false, {
+            fileName: "[project]/components/home/AddIdeaModal.tsx",
+            lineNumber: 303,
+            columnNumber: 7
+        }, this)
+    }, void 0, false, {
+        fileName: "[project]/components/home/AddIdeaModal.tsx",
+        lineNumber: 299,
+        columnNumber: 5
+    }, this);
+}
+_s1(AddIdeaModal, "HY/uhAlymxdl2UOuvrqrqh3jup4=");
+_c1 = AddIdeaModal;
+var _c, _c1;
+__turbopack_context__.k.register(_c, "SearchableSelect");
+__turbopack_context__.k.register(_c1, "AddIdeaModal");
+if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
+    __turbopack_context__.k.registerExports(__turbopack_context__.m, globalThis.$RefreshHelpers$);
+}
+}),
 "[project]/components/home/Countdown.tsx [app-client] (ecmascript)", ((__turbopack_context__) => {
 "use strict";
 
@@ -3767,11 +4853,11 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist
 var __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$Navbar$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/components/ui/Navbar.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$context$2f$DataContext$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/context/DataContext.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/supabase.ts [app-client] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/lib/utils.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$home$2f$ActivityArea$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/components/home/ActivityArea.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$home$2f$SelectedPanel$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/components/home/SelectedPanel.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$home$2f$IdeaDetailModal$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/components/home/IdeaDetailModal.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$home$2f$EditLocationModal$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/components/home/EditLocationModal.tsx [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$home$2f$AddIdeaModal$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/components/home/AddIdeaModal.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$home$2f$Countdown$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/components/home/Countdown.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$Toast$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/components/ui/Toast.tsx [app-client] (ecmascript)");
 ;
@@ -3800,6 +4886,17 @@ const T = {
     muted: '#6b8cae',
     mutedLight: '#a0bcd4'
 };
+const inp = {
+    width: '100%',
+    padding: '9px 12px',
+    border: `1.5px solid ${T.sky}`,
+    borderRadius: 10,
+    fontSize: '0.87em',
+    color: T.navy,
+    background: T.white,
+    outline: 'none',
+    boxSizing: 'border-box'
+};
 function HomePage() {
     _s();
     const { ideas, categories, cities, reviews, ideaRatings, loading, loadAllData, loadReviews } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$context$2f$DataContext$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useData"])();
@@ -3813,18 +4910,9 @@ function HomePage() {
     const [tripDates, setTripDates] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])({});
     const [editLocIdeaId, setEditLocIdeaId] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const [showAdd, setShowAdd] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
-    const [newName, setNewName] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
-    const [newCat, setNewCat] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
-    const [newCatCustom, setNewCatCustom] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
-    const [newSub, setNewSub] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
-    const [newSubCustom, setNewSubCustom] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
-    const [newCity, setNewCity] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
-    const [newFile, setNewFile] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
-    const [addingIdea, setAddingIdea] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const [isEditMode, setIsEditMode] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const [toast, setToast] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const ideasLoaded = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(false);
-    // Ganti useEffect pertama
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "HomePage.useEffect": ()=>{
             loadAllData();
@@ -3840,7 +4928,6 @@ function HomePage() {
                             "HomePage.useEffect.deduped": (x)=>x.ideaId === s.ideaId
                         }["HomePage.useEffect.deduped"]) === i
                 }["HomePage.useEffect.deduped"]);
-                // Batch kedua setState dalam satu tick
                 setSelections(deduped);
                 setSelectedIds(new Set(deduped.map({
                     "HomePage.useEffect": (s)=>s.ideaId
@@ -3869,7 +4956,6 @@ function HomePage() {
         tripDate,
         secretMsg
     ]);
-    // Ganti handleToggle
     const handleToggle = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
         "HomePage.useCallback[handleToggle]": (ideaId)=>{
             if (!ideasLoaded.current) return;
@@ -3877,9 +4963,9 @@ function HomePage() {
             if (isCurrentlySelected) {
                 setSelectedIds({
                     "HomePage.useCallback[handleToggle]": (prev)=>{
-                        const next = new Set(prev);
-                        next.delete(ideaId);
-                        return next;
+                        const n = new Set(prev);
+                        n.delete(ideaId);
+                        return n;
                     }
                 }["HomePage.useCallback[handleToggle]"]);
                 setSelections({
@@ -3894,9 +4980,9 @@ function HomePage() {
                 if (!idea) return;
                 setSelectedIds({
                     "HomePage.useCallback[handleToggle]": (prev)=>{
-                        const next = new Set(prev);
-                        next.add(ideaId);
-                        return next;
+                        const n = new Set(prev);
+                        n.add(ideaId);
+                        return n;
                     }
                 }["HomePage.useCallback[handleToggle]"]);
                 setSelections({
@@ -3920,8 +5006,7 @@ function HomePage() {
     }["HomePage.useCallback[handleToggle]"], [
         ideas,
         selectedIds
-    ]) // tambah selectedIds di deps
-    ;
+    ]);
     const handleRemove = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
         "HomePage.useCallback[handleRemove]": (ideaId)=>{
             setSelectedIds({
@@ -3965,94 +5050,9 @@ function HomePage() {
         });
         window.location.href = '/summary';
     };
-    const resetAdd = ()=>{
-        setNewName('');
-        setNewCat('');
-        setNewCatCustom('');
-        setNewSub('');
-        setNewSubCustom('');
-        setNewCity('');
-        setNewFile(null);
-    };
-    const handleAddIdea = async ()=>{
-        const finalName = newName.trim();
-        const finalCat = newCat === '__custom__' ? newCatCustom.trim() : newCat;
-        const finalSub = newSub === '__custom__' ? newSubCustom.trim() : newSub;
-        if (!finalName) return setToast({
-            msg: 'Nama tidak boleh kosong!',
-            type: 'warn'
-        });
-        if (!finalCat) return setToast({
-            msg: 'Pilih atau isi kategori!',
-            type: 'warn'
-        });
-        if (!finalSub) return setToast({
-            msg: 'Pilih atau isi sub-tipe!',
-            type: 'warn'
-        });
-        setAddingIdea(true);
-        try {
-            let imageUrl = null;
-            if (newFile) imageUrl = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["uploadImage"])(newFile, 'anon');
-            if (newCat === '__custom__' || newSub === '__custom__') {
-                const tk = finalSub.toLowerCase().replace(/\s+/g, '_');
-                await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('idea_categories').upsert([
-                    {
-                        category: finalCat,
-                        subtype: finalSub,
-                        type_key: tk,
-                        icon: '📍',
-                        photo_url: null
-                    }
-                ], {
-                    onConflict: 'type_key'
-                });
-            }
-            const typeKey = newSub === '__custom__' ? finalSub.toLowerCase().replace(/\s+/g, '_') : newSub;
-            const { error } = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('trip_ideas_v2').insert([
-                {
-                    idea_name: finalName,
-                    type_key: typeKey,
-                    day_of_week: '',
-                    photo_url: imageUrl,
-                    city_id: newCity || null
-                }
-            ]);
-            if (error) throw error;
-            await loadAllData();
-            setShowAdd(false);
-            resetAdd();
-            setToast({
-                msg: 'Ide berhasil ditambahkan! 🎉',
-                type: 'success'
-            });
-        } catch  {
-            setToast({
-                msg: 'Gagal menyimpan. Coba lagi.',
-                type: 'error'
-            });
-        } finally{
-            setAddingIdea(false);
-        }
-    };
-    const uniqueCats = [
-        ...new Set(categories.map((c)=>c.category))
-    ];
-    const subtypesForCat = categories.filter((c)=>c.category === newCat);
     const detailIdea = detailIdeaId ? ideas.find((i)=>i.id === detailIdeaId) : null;
     const editLocIdea = editLocIdeaId ? ideas.find((i)=>i.id === editLocIdeaId) : null;
     const canGenerate = tripDate && selections.length > 0;
-    const inp = {
-        width: '100%',
-        padding: '9px 12px',
-        border: `1.5px solid ${T.sky}`,
-        borderRadius: 10,
-        fontSize: '0.87em',
-        color: T.navy,
-        background: T.white,
-        outline: 'none',
-        boxSizing: 'border-box'
-    };
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
         style: {
             minHeight: '100vh',
@@ -4071,7 +5071,7 @@ function HomePage() {
       `
             }, void 0, false, {
                 fileName: "[project]/components/home/HomePage.tsx",
-                lineNumber: 183,
+                lineNumber: 116,
                 columnNumber: 7
             }, this),
             toast && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$Toast$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -4080,12 +5080,12 @@ function HomePage() {
                 onClose: ()=>setToast(null)
             }, void 0, false, {
                 fileName: "[project]/components/home/HomePage.tsx",
-                lineNumber: 192,
+                lineNumber: 125,
                 columnNumber: 17
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$ui$2f$Navbar$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {}, void 0, false, {
                 fileName: "[project]/components/home/HomePage.tsx",
-                lineNumber: 193,
+                lineNumber: 126,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4129,7 +5129,7 @@ function HomePage() {
                                     children: "✏️ Mode edit trip aktif"
                                 }, void 0, false, {
                                     fileName: "[project]/components/home/HomePage.tsx",
-                                    lineNumber: 208,
+                                    lineNumber: 141,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4153,13 +5153,13 @@ function HomePage() {
                                     children: "✕ Batal"
                                 }, void 0, false, {
                                     fileName: "[project]/components/home/HomePage.tsx",
-                                    lineNumber: 209,
+                                    lineNumber: 142,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/home/HomePage.tsx",
-                            lineNumber: 207,
+                            lineNumber: 140,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4181,7 +5181,7 @@ function HomePage() {
                                     }
                                 }, void 0, false, {
                                     fileName: "[project]/components/home/HomePage.tsx",
-                                    lineNumber: 225,
+                                    lineNumber: 158,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4203,7 +5203,7 @@ function HomePage() {
                                             }
                                         }, void 0, false, {
                                             fileName: "[project]/components/home/HomePage.tsx",
-                                            lineNumber: 229,
+                                            lineNumber: 162,
                                             columnNumber: 15
                                         }, this),
                                         secretMsg && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4218,13 +5218,13 @@ function HomePage() {
                                             children: "✨"
                                         }, void 0, false, {
                                             fileName: "[project]/components/home/HomePage.tsx",
-                                            lineNumber: 232,
+                                            lineNumber: 165,
                                             columnNumber: 29
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/home/HomePage.tsx",
-                                    lineNumber: 228,
+                                    lineNumber: 161,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4244,7 +5244,7 @@ function HomePage() {
                                     children: "➕ Tambah Ide"
                                 }, void 0, false, {
                                     fileName: "[project]/components/home/HomePage.tsx",
-                                    lineNumber: 235,
+                                    lineNumber: 168,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4278,19 +5278,19 @@ function HomePage() {
                                             children: selections.length
                                         }, void 0, false, {
                                             fileName: "[project]/components/home/HomePage.tsx",
-                                            lineNumber: 255,
+                                            lineNumber: 188,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/components/home/HomePage.tsx",
-                                    lineNumber: 243,
+                                    lineNumber: 176,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/home/HomePage.tsx",
-                            lineNumber: 224,
+                            lineNumber: 157,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4311,7 +5311,7 @@ function HomePage() {
                                     children: "🔍"
                                 }, void 0, false, {
                                     fileName: "[project]/components/home/HomePage.tsx",
-                                    lineNumber: 263,
+                                    lineNumber: 196,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -4327,7 +5327,7 @@ function HomePage() {
                                     }
                                 }, void 0, false, {
                                     fileName: "[project]/components/home/HomePage.tsx",
-                                    lineNumber: 264,
+                                    lineNumber: 197,
                                     columnNumber: 13
                                 }, this),
                                 search && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4346,24 +5346,24 @@ function HomePage() {
                                     children: "✕"
                                 }, void 0, false, {
                                     fileName: "[project]/components/home/HomePage.tsx",
-                                    lineNumber: 268,
+                                    lineNumber: 201,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/components/home/HomePage.tsx",
-                            lineNumber: 262,
+                            lineNumber: 195,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/components/home/HomePage.tsx",
-                    lineNumber: 204,
+                    lineNumber: 137,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/components/home/HomePage.tsx",
-                lineNumber: 196,
+                lineNumber: 129,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("main", {
@@ -4380,7 +5380,7 @@ function HomePage() {
                         tripDate: tripDate
                     }, void 0, false, {
                         fileName: "[project]/components/home/HomePage.tsx",
-                        lineNumber: 276,
+                        lineNumber: 209,
                         columnNumber: 22
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$home$2f$SelectedPanel$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -4400,7 +5400,7 @@ function HomePage() {
                             })
                     }, void 0, false, {
                         fileName: "[project]/components/home/HomePage.tsx",
-                        lineNumber: 278,
+                        lineNumber: 211,
                         columnNumber: 9
                     }, this),
                     loading ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4420,12 +5420,12 @@ function HomePage() {
                             }
                         }, void 0, false, {
                             fileName: "[project]/components/home/HomePage.tsx",
-                            lineNumber: 287,
+                            lineNumber: 220,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/components/home/HomePage.tsx",
-                        lineNumber: 286,
+                        lineNumber: 219,
                         columnNumber: 11
                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$home$2f$ActivityArea$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
                         ideas: ideas,
@@ -4439,13 +5439,13 @@ function HomePage() {
                         onViewDetail: handleViewDetail
                     }, void 0, false, {
                         fileName: "[project]/components/home/HomePage.tsx",
-                        lineNumber: 290,
+                        lineNumber: 223,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/components/home/HomePage.tsx",
-                lineNumber: 275,
+                lineNumber: 208,
                 columnNumber: 7
             }, this),
             detailIdea && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$home$2f$IdeaDetailModal$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -4464,7 +5464,7 @@ function HomePage() {
                 }
             }, void 0, false, {
                 fileName: "[project]/components/home/HomePage.tsx",
-                lineNumber: 301,
+                lineNumber: 234,
                 columnNumber: 9
             }, this),
             editLocIdea && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$home$2f$EditLocationModal$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -4476,429 +5476,34 @@ function HomePage() {
                 }
             }, void 0, false, {
                 fileName: "[project]/components/home/HomePage.tsx",
-                lineNumber: 312,
+                lineNumber: 244,
                 columnNumber: 9
             }, this),
-            showAdd && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                style: {
-                    position: 'fixed',
-                    inset: 0,
-                    zIndex: 50,
-                    background: 'rgba(3,37,76,0.38)',
-                    backdropFilter: 'blur(5px)',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: 'center',
-                    padding: '24px 16px',
-                    overflowY: 'auto'
+            showAdd && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$components$2f$home$2f$AddIdeaModal$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
+                categories: categories,
+                cities: cities,
+                onClose: ()=>setShowAdd(false),
+                onSaved: ()=>{
+                    loadAllData();
+                    setShowAdd(false);
                 },
-                onClick: (e)=>{
-                    if (e.target === e.currentTarget) {
-                        setShowAdd(false);
-                        resetAdd();
-                    }
-                },
-                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                    style: {
-                        background: T.white,
-                        borderRadius: 20,
-                        border: `1.5px solid ${T.sky}`,
-                        boxShadow: '0 20px 60px rgba(3,37,76,.2)',
-                        width: '100%',
-                        maxWidth: 460,
-                        margin: 'auto'
-                    },
-                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        style: {
-                            padding: '20px 22px 24px'
-                        },
-                        children: [
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                style: {
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    marginBottom: 18
-                                },
-                                children: [
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h3", {
-                                        style: {
-                                            color: T.navy,
-                                            fontWeight: 800,
-                                            margin: 0,
-                                            fontSize: '1.02em'
-                                        },
-                                        children: "➕ Tambah Ide Baru"
-                                    }, void 0, false, {
-                                        fileName: "[project]/components/home/HomePage.tsx",
-                                        lineNumber: 328,
-                                        columnNumber: 17
-                                    }, this),
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                                        onClick: ()=>{
-                                            setShowAdd(false);
-                                            resetAdd();
-                                        },
-                                        style: {
-                                            background: T.skyLight,
-                                            border: `1px solid ${T.sky}`,
-                                            borderRadius: 999,
-                                            width: 28,
-                                            height: 28,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            cursor: 'pointer',
-                                            color: T.navy,
-                                            fontWeight: 700,
-                                            fontSize: '0.8em'
-                                        },
-                                        children: "✕"
-                                    }, void 0, false, {
-                                        fileName: "[project]/components/home/HomePage.tsx",
-                                        lineNumber: 329,
-                                        columnNumber: 17
-                                    }, this)
-                                ]
-                            }, void 0, true, {
-                                fileName: "[project]/components/home/HomePage.tsx",
-                                lineNumber: 327,
-                                columnNumber: 15
-                            }, this),
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                style: {
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    gap: 11
-                                },
-                                children: [
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                        children: [
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                style: {
-                                                    fontSize: '0.7em',
-                                                    fontWeight: 700,
-                                                    color: T.muted,
-                                                    display: 'block',
-                                                    marginBottom: 5,
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: 0.5
-                                                },
-                                                children: "Nama Tempat *"
-                                            }, void 0, false, {
-                                                fileName: "[project]/components/home/HomePage.tsx",
-                                                lineNumber: 336,
-                                                columnNumber: 19
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
-                                                value: newName,
-                                                onChange: (e)=>setNewName(e.target.value),
-                                                placeholder: "misal: Braga Permai",
-                                                style: inp
-                                            }, void 0, false, {
-                                                fileName: "[project]/components/home/HomePage.tsx",
-                                                lineNumber: 337,
-                                                columnNumber: 19
-                                            }, this)
-                                        ]
-                                    }, void 0, true, {
-                                        fileName: "[project]/components/home/HomePage.tsx",
-                                        lineNumber: 335,
-                                        columnNumber: 17
-                                    }, this),
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                        children: [
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                style: {
-                                                    fontSize: '0.7em',
-                                                    fontWeight: 700,
-                                                    color: T.muted,
-                                                    display: 'block',
-                                                    marginBottom: 5,
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: 0.5
-                                                },
-                                                children: "Kategori *"
-                                            }, void 0, false, {
-                                                fileName: "[project]/components/home/HomePage.tsx",
-                                                lineNumber: 340,
-                                                columnNumber: 19
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
-                                                value: newCat,
-                                                onChange: (e)=>{
-                                                    setNewCat(e.target.value);
-                                                    setNewSub('');
-                                                },
-                                                style: inp,
-                                                children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                        value: "",
-                                                        children: "Pilih..."
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/components/home/HomePage.tsx",
-                                                        lineNumber: 342,
-                                                        columnNumber: 21
-                                                    }, this),
-                                                    uniqueCats.map((c)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                            value: c,
-                                                            children: c
-                                                        }, c, false, {
-                                                            fileName: "[project]/components/home/HomePage.tsx",
-                                                            lineNumber: 343,
-                                                            columnNumber: 42
-                                                        }, this)),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                        value: "__custom__",
-                                                        children: "➕ Tambah baru..."
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/components/home/HomePage.tsx",
-                                                        lineNumber: 344,
-                                                        columnNumber: 21
-                                                    }, this)
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "[project]/components/home/HomePage.tsx",
-                                                lineNumber: 341,
-                                                columnNumber: 19
-                                            }, this),
-                                            newCat === '__custom__' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
-                                                value: newCatCustom,
-                                                onChange: (e)=>setNewCatCustom(e.target.value),
-                                                placeholder: "Nama kategori baru",
-                                                style: {
-                                                    ...inp,
-                                                    marginTop: 7
-                                                }
-                                            }, void 0, false, {
-                                                fileName: "[project]/components/home/HomePage.tsx",
-                                                lineNumber: 347,
-                                                columnNumber: 21
-                                            }, this)
-                                        ]
-                                    }, void 0, true, {
-                                        fileName: "[project]/components/home/HomePage.tsx",
-                                        lineNumber: 339,
-                                        columnNumber: 17
-                                    }, this),
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                        children: [
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                style: {
-                                                    fontSize: '0.7em',
-                                                    fontWeight: 700,
-                                                    color: T.muted,
-                                                    display: 'block',
-                                                    marginBottom: 5,
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: 0.5
-                                                },
-                                                children: "Sub-tipe *"
-                                            }, void 0, false, {
-                                                fileName: "[project]/components/home/HomePage.tsx",
-                                                lineNumber: 351,
-                                                columnNumber: 19
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
-                                                value: newSub,
-                                                onChange: (e)=>setNewSub(e.target.value),
-                                                disabled: !newCat,
-                                                style: {
-                                                    ...inp,
-                                                    opacity: !newCat ? 0.5 : 1
-                                                },
-                                                children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                        value: "",
-                                                        children: "Pilih..."
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/components/home/HomePage.tsx",
-                                                        lineNumber: 353,
-                                                        columnNumber: 21
-                                                    }, this),
-                                                    newCat !== '__custom__' && subtypesForCat.map((s)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                            value: s.type_key,
-                                                            children: s.subtype
-                                                        }, s.type_key, false, {
-                                                            fileName: "[project]/components/home/HomePage.tsx",
-                                                            lineNumber: 354,
-                                                            columnNumber: 73
-                                                        }, this)),
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                        value: "__custom__",
-                                                        children: "➕ Tambah baru..."
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/components/home/HomePage.tsx",
-                                                        lineNumber: 355,
-                                                        columnNumber: 21
-                                                    }, this)
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "[project]/components/home/HomePage.tsx",
-                                                lineNumber: 352,
-                                                columnNumber: 19
-                                            }, this),
-                                            newSub === '__custom__' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
-                                                value: newSubCustom,
-                                                onChange: (e)=>setNewSubCustom(e.target.value),
-                                                placeholder: "Nama sub-tipe baru",
-                                                style: {
-                                                    ...inp,
-                                                    marginTop: 7
-                                                }
-                                            }, void 0, false, {
-                                                fileName: "[project]/components/home/HomePage.tsx",
-                                                lineNumber: 358,
-                                                columnNumber: 21
-                                            }, this)
-                                        ]
-                                    }, void 0, true, {
-                                        fileName: "[project]/components/home/HomePage.tsx",
-                                        lineNumber: 350,
-                                        columnNumber: 17
-                                    }, this),
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                        children: [
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                style: {
-                                                    fontSize: '0.7em',
-                                                    fontWeight: 700,
-                                                    color: T.muted,
-                                                    display: 'block',
-                                                    marginBottom: 5,
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: 0.5
-                                                },
-                                                children: "Kota"
-                                            }, void 0, false, {
-                                                fileName: "[project]/components/home/HomePage.tsx",
-                                                lineNumber: 362,
-                                                columnNumber: 19
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
-                                                value: newCity,
-                                                onChange: (e)=>setNewCity(e.target.value),
-                                                style: inp,
-                                                children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                        value: "",
-                                                        children: "Tanpa Kota"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/components/home/HomePage.tsx",
-                                                        lineNumber: 364,
-                                                        columnNumber: 21
-                                                    }, this),
-                                                    cities.map((c)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
-                                                            value: c.id,
-                                                            children: c.name
-                                                        }, c.id, false, {
-                                                            fileName: "[project]/components/home/HomePage.tsx",
-                                                            lineNumber: 365,
-                                                            columnNumber: 38
-                                                        }, this))
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "[project]/components/home/HomePage.tsx",
-                                                lineNumber: 363,
-                                                columnNumber: 19
-                                            }, this)
-                                        ]
-                                    }, void 0, true, {
-                                        fileName: "[project]/components/home/HomePage.tsx",
-                                        lineNumber: 361,
-                                        columnNumber: 17
-                                    }, this),
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                        children: [
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                style: {
-                                                    fontSize: '0.7em',
-                                                    fontWeight: 700,
-                                                    color: T.muted,
-                                                    display: 'block',
-                                                    marginBottom: 5,
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: 0.5
-                                                },
-                                                children: "Foto (Opsional)"
-                                            }, void 0, false, {
-                                                fileName: "[project]/components/home/HomePage.tsx",
-                                                lineNumber: 369,
-                                                columnNumber: 19
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
-                                                type: "file",
-                                                accept: "image/*",
-                                                onChange: (e)=>setNewFile(e.target.files?.[0] || null),
-                                                style: {
-                                                    fontSize: '0.8em',
-                                                    color: T.navy,
-                                                    width: '100%'
-                                                }
-                                            }, void 0, false, {
-                                                fileName: "[project]/components/home/HomePage.tsx",
-                                                lineNumber: 370,
-                                                columnNumber: 19
-                                            }, this)
-                                        ]
-                                    }, void 0, true, {
-                                        fileName: "[project]/components/home/HomePage.tsx",
-                                        lineNumber: 368,
-                                        columnNumber: 17
-                                    }, this)
-                                ]
-                            }, void 0, true, {
-                                fileName: "[project]/components/home/HomePage.tsx",
-                                lineNumber: 334,
-                                columnNumber: 15
-                            }, this),
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                                onClick: handleAddIdea,
-                                disabled: addingIdea,
-                                style: {
-                                    width: '100%',
-                                    marginTop: 16,
-                                    padding: '12px',
-                                    borderRadius: 11,
-                                    background: addingIdea ? T.sky : `linear-gradient(135deg, ${T.navy}, ${T.navyMid})`,
-                                    color: addingIdea ? T.muted : T.white,
-                                    border: 'none',
-                                    fontWeight: 700,
-                                    cursor: addingIdea ? 'not-allowed' : 'pointer',
-                                    fontSize: '0.9em',
-                                    boxShadow: addingIdea ? 'none' : '0 4px 14px rgba(3,37,76,.2)',
-                                    transition: 'all .15s'
-                                },
-                                children: addingIdea ? '⏳ Menyimpan...' : '💾 Simpan Ide'
-                            }, void 0, false, {
-                                fileName: "[project]/components/home/HomePage.tsx",
-                                lineNumber: 373,
-                                columnNumber: 15
-                            }, this)
-                        ]
-                    }, void 0, true, {
-                        fileName: "[project]/components/home/HomePage.tsx",
-                        lineNumber: 326,
-                        columnNumber: 13
-                    }, this)
-                }, void 0, false, {
-                    fileName: "[project]/components/home/HomePage.tsx",
-                    lineNumber: 325,
-                    columnNumber: 11
-                }, this)
+                onToast: (msg, type)=>setToast({
+                        msg,
+                        type
+                    })
             }, void 0, false, {
                 fileName: "[project]/components/home/HomePage.tsx",
-                lineNumber: 321,
+                lineNumber: 252,
                 columnNumber: 9
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/components/home/HomePage.tsx",
-        lineNumber: 182,
+        lineNumber: 115,
         columnNumber: 5
     }, this);
 }
-_s(HomePage, "gZv8dqHiKgwLylgPD8rXm9ratZ4=", false, function() {
+_s(HomePage, "4TsNyWeWve9OavbFzG59jDZKDc0=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$context$2f$DataContext$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useData"]
     ];
@@ -4912,4 +5517,4 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
 }),
 ]);
 
-//# sourceMappingURL=_1cb06945._.js.map
+//# sourceMappingURL=_8347cf05._.js.map

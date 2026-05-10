@@ -1,7 +1,7 @@
 import { supabase } from './supabase'
 
 const IMAGE_BUCKET = 'trip-ideas-images'
-const VIDEO_BUCKET = 'trip-ideas-videos'
+const VIDEO_BUCKET = 'trip-videos'
 
 // ============================================================
 // IMAGE HELPERS

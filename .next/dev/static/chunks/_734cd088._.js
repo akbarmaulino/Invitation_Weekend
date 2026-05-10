@@ -39,6 +39,7 @@ const DataContext = /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project
     cities: [],
     reviews: [],
     ideaRatings: {},
+    tripHistories: [],
     loading: false,
     loadAllData: async ()=>{},
     loadReviews: async ()=>{}
@@ -70,6 +71,7 @@ function DataProvider({ children }) {
     const [cities, setCities] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
     const [reviews, setReviews] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
     const [ideaRatings, setIdeaRatings] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])({});
+    const [tripHistories, setTripHistories] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
     const [loading, setLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const loadingRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(false);
     const loadAllData = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
@@ -78,7 +80,7 @@ function DataProvider({ children }) {
             loadingRef.current = true;
             setLoading(true);
             try {
-                const [citiesRes, catsRes, ideasRes, reviewsRes] = await Promise.all([
+                const [citiesRes, catsRes, ideasRes, reviewsRes, tripHistRes] = await Promise.all([
                     __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('cities').select('*').order('display_order', {
                         ascending: true
                     }),
@@ -86,10 +88,12 @@ function DataProvider({ children }) {
                     __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('trip_ideas_v2').select('*, idea_categories(category, subtype, icon, photo_url)').order('created_at', {
                         ascending: false
                     }),
-                    __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('idea_reviews').select('*')
+                    __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('idea_reviews').select('*'),
+                    __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$supabase$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["supabase"].from('trip_history').select('id, trip_date, trip_day')
                 ]);
                 setCities(citiesRes.data || []);
                 setCategories(catsRes.data || []);
+                setTripHistories(tripHistRes.data || []);
                 const mapped = (ideasRes.data || []).map({
                     "DataProvider.useCallback[loadAllData].mapped": (i)=>({
                             ...i,
@@ -131,6 +135,7 @@ function DataProvider({ children }) {
             cities,
             reviews,
             ideaRatings,
+            tripHistories,
             loading,
             loadAllData,
             loadReviews
@@ -138,11 +143,11 @@ function DataProvider({ children }) {
         children: children
     }, void 0, false, {
         fileName: "[project]/context/DataContext.tsx",
-        lineNumber: 94,
+        lineNumber: 104,
         columnNumber: 5
     }, this);
 }
-_s(DataProvider, "F1rx5S3Ce1jo4OyRVwYvARjyTl0=");
+_s(DataProvider, "bSX3bwUkDXNpwTl1zT2clRgLax4=");
 _c = DataProvider;
 const useData = ()=>{
     _s1();

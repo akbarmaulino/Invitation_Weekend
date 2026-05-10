@@ -11,7 +11,10 @@ const cfg = {
 export default function Toast({ message, type = 'info', onClose, duration = 3500 }: {
   message: string; type?: keyof typeof cfg; onClose: () => void; duration?: number
 }) {
-  useEffect(() => { const t = setTimeout(onClose, duration); return () => clearTimeout(t) }, [])
+  useEffect(() => {
+  const t = setTimeout(onClose, duration)
+  return () => clearTimeout(t)
+}, [onClose, duration]) 
   const s = cfg[type]
   return (
     <div onClick={onClose} style={{

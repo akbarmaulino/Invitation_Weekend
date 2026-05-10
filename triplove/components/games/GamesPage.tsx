@@ -54,6 +54,31 @@ const GAMES = [
     bg: '#fdf2f8',
     ready: true,
   },
+  // // ✨ NEW
+  // {
+  //   href: '/games/tts',
+  //   icon: '🧩',
+  //   title: 'Teka-Teki Silang',
+  //   desc: 'Soal dibuat AI! Jawab bareng pasangan, siapa paling banyak?',
+  //   players: '2 pemain',
+  //   duration: '10–20 menit',
+  //   difficulty: 'Medium',
+  //   color: '#8b5cf6',
+  //   bg: '#f5f3ff',
+  //   ready: true,
+  // },
+  {
+    href: '/games/congklak',
+    icon: '🥥',
+    title: 'Congklak',
+    desc: 'Game tradisional Indonesia! Siapa yang paling banyak biji di kalang?',
+    players: '2 pemain',
+    duration: '10–20 menit',
+    difficulty: 'Easy',
+    color: '#a16207',
+    bg: '#fefce8',
+    ready: true,
+  },
 ]
 
 const DIFF_COLOR: Record<string, string> = {
@@ -160,7 +185,7 @@ export default function GamesPage() {
         <div style={{ marginTop: 28, padding: '18px 22px', borderRadius: 18, border: `2px dashed ${S}`, background: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
           <p style={{ margin: '0 0 5px', fontSize: '1.2em' }}>🚀</p>
           <p style={{ margin: 0, fontWeight: 700, color: P, fontSize: '0.88em' }}>Lebih banyak game coming soon!</p>
-          <p style={{ margin: '4px 0 0', color: MUTED, fontSize: '0.78em' }}>Ular tangga couple edition, Truth or Dare, dan lainnya</p>
+          <p style={{ margin: '4px 0 0', color: MUTED, fontSize: '0.78em' }}>Congklak, Ludo, dan lainnya</p>
         </div>
 
       </main>
