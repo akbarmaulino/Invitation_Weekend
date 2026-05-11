@@ -1,165 +1,256 @@
-'use client'
-import { useState, useRef, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
-import { uploadImage } from '@/lib/utils'
-import type { IdeaCategory, City } from '@/types/types'
+"use client";
+import { useState, useRef, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { uploadImage } from "@/lib/utils";
+import type { IdeaCategory, City } from "@/types/types";
 
 const T = {
-  navy: '#03254c', navyMid: '#1a4d7a', navyLight: '#2563a8',
-  sky: '#c4e8ff', skyLight: '#e1f3ff', skyMid: '#a8d8f0',
-  white: '#ffffff', muted: '#6b8cae', mutedLight: '#a0bcd4',
-}
+  navy: "#03254c",
+  navyMid: "#1a4d7a",
+  navyLight: "#2563a8",
+  sky: "#c4e8ff",
+  skyLight: "#e1f3ff",
+  skyMid: "#a8d8f0",
+  white: "#ffffff",
+  muted: "#6b8cae",
+  mutedLight: "#a0bcd4",
+};
 
 const inp: React.CSSProperties = {
-  width: '100%', padding: '9px 12px',
-  border: `1.5px solid ${T.sky}`, borderRadius: 10,
-  fontSize: '0.87em', color: T.navy, background: T.white,
-  outline: 'none', boxSizing: 'border-box',
-}
+  width: "100%",
+  padding: "9px 12px",
+  border: `1.5px solid ${T.sky}`,
+  borderRadius: 10,
+  fontSize: "0.87em",
+  color: T.navy,
+  background: T.white,
+  outline: "none",
+  boxSizing: "border-box",
+};
 
 const labelStyle: React.CSSProperties = {
-  fontSize: '0.7em', fontWeight: 700, color: T.muted,
-  display: 'block', marginBottom: 5,
-  textTransform: 'uppercase', letterSpacing: 0.5,
-}
+  fontSize: "0.7em",
+  fontWeight: 700,
+  color: T.muted,
+  display: "block",
+  marginBottom: 5,
+  textTransform: "uppercase",
+  letterSpacing: 0.5,
+};
 
 // ── CUSTOM SEARCHABLE SELECT ──────────────────────────────────────────────────
-interface SelectOption { label: string; value: string }
-
-interface SearchableSelectProps {
-  options: SelectOption[]
-  value: string
-  onChange: (val: string) => void
-  placeholder?: string
-  disabled?: boolean
-  clearable?: boolean
+interface SelectOption {
+  label: string;
+  value: string;
 }
 
-function SearchableSelect({ options, value, onChange, placeholder = 'Pilih...', disabled = false, clearable = true }: SearchableSelectProps) {
-  const [open, setOpen]       = useState(false)
-  const [query, setQuery]     = useState('')
-  const containerRef          = useRef<HTMLDivElement>(null)
-  const inputRef              = useRef<HTMLInputElement>(null)
+interface SearchableSelectProps {
+  options: SelectOption[];
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  clearable?: boolean;
+}
 
-  const selected = options.find(o => o.value === value) ?? null
+function SearchableSelect({
+  options,
+  value,
+  onChange,
+  placeholder = "Pilih...",
+  disabled = false,
+  clearable = true,
+}: SearchableSelectProps) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const selected = options.find((o) => o.value === value) ?? null;
 
   const filtered = query.trim()
-    ? options.filter(o => o.label.toLowerCase().includes(query.toLowerCase()))
-    : options
+    ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
+    : options;
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false)
-        setQuery('')
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+        setQuery("");
       }
     }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   function handleOpen() {
-    if (disabled) return
-    setOpen(true)
-    setQuery('')
-    setTimeout(() => inputRef.current?.focus(), 50)
+    if (disabled) return;
+    setOpen(true);
+    setQuery("");
+    setTimeout(() => inputRef.current?.focus(), 50);
   }
 
   function handleSelect(opt: SelectOption) {
-    onChange(opt.value)
-    setOpen(false)
-    setQuery('')
+    onChange(opt.value);
+    setOpen(false);
+    setQuery("");
   }
 
   function handleClear(e: React.MouseEvent) {
-    e.stopPropagation()
-    onChange('')
-    setOpen(false)
-    setQuery('')
+    e.stopPropagation();
+    onChange("");
+    setOpen(false);
+    setQuery("");
   }
 
   return (
-    <div ref={containerRef} style={{ position: 'relative' }}>
+    <div ref={containerRef} style={{ position: "relative" }}>
       {/* Control */}
       <div
         onClick={handleOpen}
         style={{
-          display: 'flex', alignItems: 'center',
+          display: "flex",
+          alignItems: "center",
           border: `1.5px solid ${open ? T.navyLight : T.sky}`,
-          borderRadius: 10, background: disabled ? T.skyLight : T.white,
-          height: 38, cursor: disabled ? 'not-allowed' : 'pointer',
-          boxShadow: open ? `0 0 0 3px ${T.skyMid}66` : 'none',
-          transition: 'border-color .15s, box-shadow .15s',
+          borderRadius: 10,
+          background: disabled ? T.skyLight : T.white,
+          height: 38,
+          cursor: disabled ? "not-allowed" : "pointer",
+          boxShadow: open ? `0 0 0 3px ${T.skyMid}66` : "none",
+          transition: "border-color .15s, box-shadow .15s",
           opacity: disabled ? 0.6 : 1,
-          overflow: 'hidden',
+          overflow: "hidden",
         }}
       >
         {open ? (
           <input
             ref={inputRef}
             value={query}
-            onChange={e => setQuery(e.target.value)}
-            onClick={e => e.stopPropagation()}
+            onChange={(e) => setQuery(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
             placeholder="Cari..."
             style={{
-              flex: 1, border: 'none', outline: 'none',
-              padding: '0 12px', fontSize: '0.87em',
-              color: T.navy, background: 'transparent',
-              height: '100%',
+              flex: 1,
+              border: "none",
+              outline: "none",
+              padding: "0 12px",
+              fontSize: "0.87em",
+              color: T.navy,
+              background: "transparent",
+              height: "100%",
             }}
           />
         ) : (
-          <span style={{
-            flex: 1, padding: '0 12px', fontSize: '0.87em',
-            color: selected ? T.navy : T.mutedLight,
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          }}>
+          <span
+            style={{
+              flex: 1,
+              padding: "0 12px",
+              fontSize: "0.87em",
+              color: selected ? T.navy : T.mutedLight,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
             {selected ? selected.label : placeholder}
           </span>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', paddingRight: 8, gap: 2, flexShrink: 0 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            paddingRight: 8,
+            gap: 2,
+            flexShrink: 0,
+          }}
+        >
           {clearable && selected && !open && (
             <button
               onClick={handleClear}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.mutedLight, fontSize: '0.75em', padding: '2px 4px', lineHeight: 1, borderRadius: 4 }}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: T.mutedLight,
+                fontSize: "0.75em",
+                padding: "2px 4px",
+                lineHeight: 1,
+                borderRadius: 4,
+              }}
               title="Hapus pilihan"
-            >✕</button>
+            >
+              ✕
+            </button>
           )}
-          <span style={{ color: T.mutedLight, fontSize: '0.65em', transform: open ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform .15s' }}>▼</span>
+          <span
+            style={{
+              color: T.mutedLight,
+              fontSize: "0.65em",
+              transform: open ? "rotate(180deg)" : "rotate(0)",
+              transition: "transform .15s",
+            }}
+          >
+            ▼
+          </span>
         </div>
       </div>
 
       {/* Dropdown */}
       {open && !disabled && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-          background: T.white, border: `1.5px solid ${T.sky}`,
-          borderRadius: 10, boxShadow: '0 8px 24px rgba(3,37,76,0.12)',
-          zIndex: 999, maxHeight: 220, overflowY: 'auto',
-          padding: 4,
-        }}>
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            left: 0,
+            right: 0,
+            background: T.white,
+            border: `1.5px solid ${T.sky}`,
+            borderRadius: 10,
+            boxShadow: "0 8px 24px rgba(3,37,76,0.12)",
+            zIndex: 999,
+            maxHeight: 220,
+            overflowY: "auto",
+            padding: 4,
+          }}
+        >
           {filtered.length === 0 ? (
-            <div style={{ padding: '10px 12px', fontSize: '0.82em', color: T.mutedLight, textAlign: 'center' }}>
+            <div
+              style={{
+                padding: "10px 12px",
+                fontSize: "0.82em",
+                color: T.mutedLight,
+                textAlign: "center",
+              }}
+            >
               Tidak ada hasil
             </div>
           ) : (
-            filtered.map(opt => (
+            filtered.map((opt) => (
               <div
                 key={opt.value}
                 onClick={() => handleSelect(opt)}
                 style={{
-                  padding: '8px 12px', borderRadius: 6,
-                  fontSize: '0.87em', cursor: 'pointer',
+                  padding: "8px 12px",
+                  borderRadius: 6,
+                  fontSize: "0.87em",
+                  cursor: "pointer",
                   color: opt.value === value ? T.white : T.navy,
-                  background: opt.value === value ? T.navy : 'transparent',
-                  transition: 'background .1s',
+                  background: opt.value === value ? T.navy : "transparent",
+                  transition: "background .1s",
                 }}
-                onMouseEnter={e => {
-                  if (opt.value !== value) (e.currentTarget as HTMLDivElement).style.background = T.skyLight
+                onMouseEnter={(e) => {
+                  if (opt.value !== value)
+                    (e.currentTarget as HTMLDivElement).style.background =
+                      T.skyLight;
                 }}
-                onMouseLeave={e => {
-                  if (opt.value !== value) (e.currentTarget as HTMLDivElement).style.background = 'transparent'
+                onMouseLeave={(e) => {
+                  if (opt.value !== value)
+                    (e.currentTarget as HTMLDivElement).style.background =
+                      "transparent";
                 }}
               >
                 {opt.label}
@@ -169,152 +260,272 @@ function SearchableSelect({ options, value, onChange, placeholder = 'Pilih...', 
         </div>
       )}
     </div>
-  )
+  );
 }
 
 // ── LOCATION ENTRY ────────────────────────────────────────────────────────────
 interface LocationEntry {
-  name: string
-  address: string
-  phone: string
-  opening_hours: string
-  price_range: string
-  website: string
-  maps_url: string
-  notes: string
+  name: string;
+  address: string;
+  phone: string;
+  opening_hours: string;
+  price_range: string;
+  website: string;
+  maps_url: string;
+  notes: string;
 }
 
 const emptyLocation = (): LocationEntry => ({
-  name: '', address: '', phone: '',
-  opening_hours: '', price_range: '',
-  website: '', maps_url: '', notes: '',
-})
+  name: "",
+  address: "",
+  phone: "",
+  opening_hours: "",
+  price_range: "",
+  website: "",
+  maps_url: "",
+  notes: "",
+});
 
 // ── PROPS ─────────────────────────────────────────────────────────────────────
 interface Props {
-  categories: IdeaCategory[]
-  cities: City[]
-  onClose: () => void
-  onSaved: () => void
-  onToast: (msg: string, type: any) => void
+  categories: IdeaCategory[];
+  cities: City[];
+  onClose: () => void;
+  onSaved: () => void;
+  onToast: (msg: string, type: any) => void;
 }
 
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
-export default function AddIdeaModal({ categories, cities, onClose, onSaved, onToast }: Props) {
-  const [name, setName]           = useState('')
-  const [cat, setCat]             = useState('')
-  const [catCustom, setCatCustom] = useState('')
-  const [sub, setSub]             = useState('')
-  const [subCustom, setSubCustom] = useState('')
-  const [city, setCity]           = useState('')
-  const [file, setFile]           = useState<File | null>(null)
-  const [saving, setSaving]       = useState(false)
-  const [showLoc, setShowLoc]     = useState(false)
-  const [locations, setLocations] = useState<LocationEntry[]>([emptyLocation()])
+export default function AddIdeaModal({
+  categories,
+  cities,
+  onClose,
+  onSaved,
+  onToast,
+}: Props) {
+  const [name, setName] = useState("");
+  const [cat, setCat] = useState("");
+  const [catCustom, setCatCustom] = useState("");
+  const [sub, setSub] = useState("");
+  const [subCustom, setSubCustom] = useState("");
+  const [city, setCity] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [showLoc, setShowLoc] = useState(false);
+  const [locations, setLocations] = useState<LocationEntry[]>([
+    emptyLocation(),
+  ]);
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [photoMode, setPhotoMode] = useState<"file" | "url">("file");
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const photoZoneRef = useRef<HTMLDivElement>(null);
+  const handlePaste = (e: React.ClipboardEvent) => {
+    // Paste image dari clipboard
+    const items = Array.from(e.clipboardData.items);
+    const imageItem = items.find((item) => item.type.startsWith("image/"));
+    if (imageItem) {
+      const blob = imageItem.getAsFile();
+      if (blob) {
+        setFile(blob as File);
+        setPhotoPreview(URL.createObjectURL(blob));
+        return;
+      }
+    }
+    // Paste URL teks
+    const text = e.clipboardData.getData("text");
+    if (text.startsWith("http")) {
+      setPhotoUrl(text);
+      setPhotoPreview(text);
+    }
+  };
 
-  const uniqueCats     = [...new Set(categories.map(c => c.category))]
-  const subtypesForCat = categories.filter(c => c.category === cat)
+  const uniqueCats = [...new Set(categories.map((c) => c.category))];
+  const subtypesForCat = categories.filter((c) => c.category === cat);
 
   const catOptions: SelectOption[] = [
-    ...uniqueCats.map(c => ({ label: c, value: c })),
-    { label: '➕ Tambah baru...', value: '__custom__' },
-  ]
+    ...uniqueCats.map((c) => ({ label: c, value: c })),
+    { label: "➕ Tambah baru...", value: "__custom__" },
+  ];
 
-  const subOptions: SelectOption[] = cat && cat !== '__custom__'
-    ? [
-        ...subtypesForCat.map(s => ({ label: s.subtype, value: s.type_key })),
-        { label: '➕ Tambah baru...', value: '__custom__' },
-      ]
-    : [{ label: '➕ Tambah baru...', value: '__custom__' }]
+  const subOptions: SelectOption[] =
+    cat && cat !== "__custom__"
+      ? [
+          ...subtypesForCat.map((s) => ({
+            label: s.subtype,
+            value: s.type_key,
+          })),
+          { label: "➕ Tambah baru...", value: "__custom__" },
+        ]
+      : [{ label: "➕ Tambah baru...", value: "__custom__" }];
 
   const cityOptions: SelectOption[] = [
-    ...cities.map(c => ({ label: c.name, value: c.id })),
-  ]
+    ...cities.map((c) => ({ label: c.name, value: c.id })),
+  ];
 
   const updateLoc = (idx: number, field: keyof LocationEntry, val: string) => {
-    setLocations(prev => prev.map((l, i) => i === idx ? { ...l, [field]: val } : l))
-  }
+    setLocations((prev) =>
+      prev.map((l, i) => (i === idx ? { ...l, [field]: val } : l)),
+    );
+  };
 
-  const addLoc    = () => setLocations(prev => [...prev, emptyLocation()])
-  const removeLoc = (idx: number) => setLocations(prev => prev.filter((_, i) => i !== idx))
+  const addLoc = () => setLocations((prev) => [...prev, emptyLocation()]);
+  const removeLoc = (idx: number) =>
+    setLocations((prev) => prev.filter((_, i) => i !== idx));
 
   const handleSave = async () => {
-    const finalName = name.trim()
-    const finalCat  = cat === '__custom__' ? catCustom.trim() : cat
-    const finalSub  = sub === '__custom__' ? subCustom.trim() : sub
-    if (!finalName) return onToast('Nama tidak boleh kosong!', 'warn')
-    if (!finalCat)  return onToast('Pilih atau isi kategori!', 'warn')
-    if (!finalSub)  return onToast('Pilih atau isi sub-tipe!', 'warn')
+    const finalName = name.trim();
+    const finalCat = cat === "__custom__" ? catCustom.trim() : cat;
+    const finalSub = sub === "__custom__" ? subCustom.trim() : sub;
+    if (!finalName) return onToast("Nama tidak boleh kosong!", "warn");
+    if (!finalCat) return onToast("Pilih atau isi kategori!", "warn");
+    if (!finalSub) return onToast("Pilih atau isi sub-tipe!", "warn");
 
-    setSaving(true)
+    setSaving(true);
     try {
-      let imageUrl: string | null = null
-      if (file) imageUrl = await uploadImage(file, 'anon')
-
-      if (cat === '__custom__' || sub === '__custom__') {
-        const tk = finalSub.toLowerCase().replace(/\s+/g, '_')
-        await supabase.from('idea_categories').upsert(
-          [{ category: finalCat, subtype: finalSub, type_key: tk, icon: '📍', photo_url: null }],
-          { onConflict: 'type_key' }
-        )
+      let imageUrl: string | null = null;
+      if (photoMode === "url" && photoUrl.startsWith("http")) {
+        imageUrl = photoUrl;
+      } else if (file) {
+        imageUrl = await uploadImage(file, "anon");
       }
 
-      const typeKey = sub === '__custom__'
-        ? finalSub.toLowerCase().replace(/\s+/g, '_')
-        : sub
+      if (cat === "__custom__" || sub === "__custom__") {
+        const tk = finalSub.toLowerCase().replace(/\s+/g, "_");
+        await supabase
+          .from("idea_categories")
+          .upsert(
+            [
+              {
+                category: finalCat,
+                subtype: finalSub,
+                type_key: tk,
+                icon: "📍",
+                photo_url: null,
+              },
+            ],
+            { onConflict: "type_key" },
+          );
+      }
+
+      const typeKey =
+        sub === "__custom__"
+          ? finalSub.toLowerCase().replace(/\s+/g, "_")
+          : sub;
 
       const locPayload = showLoc
-        ? locations.filter(l => l.name.trim() || l.address.trim())
-        : null
+        ? locations.filter((l) => l.name.trim() || l.address.trim())
+        : null;
 
-      const firstLoc = locPayload?.[0]
+      const firstLoc = locPayload?.[0];
 
-      const { error } = await supabase.from('trip_ideas_v2').insert([{
-        idea_name:     finalName,
-        type_key:      typeKey,
-        day_of_week:   '',
-        photo_url:     imageUrl,
-        city_id:       city || null,
-        locations:     locPayload && locPayload.length > 0 ? locPayload : null,
-        address:       firstLoc?.address || null,
-        maps_url:      firstLoc?.maps_url || null,
-        phone:         firstLoc?.phone || null,
-        opening_hours: firstLoc?.opening_hours || null,
-        price_range:   firstLoc?.price_range || null,
-        website:       firstLoc?.website || null,
-        notes:         firstLoc?.notes || null,
-      }])
+      const { error } = await supabase.from("trip_ideas_v2").insert([
+        {
+          idea_name: finalName,
+          type_key: typeKey,
+          day_of_week: "",
+          photo_url: imageUrl,
+          city_id: city || null,
+          locations: locPayload && locPayload.length > 0 ? locPayload : null,
+          address: firstLoc?.address || null,
+          maps_url: firstLoc?.maps_url || null,
+          phone: firstLoc?.phone || null,
+          opening_hours: firstLoc?.opening_hours || null,
+          price_range: firstLoc?.price_range || null,
+          website: firstLoc?.website || null,
+          notes: firstLoc?.notes || null,
+        },
+      ]);
 
-      if (error) throw error
-      onSaved()
-      onToast('Ide berhasil ditambahkan! 🎉', 'success')
+      if (error) throw error;
+      onSaved();
+      onToast("Ide berhasil ditambahkan! 🎉", "success");
     } catch {
-      onToast('Gagal menyimpan. Coba lagi.', 'error')
+      onToast("Gagal menyimpan. Coba lagi.", "error");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(3,37,76,0.38)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '24px 16px', overflowY: 'auto' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 50,
+        background: "rgba(3,37,76,0.38)",
+        backdropFilter: "blur(5px)",
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        padding: "24px 16px",
+        overflowY: "auto",
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
-      <div style={{ background: T.white, borderRadius: 20, border: `1.5px solid ${T.sky}`, boxShadow: '0 20px 60px rgba(3,37,76,.2)', width: '100%', maxWidth: 480, margin: 'auto' }}>
-        <div style={{ padding: '20px 22px 24px' }}>
-
+      <div
+        style={{
+          background: T.white,
+          borderRadius: 20,
+          border: `1.5px solid ${T.sky}`,
+          boxShadow: "0 20px 60px rgba(3,37,76,.2)",
+          width: "100%",
+          maxWidth: 480,
+          margin: "auto",
+        }}
+      >
+        <div style={{ padding: "20px 22px 24px" }}>
           {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-            <h3 style={{ color: T.navy, fontWeight: 800, margin: 0, fontSize: '1.02em' }}>➕ Tambah Ide Baru</h3>
-            <button onClick={onClose} style={{ background: T.skyLight, border: `1px solid ${T.sky}`, borderRadius: 999, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.navy, fontWeight: 700, fontSize: '0.8em' }}>✕</button>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 18,
+            }}
+          >
+            <h3
+              style={{
+                color: T.navy,
+                fontWeight: 800,
+                margin: 0,
+                fontSize: "1.02em",
+              }}
+            >
+              ➕ Tambah Ide Baru
+            </h3>
+            <button
+              onClick={onClose}
+              style={{
+                background: T.skyLight,
+                border: `1px solid ${T.sky}`,
+                borderRadius: 999,
+                width: 28,
+                height: 28,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: T.navy,
+                fontWeight: 700,
+                fontSize: "0.8em",
+              }}
+            >
+              ✕
+            </button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-
+          <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
             {/* Nama */}
             <div>
               <label style={labelStyle}>Nama Tempat *</label>
-              <input value={name} onChange={e => setName(e.target.value)} placeholder='misal: Braga Permai' style={inp} />
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="misal: Braga Permai"
+                style={inp}
+              />
             </div>
 
             {/* Kategori */}
@@ -323,12 +534,20 @@ export default function AddIdeaModal({ categories, cities, onClose, onSaved, onT
               <SearchableSelect
                 options={catOptions}
                 value={cat}
-                onChange={val => { setCat(val); setSub(''); setSubCustom('') }}
+                onChange={(val) => {
+                  setCat(val);
+                  setSub("");
+                  setSubCustom("");
+                }}
                 placeholder="Pilih kategori..."
               />
-              {cat === '__custom__' && (
-                <input value={catCustom} onChange={e => setCatCustom(e.target.value)}
-                  placeholder='Nama kategori baru' style={{ ...inp, marginTop: 7 }} />
+              {cat === "__custom__" && (
+                <input
+                  value={catCustom}
+                  onChange={(e) => setCatCustom(e.target.value)}
+                  placeholder="Nama kategori baru"
+                  style={{ ...inp, marginTop: 7 }}
+                />
               )}
             </div>
 
@@ -338,13 +557,20 @@ export default function AddIdeaModal({ categories, cities, onClose, onSaved, onT
               <SearchableSelect
                 options={subOptions}
                 value={sub}
-                onChange={val => { setSub(val); setSubCustom('') }}
-                placeholder={cat ? 'Pilih sub-tipe...' : 'Pilih kategori dulu'}
+                onChange={(val) => {
+                  setSub(val);
+                  setSubCustom("");
+                }}
+                placeholder={cat ? "Pilih sub-tipe..." : "Pilih kategori dulu"}
                 disabled={!cat}
               />
-              {sub === '__custom__' && (
-                <input value={subCustom} onChange={e => setSubCustom(e.target.value)}
-                  placeholder='Nama sub-tipe baru' style={{ ...inp, marginTop: 7 }} />
+              {sub === "__custom__" && (
+                <input
+                  value={subCustom}
+                  onChange={(e) => setSubCustom(e.target.value)}
+                  placeholder="Nama sub-tipe baru"
+                  style={{ ...inp, marginTop: 7 }}
+                />
               )}
             </div>
 
@@ -362,78 +588,343 @@ export default function AddIdeaModal({ categories, cities, onClose, onSaved, onT
             {/* Foto */}
             <div>
               <label style={labelStyle}>Foto (Opsional)</label>
-              <input type='file' accept='image/*' onChange={e => setFile(e.target.files?.[0] || null)}
-                style={{ fontSize: '0.8em', color: T.navy, width: '100%' }} />
+
+              {/* Tab toggle */}
+              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                {(["file", "url"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => {
+                      setPhotoMode(mode);
+                      setFile(null);
+                      setPhotoUrl("");
+                      setPhotoPreview(null);
+                    }}
+                    style={{
+                      padding: "5px 12px",
+                      borderRadius: 8,
+                      fontSize: "0.75em",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      border: `1.5px solid ${photoMode === mode ? T.navyLight : T.sky}`,
+                      background: photoMode === mode ? T.navy : T.white,
+                      color: photoMode === mode ? T.white : T.muted,
+                      transition: "all .15s",
+                    }}
+                  >
+                    {mode === "file" ? "📁 Upload / Paste" : "🔗 URL"}
+                  </button>
+                ))}
+              </div>
+
+              {photoMode === "file" ? (
+                // Zone yang bisa klik upload ATAU ctrl+v paste
+                <div
+                  ref={photoZoneRef}
+                  tabIndex={0}
+                  onPaste={handlePaste}
+                  onClick={() =>
+                    document.getElementById("photo-file-input")?.click()
+                  }
+                  style={{
+                    border: `2px dashed ${T.skyMid}`,
+                    borderRadius: 10,
+                    padding: "16px",
+                    textAlign: "center",
+                    cursor: "pointer",
+                    background: T.skyLight,
+                    color: T.muted,
+                    fontSize: "0.8em",
+                    outline: "none",
+                    transition: "border-color .15s",
+                  }}
+                  onFocus={(e) =>
+                    (e.currentTarget.style.borderColor = T.navyLight)
+                  }
+                  onBlur={(e) => (e.currentTarget.style.borderColor = T.skyMid)}
+                >
+                  {photoPreview ? (
+                    <img
+                      src={photoPreview}
+                      alt="preview"
+                      style={{
+                        maxHeight: 100,
+                        borderRadius: 8,
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <span>
+                      📎 Klik untuk upload, atau <strong>Ctrl+V</strong> paste
+                      gambar
+                    </span>
+                  )}
+                  <input
+                    id="photo-file-input"
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] || null;
+                      setFile(f);
+                      setPhotoPreview(f ? URL.createObjectURL(f) : null);
+                    }}
+                  />
+                </div>
+              ) : (
+                // URL input
+                <div>
+                  <input
+                    value={photoUrl}
+                    onChange={(e) => {
+                      setPhotoUrl(e.target.value);
+                      setPhotoPreview(
+                        e.target.value.startsWith("http")
+                          ? e.target.value
+                          : null,
+                      );
+                    }}
+                    onPaste={(e) => {
+                      const text = e.clipboardData.getData("text");
+                      if (text.startsWith("http"))
+                        setTimeout(() => setPhotoPreview(text), 0);
+                    }}
+                    placeholder="https://example.com/foto.jpg"
+                    style={inp}
+                  />
+                  {photoPreview && (
+                    <img
+                      src={photoPreview}
+                      alt="preview"
+                      style={{
+                        marginTop: 8,
+                        maxHeight: 100,
+                        borderRadius: 8,
+                        objectFit: "cover",
+                        width: "100%",
+                      }}
+                      onError={() => setPhotoPreview(null)}
+                    />
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Detail Lokasi Toggle */}
-            <div style={{ borderTop: `1.5px dashed ${T.sky}`, paddingTop: 12, marginTop: 2 }}>
+            <div
+              style={{
+                borderTop: `1.5px dashed ${T.sky}`,
+                paddingTop: 12,
+                marginTop: 2,
+              }}
+            >
               <button
-                onClick={() => setShowLoc(v => !v)}
+                onClick={() => setShowLoc((v) => !v)}
                 style={{
-                  width: '100%', padding: '9px 14px', borderRadius: 10,
+                  width: "100%",
+                  padding: "9px 14px",
+                  borderRadius: 10,
                   background: showLoc ? T.skyLight : T.white,
                   border: `1.5px solid ${T.sky}`,
-                  color: T.navy, fontWeight: 700, cursor: 'pointer',
-                  fontSize: '0.84em', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  color: T.navy,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontSize: "0.84em",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                 }}
               >
                 <span>📍 Detail Lokasi (Opsional)</span>
-                <span style={{ fontSize: '0.75em', color: T.muted }}>{showLoc ? '▲ Sembunyikan' : '▼ Tampilkan'}</span>
+                <span style={{ fontSize: "0.75em", color: T.muted }}>
+                  {showLoc ? "▲ Sembunyikan" : "▼ Tampilkan"}
+                </span>
               </button>
 
               {showLoc && (
-                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div
+                  style={{
+                    marginTop: 10,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 14,
+                  }}
+                >
                   {locations.map((loc, idx) => (
-                    <div key={idx} style={{ background: T.skyLight, borderRadius: 12, border: `1.5px solid ${T.sky}`, padding: '14px 14px 10px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                        <span style={{ fontWeight: 700, color: T.navy, fontSize: '0.82em' }}>Lokasi {idx + 1}</span>
+                    <div
+                      key={idx}
+                      style={{
+                        background: T.skyLight,
+                        borderRadius: 12,
+                        border: `1.5px solid ${T.sky}`,
+                        padding: "14px 14px 10px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: 10,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontWeight: 700,
+                            color: T.navy,
+                            fontSize: "0.82em",
+                          }}
+                        >
+                          Lokasi {idx + 1}
+                        </span>
                         {locations.length > 1 && (
-                          <button onClick={() => removeLoc(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8em', fontWeight: 700 }}>✕ Hapus</button>
+                          <button
+                            onClick={() => removeLoc(idx)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: "#ef4444",
+                              cursor: "pointer",
+                              fontSize: "0.8em",
+                              fontWeight: 700,
+                            }}
+                          >
+                            ✕ Hapus
+                          </button>
                         )}
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 8,
+                        }}
+                      >
                         <div>
                           <label style={labelStyle}>Nama Lokasi *</label>
-                          <input value={loc.name} onChange={e => updateLoc(idx, 'name', e.target.value)} placeholder='misal: Lokasi Utama' style={inp} />
+                          <input
+                            value={loc.name}
+                            onChange={(e) =>
+                              updateLoc(idx, "name", e.target.value)
+                            }
+                            placeholder="misal: Lokasi Utama"
+                            style={inp}
+                          />
                         </div>
                         <div>
                           <label style={labelStyle}>Alamat</label>
-                          <textarea value={loc.address} onChange={e => updateLoc(idx, 'address', e.target.value)} placeholder='Jl. ...' rows={2} style={{ ...inp, resize: 'vertical', fontFamily: 'inherit' }} />
+                          <textarea
+                            value={loc.address}
+                            onChange={(e) =>
+                              updateLoc(idx, "address", e.target.value)
+                            }
+                            placeholder="Jl. ..."
+                            rows={2}
+                            style={{
+                              ...inp,
+                              resize: "vertical",
+                              fontFamily: "inherit",
+                            }}
+                          />
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",
+                            gap: 8,
+                          }}
+                        >
                           <div>
                             <label style={labelStyle}>No. Telepon</label>
-                            <input value={loc.phone} onChange={e => updateLoc(idx, 'phone', e.target.value)} placeholder='08xx...' style={inp} />
+                            <input
+                              value={loc.phone}
+                              onChange={(e) =>
+                                updateLoc(idx, "phone", e.target.value)
+                              }
+                              placeholder="08xx..."
+                              style={inp}
+                            />
                           </div>
                           <div>
                             <label style={labelStyle}>Jam Buka</label>
-                            <input value={loc.opening_hours} onChange={e => updateLoc(idx, 'opening_hours', e.target.value)} placeholder='10:00 - 22:00' style={inp} />
+                            <input
+                              value={loc.opening_hours}
+                              onChange={(e) =>
+                                updateLoc(idx, "opening_hours", e.target.value)
+                              }
+                              placeholder="10:00 - 22:00"
+                              style={inp}
+                            />
                           </div>
                           <div>
                             <label style={labelStyle}>Kisaran Harga</label>
-                            <input value={loc.price_range} onChange={e => updateLoc(idx, 'price_range', e.target.value)} placeholder='25.000 - 200.000' style={inp} />
+                            <input
+                              value={loc.price_range}
+                              onChange={(e) =>
+                                updateLoc(idx, "price_range", e.target.value)
+                              }
+                              placeholder="25.000 - 200.000"
+                              style={inp}
+                            />
                           </div>
                           <div>
                             <label style={labelStyle}>Website</label>
-                            <input value={loc.website} onChange={e => updateLoc(idx, 'website', e.target.value)} placeholder='https://...' style={inp} />
+                            <input
+                              value={loc.website}
+                              onChange={(e) =>
+                                updateLoc(idx, "website", e.target.value)
+                              }
+                              placeholder="https://..."
+                              style={inp}
+                            />
                           </div>
                         </div>
                         <div>
                           <label style={labelStyle}>Link Google Maps</label>
-                          <input value={loc.maps_url} onChange={e => updateLoc(idx, 'maps_url', e.target.value)} placeholder='https://maps.app.goo.gl/...' style={inp} />
+                          <input
+                            value={loc.maps_url}
+                            onChange={(e) =>
+                              updateLoc(idx, "maps_url", e.target.value)
+                            }
+                            placeholder="https://maps.app.goo.gl/..."
+                            style={inp}
+                          />
                         </div>
                         <div>
                           <label style={labelStyle}>Catatan</label>
-                          <textarea value={loc.notes} onChange={e => updateLoc(idx, 'notes', e.target.value)} placeholder='Tips, info tambahan...' rows={2} style={{ ...inp, resize: 'vertical', fontFamily: 'inherit' }} />
+                          <textarea
+                            value={loc.notes}
+                            onChange={(e) =>
+                              updateLoc(idx, "notes", e.target.value)
+                            }
+                            placeholder="Tips, info tambahan..."
+                            rows={2}
+                            style={{
+                              ...inp,
+                              resize: "vertical",
+                              fontFamily: "inherit",
+                            }}
+                          />
                         </div>
                       </div>
                     </div>
                   ))}
                   <button
                     onClick={addLoc}
-                    style={{ padding: '8px 14px', borderRadius: 10, background: T.white, border: `1.5px dashed ${T.skyMid}`, color: T.muted, fontWeight: 600, cursor: 'pointer', fontSize: '0.82em', width: '100%' }}
-                  >➕ Tambah Lokasi Lain</button>
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 10,
+                      background: T.white,
+                      border: `1.5px dashed ${T.skyMid}`,
+                      color: T.muted,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontSize: "0.82em",
+                      width: "100%",
+                    }}
+                  >
+                    ➕ Tambah Lokasi Lain
+                  </button>
                 </div>
               )}
             </div>
@@ -444,16 +935,26 @@ export default function AddIdeaModal({ categories, cities, onClose, onSaved, onT
             onClick={handleSave}
             disabled={saving}
             style={{
-              width: '100%', marginTop: 16, padding: '12px', borderRadius: 11,
-              background: saving ? T.sky : `linear-gradient(135deg, ${T.navy}, ${T.navyMid})`,
+              width: "100%",
+              marginTop: 16,
+              padding: "12px",
+              borderRadius: 11,
+              background: saving
+                ? T.sky
+                : `linear-gradient(135deg, ${T.navy}, ${T.navyMid})`,
               color: saving ? T.muted : T.white,
-              border: 'none', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer',
-              fontSize: '0.9em', boxShadow: saving ? 'none' : '0 4px 14px rgba(3,37,76,.2)',
-              transition: 'all .15s',
+              border: "none",
+              fontWeight: 700,
+              cursor: saving ? "not-allowed" : "pointer",
+              fontSize: "0.9em",
+              boxShadow: saving ? "none" : "0 4px 14px rgba(3,37,76,.2)",
+              transition: "all .15s",
             }}
-          >{saving ? '⏳ Menyimpan...' : '💾 Simpan Ide'}</button>
+          >
+            {saving ? "⏳ Menyimpan..." : "💾 Simpan Ide"}
+          </button>
         </div>
       </div>
     </div>
-  )
+  );
 }
